@@ -1,0 +1,699 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Admin PDF Toolkit — Dashboard Önizleme</title>
+  <meta name="description" content="Yeni dashboard tasarımı önizlemesi (görsel mock — fonksiyon yok).">
+  <style>
+    /* =====================================================================
+     * Admin PDF Toolkit — Dashboard Mock
+     * Bu sayfa sadece görsel önizleme: kartlara tıklamak iş yapmaz.
+     * Renk paleti, tipografi, grid sistemi mevcut uygulama ile uyumlu.
+     * ===================================================================== */
+
+    :root {
+      --bg:        #f3f4f6;
+      --surface:   #ffffff;
+      --surface-2: #f8fafc;
+      --border:    #e2e8f0;
+      --border-2:  #cbd5e1;
+      --text:      #1f2937;
+      --text-2:    #475569;
+      --text-3:    #64748b;
+      --text-mute: #94a3b8;
+      --primary:   #2F5496;
+      --primary-d: #1f3a6e;
+      --primary-l: #eef2ff;
+      --success:   #15803d;
+      --warning:   #b45309;
+      --danger:    #b91c1c;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+      --shadow:    0 4px 12px rgba(15, 23, 42, 0.10);
+      --shadow-lg: 0 12px 28px rgba(15, 23, 42, 0.18);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-text-size-adjust: 100%;
+      -webkit-tap-highlight-color: rgba(47, 84, 150, .15);
+      line-height: 1.5;
+    }
+
+    /* Focus ring (AA accessibility) */
+    :focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+      border-radius: 6px;
+    }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    /* ========== Header ========== */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+    .topbar-inner {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 17px;
+      color: var(--primary);
+      text-decoration: none;
+    }
+    .brand .logo { font-size: 22px; }
+    .brand .by {
+      font-size: 12px;
+      color: var(--text-3);
+      font-weight: 500;
+    }
+    .brand-spacer { flex: 1 1 0; }
+
+    .search {
+      position: relative;
+      flex: 0 1 320px;
+    }
+    .search input {
+      width: 100%;
+      padding: 8px 14px 8px 36px;
+      border: 1px solid var(--border-2);
+      border-radius: 8px;
+      font: inherit;
+      font-size: 14px;
+      background: var(--surface-2);
+    }
+    .search input:focus {
+      background: var(--surface);
+      outline: 2px solid var(--primary);
+      outline-offset: -1px;
+    }
+    .search::before {
+      content: "🔍";
+      position: absolute;
+      left: 12px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .header-btn {
+      padding: 8px 12px;
+      border: 1px solid var(--border-2);
+      background: var(--surface);
+      color: var(--text-2);
+      border-radius: 7px;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .header-btn:hover {
+      background: var(--surface-2);
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .header-btn.icon {
+      width: 36px;
+      padding: 8px 0;
+      text-align: center;
+      font-size: 14px;
+    }
+
+    /* ========== Hero ========== */
+    .hero-wrap {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 20px 12px;
+    }
+    .hero {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-d) 100%);
+      color: #fff;
+      border-radius: 16px;
+      padding: 40px 32px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      right: -120px; top: -120px;
+      width: 360px; height: 360px;
+      background: radial-gradient(circle, rgba(255,255,255,0.15), transparent 60%);
+    }
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: clamp(22px, 3vw, 30px);
+      font-weight: 700;
+      line-height: 1.2;
+      position: relative;
+    }
+    .hero p {
+      margin: 0 0 24px;
+      font-size: 15px;
+      opacity: 0.92;
+      max-width: 640px;
+      position: relative;
+    }
+    .hero .badges {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      margin-bottom: 22px;
+      position: relative;
+    }
+    .hero .badge {
+      padding: 4px 11px;
+      border: 1px solid rgba(255,255,255,0.35);
+      background: rgba(255,255,255,0.12);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .drop {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 6px;
+      padding: 28px 20px;
+      background: rgba(255,255,255,0.96);
+      color: var(--text);
+      border: 2px dashed rgba(255,255,255,0.6);
+      border-radius: 12px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.15s, transform 0.15s;
+    }
+    .drop:hover { background: #fff; transform: translateY(-1px); }
+    .drop .drop-icon { font-size: 30px; }
+    .drop .drop-title { font-weight: 600; font-size: 16px; color: var(--text); }
+    .drop .drop-hint { font-size: 12px; color: var(--text-3); }
+    .drop input[type=file] {
+      position: absolute; inset: 0;
+      opacity: 0; cursor: pointer;
+    }
+
+    /* ========== Categories ========== */
+    .section {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin: 0 0 14px;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .section-head h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .section-head .sub {
+      color: var(--text-3);
+      font-size: 13px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+      font: inherit;
+      color: inherit;
+      position: relative;
+      min-height: 200px;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow);
+      border-color: var(--primary);
+    }
+    .card:focus-visible {
+      outline: 2px solid var(--primary);
+      outline-offset: 2px;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .card .icon {
+      font-size: 28px;
+      line-height: 1;
+      flex: 0 0 auto;
+    }
+    .card .count {
+      background: var(--primary-l);
+      color: var(--primary);
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .card h3 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.01em;
+    }
+    .card .desc {
+      color: var(--text-2);
+      font-size: 13px;
+      line-height: 1.5;
+      flex: 1 1 auto;
+    }
+    .card ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .card li {
+      padding: 3px 9px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--text-2);
+      font-weight: 500;
+    }
+    .card .arrow {
+      align-self: flex-end;
+      font-size: 14px;
+      color: var(--primary);
+      opacity: 0.6;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    .card:hover .arrow {
+      transform: translateX(3px);
+      opacity: 1;
+    }
+
+    /* Per-category accent (subtle) */
+    .card[data-cat="convert"]  .icon { color: #1f6feb; }
+    .card[data-cat="tools"]    .icon { color: #b45309; }
+    .card[data-cat="editor"]   .icon { color: #7c3aed; }
+    .card[data-cat="analyze"]  .icon { color: #15803d; }
+    .card[data-cat="generate"] .icon { color: #be185d; }
+    .card[data-cat="extract"]  .icon { color: #0891b2; }
+    .card[data-cat="find"]     .icon { color: #ca8a04; }
+    .card[data-cat="batch"]    .icon { color: #9333ea; }
+
+    /* ========== Quick stats strip ========== */
+    .stats {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 12px 20px 28px;
+    }
+    .stats-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .stat .num {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .stat .lbl {
+      font-size: 11px;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .stats-bar .grow { flex: 1 1 0; }
+    .stats-bar a {
+      color: var(--primary);
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .stats-bar a:hover { text-decoration: underline; }
+
+    /* ========== Footer note ========== */
+    .footer {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 16px 20px 32px;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 12px;
+    }
+    .footer .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      color: #92400e;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    /* ========== Responsive ========== */
+    @media (min-width: 1280px) {
+      .grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (min-width: 900px) and (max-width: 1279px) {
+      .grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (min-width: 600px) and (max-width: 899px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+      .hero { padding: 28px 22px; }
+      .hero h1 { font-size: 20px; }
+      .topbar-inner { padding: 10px 16px; }
+      .search { flex: 1 1 100%; order: 99; }
+    }
+    @media (max-width: 599px) {
+      .grid { grid-template-columns: 1fr; }
+      .hero-wrap, .section, .stats { padding-left: 14px; padding-right: 14px; }
+      .hero { padding: 24px 18px; border-radius: 14px; }
+      .hero h1 { font-size: 20px; }
+      .hero p { font-size: 13px; margin-bottom: 18px; }
+      .drop { padding: 22px 14px; }
+      .drop .drop-icon { font-size: 26px; }
+      .topbar-inner { padding: 10px 14px; }
+      .brand { font-size: 15px; }
+      .brand .by { display: none; }
+      .search { flex: 1 1 100%; order: 99; }
+      .header-btn { padding: 7px 10px; font-size: 12px; }
+      .card { padding: 16px; min-height: 0; }
+      .card h3 { font-size: 16px; }
+      .stat .num { font-size: 16px; }
+    }
+    /* Galaxy S1 / 320px */
+    @media (max-width: 360px) {
+      .hero { padding: 20px 14px; }
+      .hero h1 { font-size: 18px; }
+      .topbar-inner { gap: 6px; }
+      .brand .logo { font-size: 18px; }
+      .header-btn.icon { width: 32px; padding: 6px 0; }
+    }
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+    /* Dark mode (preview only — main app keeps light) */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --surface-2: #0f1828;
+        --border: #334155;
+        --border-2: #475569;
+        --text: #f1f5f9;
+        --text-2: #cbd5e1;
+        --text-3: #94a3b8;
+        --primary-l: rgba(47, 84, 150, 0.18);
+      }
+      .footer .pill { background: rgba(254,243,199,0.12); }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar" role="banner">
+    <div class="topbar-inner">
+      <a class="brand" href="/">
+        <span class="logo" aria-hidden="true">📑</span>
+        <span>Admin PDF Toolkit</span>
+        <span class="by">· by Engin</span>
+      </a>
+      <div class="brand-spacer"></div>
+      <div class="search" role="search">
+        <label class="sr-only" for="search">Araç ara</label>
+        <input id="search" type="search" placeholder="Araç ara · ör: birleştir, OCR, watermark…">
+      </div>
+      <button class="header-btn" type="button">📜 Geçmiş</button>
+      <button class="header-btn icon" type="button" title="Dil">🌐</button>
+      <button class="header-btn icon" type="button" title="Ayarlar">⚙</button>
+    </div>
+  </header>
+
+  <main role="main">
+    <!-- HERO -->
+    <section class="hero-wrap" aria-labelledby="hero-title">
+      <div class="hero">
+        <h1 id="hero-title">Tek pencerede 35+ PDF aracı</h1>
+        <p>%100 offline · KVKK uyumlu · Veri makineyi terk etmez.</p>
+        <div class="badges">
+          <span class="badge">🔒 Offline</span>
+          <span class="badge">⚡ 232 test, %100 yeşil</span>
+          <span class="badge">📐 153 font ailesi</span>
+          <span class="badge">🌐 TR · EN</span>
+        </div>
+        <label class="drop">
+          <span class="drop-icon" aria-hidden="true">📂</span>
+          <span class="drop-title">PDF dosyanı sürükle-bırak veya seç</span>
+          <span class="drop-hint">Akıllı algılama: Editor / araç / dönüşüm uygun ekrana yönlendirir</span>
+          <input type="file" accept="application/pdf" multiple>
+        </label>
+      </div>
+    </section>
+
+    <!-- KATEGORİLER -->
+    <section class="section" aria-labelledby="categories-title">
+      <div class="section-head">
+        <h2 id="categories-title">Ne yapmak istiyorsun?</h2>
+        <span class="sub">Kategori seç veya yukarıdaki kutuya PDF bırak</span>
+      </div>
+
+      <div class="grid">
+        <button class="card" data-cat="convert" type="button"
+                aria-describedby="d-convert">
+          <div class="card-head">
+            <span class="icon" aria-hidden="true">🔄</span>
+            <span class="count">4 İŞLEM</span>
+          </div>
+          <h3>Dönüştür</h3>
+          <p class="desc" id="d-convert">PDF'i Excel, Word veya JPG'ye çevir. Taranmış belgeler için OCR otomatik devreye girer.</p>
+          <ul>
+            <li>📊 Excel</li>
+            <li>📝 Word</li>
+            <li>🖼 JPG</li>
+            <li>🔤 OCR</li>
+          </ul>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+
+        <button class="card" data-cat="tools" type="button"
+                aria-describedby="d-tools">
+          <div class="card-head">
+            <span class="icon" aria-hidden="true">🛠</span>
+            <span class="count">13 İŞLEM</span>
+          </div>
+          <h3>Düzenle (sayfa)</h3>
+          <p class="desc" id="d-tools">Sayfa seviyesinde işlemler: birleştir, böl, sıkıştır, şifrele, watermark, sayfa numarası, kırp, döndür, sırala, sil.</p>
+          <ul>
+            <li>🔗 Birleştir</li>
+            <li>✂ Böl</li>
+            <li>🗜 Sıkıştır</li>
+            <li>🔒 Şifrele</li>
+            <li>💧 Watermark</li>
+          </ul>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+
+        <button class="card" data-cat="editor" type="button"
+                aria-describedby="d-editor">
+          <div class="card-head">
+            <span class="icon" aria-hidden="true">🖊</span>
+            <span class="count">11 OP</span>
+          </div>
+          <h3>Editör (içerik)</h3>
+          <p class="desc" id="d-editor">İçerik seviyesinde tam editör: vurgu, sticky, çizim, metin/şekil ekleme, mevcut metni akıllı font matching ile değiştir.</p>
+          <ul>
+            <li>🟨 Vurgu</li>
+            <li>📌 Sticky</li>
+            <li>✏ Çizim</li>
+            <li>T Metin</li>
+            <li>🔁 Replace</li>
+          </ul>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+
+        <button class="card" data-cat="analyze" type="button"
+                aria-describedby="d-analyze">
+          <div class="card-head">
+            <span class="icon" aria-hidden="true">🔍</span>
+            <span class="count">4 İŞLEM</span>
+          </div>
+          <h3>Analiz</h3>
+          <p class="desc" id="d-analyze">Boş sayfa tespiti, dijital imza algılama, otomatik kategori (fatura/dekont/sözleşme/…), deep-analyze raporu.</p>
+          <ul>
+            <li>🕳 Boş sayfa</li>
+            <li>✍ İmza</li>
+            <li>🏷 Kategori</li>
+            <li>📊 Deep</li>
+          </ul>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+
+        <button class="card" data-cat="generate" type="button"
+                aria-describedby="d-generate">
+          <div class="card-head">
+            <span class="icon" aria-hidden="true">📥</span>
+            <span class="count">5 İŞLEM</span>
+          </div>
+          <h3>Oluştur (→ PDF)</h3>
+          <p class="desc" id="d-generate">Diğer formatlardan PDF üret: görsel, Word, Excel, HTML, doğrudan URL'den web sayfası.</p>
+          <ul>
+            <li>🖼 Görsel</li>
+            <li>📝 Word</li>
+            <li>📊 Excel</li>
+            <li>🌐 HTML</li>
+            <li>🔗 URL</li>
+          </ul>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+
+        <button class="card" data-cat="extract" type="button"
+                aria-describedby="d-extract">
+          <div class="card-head">
+            <span class="icon" aria-hidden="true">📤</span>
+            <span class="count">5 İŞLEM</span>
+          </div>
+          <h3>Çıkar (PDF →)</h3>
+          <p class="desc" id="d-extract">PDF içeriğini parçala: tabloları CSV'ye, metni Markdown'a, görselleri ZIP'e, içindekiler ve metadata'yı dışa al.</p>
+          <ul>
+            <li>📈 CSV</li>
+            <li>📑 Markdown</li>
+            <li>🖼 Görsel</li>
+            <li>🗂 Outline</li>
+            <li>ℹ Metadata</li>
+          </ul>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+
+        <button class="card" data-cat="find" type="button"
+                aria-describedby="d-find">
+          <div class="card-head">
+            <span class="icon" aria-hidden="true">🔎</span>
+            <span class="count">YENİ</span>
+          </div>
+          <h3>Bul / Vurgula</h3>
+          <p class="desc" id="d-find">PDF içinde metin ara, eşleşmeleri bbox + bağlamla listele, doğrudan editöre gönder ya da topluca vurgula.</p>
+          <ul>
+            <li>🔎 Arama</li>
+            <li>🟨 Toplu vurgu</li>
+            <li>🎯 Tek tık navigasyon</li>
+          </ul>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+
+        <button class="card" data-cat="batch" type="button"
+                aria-describedby="d-batch">
+          <div class="card-head">
+            <span class="icon" aria-hidden="true">📦</span>
+            <span class="count">3 İŞLEM</span>
+          </div>
+          <h3>Toplu İşlem</h3>
+          <p class="desc" id="d-batch">Birden fazla PDF'i aynı anda işle: birleştirilmiş Excel, ekiplere dağıtım, mükerrer telefon temizliği.</p>
+          <ul>
+            <li>📑 Birleşik Excel</li>
+            <li>👥 Ekip dağıtımı</li>
+            <li>🧹 Dedupe</li>
+          </ul>
+          <span class="arrow" aria-hidden="true">→</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="stats" aria-label="Son aktivite">
+      <div class="stats-bar">
+        <div class="stat"><span class="num">12</span><span class="lbl">Bugün işlem</span></div>
+        <div class="stat"><span class="num">234</span><span class="lbl">Toplam dosya</span></div>
+        <div class="stat"><span class="num">5</span><span class="lbl">Son 1 saat</span></div>
+        <div class="stat"><span class="num">35+</span><span class="lbl">Mevcut araç</span></div>
+        <span class="grow"></span>
+        <a href="#" aria-label="Tüm geçmişi gör">Tüm geçmiş →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span class="pill">🎨 GÖRSEL ÖNİZLEME</span><br>
+    Bu sayfa sadece dashboard tasarımının önizlemesidir — kartlara tıklamak iş yapmaz.<br>
+    Beğenirsen ana uygulamaya entegre edilir. Mobil için ekranı küçülterek test edebilirsin (1col → 2col → 3col → 4col).
+  </footer>
+
+  <script>
+    // Sadece görsel feedback — tıklayınca alert
+    document.querySelectorAll(".card").forEach((c) => {
+      c.addEventListener("click", () => {
+        const title = c.querySelector("h3").textContent;
+        alert(`"${title}" akışı henüz mock — onaylarsan canlıya bağlanacak.`);
+      });
+    });
+    document.querySelector(".drop input")?.addEventListener("change", (e) => {
+      if (e.target.files && e.target.files.length) {
+        alert(`${e.target.files.length} PDF seçildi. Akıllı yönlendirme henüz mock.`);
+      }
+    });
+    document.getElementById("search")?.addEventListener("keyup", (e) => {
+      if (e.key === "Enter" && e.target.value.trim()) {
+        alert(`"${e.target.value}" araması mock.`);
+      }
+    });
+  </script>
+</body>
+</html>

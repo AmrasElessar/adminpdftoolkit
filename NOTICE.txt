@@ -1,0 +1,82 @@
+================================================================
+Admin PDF Toolkit — Yasal Bildirim ve Sorumluluk Reddi
+Admin PDF Toolkit — Legal Notice and Disclaimer (by Engin)
+================================================================
+
+Telif Hakkı © 2026 Orhan Engin Okay. Tüm hakları saklıdır.
+Copyright (c) 2026 Orhan Engin Okay. All rights reserved.
+
+----------------------------------------------------------------
+LİSANS / LICENSE
+----------------------------------------------------------------
+
+Bu yazılım GNU Affero General Public License v3.0 (AGPL-3.0)
+altında yayımlanmıştır. Tam metin için "LICENSE" dosyasına bakınız
+veya https://www.gnu.org/licenses/agpl-3.0.html adresini ziyaret
+ediniz.
+
+This software is licensed under the GNU Affero General Public
+License v3.0 (AGPL-3.0). See the "LICENSE" file for the full text
+or visit https://www.gnu.org/licenses/agpl-3.0.html.
+
+AGPL-3.0 ÖZET (Türkçe):
+  - Yazılımı serbestçe kullanabilirsiniz.
+  - Kaynak koda erişme ve değiştirme hakkınız vardır.
+  - Değiştirilmiş veya türetilmiş yazılımı dağıtırsanız aynı
+    AGPL-3.0 lisansı altında, kaynak koduyla birlikte
+    paylaşmak zorundasınız.
+  - Yazılımı network üzerinden hizmet olarak sunarsanız,
+    kullanıcılarınıza kaynak kod erişimi sağlamak zorundasınız.
+
+----------------------------------------------------------------
+GARANTİ REDDİ / NO WARRANTY
+----------------------------------------------------------------
+
+YAZILIM "OLDUĞU GİBİ" SUNULMAKTADIR. Yazar; açık veya zımni
+hiçbir garanti vermemektedir.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND.
+
+----------------------------------------------------------------
+SORUMLULUK SINIRLAMASI / LIMITATION OF LIABILITY
+----------------------------------------------------------------
+
+Yazar; yazılımın kullanımından doğan veri kaybı, gelir kaybı,
+iş durması, dolaylı veya sonuçsal zararlardan HİÇBİR ŞEKİLDE
+sorumlu tutulamaz.
+
+  >>> VERİ İŞLEME, AKTARMA VE OLASI KAYIPLAR TAMAMEN
+      KULLANICININ SORUMLULUĞUNDADIR. <<<
+
+The author shall not be liable for any data loss, revenue loss,
+business interruption, indirect, special, consequential or
+punitive damages.
+
+  >>> DATA PROCESSING, TRANSFER, AND ANY POTENTIAL LOSS ARE
+      ENTIRELY THE RESPONSIBILITY OF THE USER. <<<
+
+----------------------------------------------------------------
+VERİ GİZLİLİĞİ ve KVKK / PRIVACY and KVKK/GDPR
+----------------------------------------------------------------
+
+Yazılım yerel ortamda çalışır; yüklenen dosyalar internete
+gönderilmez. Geçici işlem dosyaları otomatik temizlenir.
+
+Kişisel veri işleyen kuruluşlar için 6698 Sayılı KVKK (TR) veya
+GDPR (EU) kapsamındaki yükümlülükler veri sorumlusu olan
+kuruluşa/kullanıcıya aittir.
+
+----------------------------------------------------------------
+ÜÇÜNCÜ TARAF KÜTÜPHANELER / THIRD-PARTY LIBRARIES
+----------------------------------------------------------------
+
+Bu yazılım, kendi lisansları altında dağıtılan açık kaynak
+kütüphaneler içerir. Detaylı liste için THIRD_PARTY_LICENSES.md
+dosyasına bakınız.
+
+This software includes open-source libraries distributed under
+their own licenses. See THIRD_PARTY_LICENSES.md for details.
+
+================================================================
+End of Notice / Bildirim Sonu
+================================================================

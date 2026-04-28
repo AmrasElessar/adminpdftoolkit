@@ -1,0 +1,63 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtualenvs
+.venv/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.egg
+.deps_ok
+
+# Runtime
+_work/
+output/
+history.db
+*.log
+
+# Editor / IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# CI / GitHub
+.github/
+
+# Docs not needed in image
+README.md
+README.en.md
+CHANGELOG.md
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+SECURITY.md
+*.bat
+build_portable.py
+kaspersky.txt
+
+# Tests
+tests/
+.coverage
+coverage.xml
+htmlcov/
+
+# Claude / IDE
+.claude/
+
+# Sample / user PDFs
+*.pdf
