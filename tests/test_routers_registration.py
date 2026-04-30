@@ -9,11 +9,11 @@ contract:
 * every router exposes at least one route
 * ``ALL`` and the modules it points at are consistent
 """
+
 from __future__ import annotations
 
 import app
 from routers import ALL
-
 
 # Snapshot of every public-facing endpoint after the S5 split.
 # Keep this list in sync intentionally — adding a new endpoint should
@@ -120,8 +120,7 @@ def test_no_duplicate_paths_across_routers() -> None:
             for m in methods or {"<no-method>"}:
                 key = f"{m} {path}"
                 assert key not in seen, (
-                    f"Duplicate route across routers: {key} "
-                    f"(first in {seen[key]}, repeated in {r})"
+                    f"Duplicate route across routers: {key} (first in {seen[key]}, repeated in {r})"
                 )
                 seen[key] = repr(r)
 

@@ -5,6 +5,7 @@ endpoints replicate inline (app.py:1097-1103). We don't go through HTTP for
 the size check — that path is covered by individual endpoint tests — but we
 do verify the helper itself handles the chunked write + close correctly.
 """
+
 from __future__ import annotations
 
 import io

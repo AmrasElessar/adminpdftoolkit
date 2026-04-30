@@ -1,8 +1,13 @@
 """Dağıtım fonksiyonları için temel testler."""
+
+from core import (
+    distribute_custom as _distribute_custom,
+)
+from core import (
+    distribute_roundrobin as _distribute_roundrobin,
+)
 from core import (
     distribute_sequential as _distribute_sequential,
-    distribute_roundrobin as _distribute_roundrobin,
-    distribute_custom as _distribute_custom,
 )
 
 

@@ -7,6 +7,7 @@ tests pin its contract — race-safe updates, no-op on missing tokens,
 locked snapshots, and the legacy ``.lock`` / ``.jobs`` accessors that the
 batch worker's ``files_progress`` mutator still uses directly.
 """
+
 from __future__ import annotations
 
 import threading

@@ -41,9 +41,7 @@ def is_local_request(request: Request) -> bool:
     Used to decide whether mobile-token authentication should be enforced.
     Treats X-Forwarded-For ONLY when no real client is set, to avoid spoofing.
     """
-    if request.client and request.client.host in LOCAL_HOSTS:
-        return True
-    return False
+    return bool(request.client and request.client.host in LOCAL_HOSTS)
 
 
 def lan_ip() -> str:
@@ -62,9 +60,9 @@ def lan_ip() -> str:
 def ensure_self_signed_cert() -> tuple[Path, Path]:
     """Generate a self-signed cert under BASE_DIR/cert if not present."""
     from cryptography import x509
-    from cryptography.x509.oid import NameOID
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import rsa
+    from cryptography.x509.oid import NameOID
 
     cert_dir = BASE_DIR / "cert"
     cert_dir.mkdir(exist_ok=True)
@@ -74,14 +72,18 @@ def ensure_self_signed_cert() -> tuple[Path, Path]:
         return cert_file, key_file
 
     key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, "Admin PDF Toolkit Local"),
-    ])
-    san = x509.SubjectAlternativeName([
-        x509.DNSName("localhost"),
-        x509.IPAddress(__import__("ipaddress").ip_address("127.0.0.1")),
-        x509.IPAddress(__import__("ipaddress").ip_address(lan_ip())),
-    ])
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, "Admin PDF Toolkit Local"),
+        ]
+    )
+    san = x509.SubjectAlternativeName(
+        [
+            x509.DNSName("localhost"),
+            x509.IPAddress(__import__("ipaddress").ip_address("127.0.0.1")),
+            x509.IPAddress(__import__("ipaddress").ip_address(lan_ip())),
+        ]
+    )
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)

@@ -44,7 +44,7 @@ jobs:
         # Strict-mode is intentionally NOT enabled yet (the codebase has
         # too many gradually-typed call sites for a clean first run);
         # this gate catches actual mypy errors against the default config.
-        run: mypy --install-types --non-interactive app.py app_http.py core.py state.py settings.py pdf_converter.py pdf_safety.py routers pipelines parsers
+        run: mypy --install-types --non-interactive app.py app_http.py core state.py settings.py pdf_converter.py pdf_safety.py routers pipelines parsers
 
   packaging:
     name: Packaging drift gate

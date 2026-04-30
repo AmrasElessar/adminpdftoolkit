@@ -6,6 +6,7 @@ Covers:
   - safe_filename strips both / and \\
   - make_job_dir / assert_under_work symlink-escape defense
 """
+
 from __future__ import annotations
 
 import os
@@ -106,6 +107,7 @@ def test_url_to_pdf_rejects_empty_url(tmp_path: Path) -> None:
 def test_assert_public_url_rejects_unspecified() -> None:
     """0.0.0.0 should also be rejected (is_unspecified)."""
     from urllib.parse import urlparse
+
     with pytest.raises(ValueError):
         core._assert_public_url(urlparse("http://0.0.0.0/"))
 
@@ -158,6 +160,7 @@ def test_make_job_dir_creates_under_work() -> None:
 
 def test_make_job_dir_with_subkind() -> None:
     from uuid import uuid4
+
     tok = uuid4().hex
     job_dir = core.make_job_dir("convert", tok)
     try:

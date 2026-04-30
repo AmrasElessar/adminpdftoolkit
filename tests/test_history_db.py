@@ -5,6 +5,7 @@ function swallows DB exceptions and only debug-logs them; we make sure that
 behaviour is intentional (audit-trail loss must not break the conversion
 path) AND that the surrounding lock + path resolution stay sane.
 """
+
 from __future__ import annotations
 
 import sqlite3
@@ -62,9 +63,9 @@ def test_log_history_writes_row(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     assert row[5] == "127.0.0.1"
 
 
-def test_log_history_silent_fail_when_db_unwritable(monkeypatch: pytest.MonkeyPatch,
-                                                       tmp_path: Path,
-                                                       caplog: pytest.LogCaptureFixture) -> None:
+def test_log_history_silent_fail_when_db_unwritable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     """If the DB is unreachable, log_history must not raise — only debug-log.
 
     This is the documented behaviour at core.py:371. A broken audit trail
@@ -82,8 +83,7 @@ def test_log_history_silent_fail_when_db_unwritable(monkeypatch: pytest.MonkeyPa
     assert any("history insert failed" in m for m in msgs)
 
 
-def test_legacy_history_db_migration(monkeypatch: pytest.MonkeyPatch,
-                                      tmp_path: Path) -> None:
+def test_legacy_history_db_migration(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """If a legacy BASE_DIR/history.db exists and the new path is empty, the
     init routine must move it over so audit history isn't dropped."""
     legacy_dir = tmp_path / "legacy"
@@ -92,7 +92,9 @@ def test_legacy_history_db_migration(monkeypatch: pytest.MonkeyPatch,
 
     # Build a valid sqlite DB at the legacy path
     conn = sqlite3.connect(str(legacy_db))
-    conn.execute("CREATE TABLE history (id INTEGER PRIMARY KEY, ts TEXT, action TEXT, target TEXT, filename TEXT, record_count INTEGER, note TEXT, ip TEXT)")
+    conn.execute(
+        "CREATE TABLE history (id INTEGER PRIMARY KEY, ts TEXT, action TEXT, target TEXT, filename TEXT, record_count INTEGER, note TEXT, ip TEXT)"
+    )
     conn.execute("INSERT INTO history (ts, action) VALUES ('2026-04-28T00:00:00', 'legacy-row')")
     conn.commit()
     conn.close()
@@ -116,8 +118,9 @@ def test_legacy_history_db_migration(monkeypatch: pytest.MonkeyPatch,
     assert rows == [("legacy-row",)]
 
 
-def test_migration_skipped_when_legacy_missing(monkeypatch: pytest.MonkeyPatch,
-                                                 tmp_path: Path) -> None:
+def test_migration_skipped_when_legacy_missing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Migration must be a no-op when there's no legacy DB to move."""
     monkeypatch.setattr(core, "BASE_DIR", tmp_path)
     monkeypatch.setattr(core, "HISTORY_DB_PATH", tmp_path / "history.db")

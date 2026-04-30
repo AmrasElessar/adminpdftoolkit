@@ -5,6 +5,7 @@ freshclam via ``subprocess.run``; tests monkeypatch that, plus the
 on-disk paths, so the orchestration logic is covered end-to-end without
 needing the real binary.
 """
+
 from __future__ import annotations
 
 import json
@@ -51,6 +52,7 @@ def _make_db(clamav_dir: Path, *, age_seconds: float = 0) -> None:
     if age_seconds > 0:
         old = time.time() - age_seconds
         import os
+
         os.utime(sig, (old, old))
 
 
@@ -94,16 +96,17 @@ def test_update_signatures_skips_when_not_bundled(fake_clamav_dir: Path):
     assert "not bundled" in (result["error"] or "")
 
 
-def test_update_signatures_success(fake_clamav_dir: Path,
-                                     monkeypatch: pytest.MonkeyPatch):
+def test_update_signatures_success(fake_clamav_dir: Path, monkeypatch: pytest.MonkeyPatch):
     _make_freshclam(fake_clamav_dir)
 
     def fake_run(cmd, **kwargs):
         return subprocess.CompletedProcess(
-            args=cmd, returncode=0,
+            args=cmd,
+            returncode=0,
             stdout="ClamAV update process started\nmain.cvd updated\n",
             stderr="",
         )
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     result = clamav_update.update_signatures()
@@ -112,30 +115,39 @@ def test_update_signatures_success(fake_clamav_dir: Path,
     assert "main.cvd updated" in result["stdout_tail"]
 
 
-def test_update_signatures_treats_exit_1_as_ok(fake_clamav_dir: Path,
-                                                  monkeypatch: pytest.MonkeyPatch):
+def test_update_signatures_treats_exit_1_as_ok(
+    fake_clamav_dir: Path, monkeypatch: pytest.MonkeyPatch
+):
     """freshclam exits 1 when the DB is already up to date — that's not a failure."""
     _make_freshclam(fake_clamav_dir)
 
     def fake_run(cmd, **kwargs):
         return subprocess.CompletedProcess(
-            args=cmd, returncode=1, stdout="DB up-to-date\n", stderr="",
+            args=cmd,
+            returncode=1,
+            stdout="DB up-to-date\n",
+            stderr="",
         )
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     result = clamav_update.update_signatures()
     assert result["ok"] is True
 
 
-def test_update_signatures_failure_records_error(fake_clamav_dir: Path,
-                                                    monkeypatch: pytest.MonkeyPatch):
+def test_update_signatures_failure_records_error(
+    fake_clamav_dir: Path, monkeypatch: pytest.MonkeyPatch
+):
     _make_freshclam(fake_clamav_dir)
 
     def fake_run(cmd, **kwargs):
         return subprocess.CompletedProcess(
-            args=cmd, returncode=2,
-            stdout="", stderr="Can't connect to mirror",
+            args=cmd,
+            returncode=2,
+            stdout="",
+            stderr="Can't connect to mirror",
         )
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     result = clamav_update.update_signatures()
@@ -147,12 +159,12 @@ def test_update_signatures_failure_records_error(fake_clamav_dir: Path,
     assert "exit=2" in state["last_error"]
 
 
-def test_update_signatures_timeout(fake_clamav_dir: Path,
-                                      monkeypatch: pytest.MonkeyPatch):
+def test_update_signatures_timeout(fake_clamav_dir: Path, monkeypatch: pytest.MonkeyPatch):
     _make_freshclam(fake_clamav_dir)
 
     def fake_run(cmd, **kwargs):
         raise subprocess.TimeoutExpired(cmd=cmd, timeout=1)
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     result = clamav_update.update_signatures(timeout=1)
@@ -167,15 +179,14 @@ def test_maybe_update_noop_when_not_bundled(fake_clamav_dir: Path):
     assert clamav_update.maybe_update() is None
 
 
-def test_maybe_update_runs_when_db_missing(fake_clamav_dir: Path,
-                                              monkeypatch: pytest.MonkeyPatch):
+def test_maybe_update_runs_when_db_missing(fake_clamav_dir: Path, monkeypatch: pytest.MonkeyPatch):
     _make_freshclam(fake_clamav_dir)
     called = {"n": 0}
 
     def fake_run(cmd, **kwargs):
         called["n"] += 1
-        return subprocess.CompletedProcess(args=cmd, returncode=0,
-                                           stdout="updated\n", stderr="")
+        return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="updated\n", stderr="")
+
     monkeypatch.setattr(subprocess, "run", fake_run)
 
     result = clamav_update.maybe_update()

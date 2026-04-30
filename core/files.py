@@ -16,6 +16,11 @@ from .logging_setup import logger
 def safe_filename(name: str) -> str:
     """Strip path separators and reserved chars from a user-supplied name."""
     name = re.sub(r"[\\/:*?\"<>|]+", "_", name).strip()
+    # POSIX treats backslash as a literal char, so a Windows-style
+    # ``..\foo`` filename round-trips through Path().stem as ``..\foo`` and
+    # only the backslash is rewritten above, leaving ``.._foo`` — defense-
+    # in-depth: collapse any surviving ``..`` runs.
+    name = re.sub(r"\.{2,}", "_", name)
     return name[:120] or "output"
 
 

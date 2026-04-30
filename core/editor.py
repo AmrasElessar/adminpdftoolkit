@@ -55,8 +55,19 @@ from .pdf_tools import _find_unicode_font, _save_pdf
 # frontend before being sent. Page rect / mediabox are validated server-side.
 
 _VALID_OPS: frozenset[str] = frozenset(
-    {"highlight", "underline", "strikeout", "sticky", "ink", "image",
-     "text", "rect", "ellipse", "line", "replace"}
+    {
+        "highlight",
+        "underline",
+        "strikeout",
+        "sticky",
+        "ink",
+        "image",
+        "text",
+        "rect",
+        "ellipse",
+        "line",
+        "replace",
+    }
 )
 
 
@@ -139,17 +150,22 @@ def editor_font_catalog() -> list[dict[str, Any]]:
                 present.append(variant_key)
         if not present:
             continue
-        out.append({
-            "id": fam["id"],
-            "label": fam["label"],
-            "category": fam["category"],
-            "variants": present,
-        })
+        out.append(
+            {
+                "id": fam["id"],
+                "label": fam["label"],
+                "category": fam["category"],
+                "variants": present,
+            }
+        )
     return out
 
 
 def resolve_editor_font(
-    family_id: str, *, bold: bool = False, italic: bool = False,
+    family_id: str,
+    *,
+    bold: bool = False,
+    italic: bool = False,
 ) -> Path | None:
     """Resolve a (family, bold, italic) combination to a TTF path.
 
@@ -164,12 +180,17 @@ def resolve_editor_font(
         fallback = _find_unicode_font()
         return Path(fallback) if fallback else None
     variants = family["variants"]
-    style_key = "bolditalic" if bold and italic else (
-        "bold" if bold else ("italic" if italic else "regular")
+    style_key = (
+        "bolditalic"
+        if bold and italic
+        else ("bold" if bold else ("italic" if italic else "regular"))
     )
-    for candidate in (style_key, "regular",
-                      "bold" if bold else "regular",
-                      "italic" if italic else "regular"):
+    for candidate in (
+        style_key,
+        "regular",
+        "bold" if bold else "regular",
+        "italic" if italic else "regular",
+    ):
         filename = variants.get(candidate)
         if not filename:
             continue
@@ -194,7 +215,7 @@ def _parse_data_url(data_url: str) -> bytes:
         raise ValueError("Yalnızca base64 data URL'leri desteklenir.")
     try:
         return base64.b64decode(payload)
-    except Exception as e:  # noqa: BLE001 — base64 errors vary by python version
+    except Exception as e:
         raise ValueError("Görsel base64 çözülemedi.") from e
 
 
@@ -294,9 +315,7 @@ def _apply_one_op(page: Any, op: dict, op_index: int) -> None:
         normalised: list[list[tuple[float, float]]] = []
         for s_idx, stroke in enumerate(strokes):
             if not isinstance(stroke, list) or len(stroke) < 2:
-                raise ValueError(
-                    f"#{op_index}: ink stroke #{s_idx} en az 2 nokta içermeli."
-                )
+                raise ValueError(f"#{op_index}: ink stroke #{s_idx} en az 2 nokta içermeli.")
             pts: list[tuple[float, float]] = []
             for p in stroke:
                 if not isinstance(p, (list, tuple)) or len(p) != 2:
@@ -418,10 +437,20 @@ def _map_font_name_to_family(font_name: str) -> tuple[str, bool, bool]:
     italic = any(token in lower for token in ("italic", "oblique", "-it", "it-", "slant"))
     if any(t in lower for t in ("mono", "courier", "consolas", "menlo", "fixed")):
         family = "noto-mono"
-    elif any(t in lower for t in (
-        "times", "serif", "garamond", "georgia", "palatino",
-        "minion", "caslon", "baskerville", "didot",
-    )):
+    elif any(
+        t in lower
+        for t in (
+            "times",
+            "serif",
+            "garamond",
+            "georgia",
+            "palatino",
+            "minion",
+            "caslon",
+            "baskerville",
+            "didot",
+        )
+    ):
         family = "noto-serif"
     else:
         family = "noto-sans"
@@ -577,9 +606,7 @@ def _spans_share_style(a: dict, b: dict, *, y_tol: float = 1.0) -> bool:
         return False
     if a["bold"] != b["bold"] or a["italic"] != b["italic"]:
         return False
-    if a["color"] != b["color"]:
-        return False
-    return True
+    return bool(a["color"] == b["color"])
 
 
 def _merge_consecutive_spans(spans: list[dict]) -> list[dict]:
@@ -697,7 +724,10 @@ def _make_span_dict(
 
 
 def _extract_line_spans(
-    block: dict, page_idx: int, granularity: str, merge_adjacent: bool,
+    block: dict,
+    page_idx: int,
+    granularity: str,
+    merge_adjacent: bool,
 ) -> list[dict]:
     """Yield word- or line-level entries for one text block."""
     line_results: list[dict] = []
@@ -707,15 +737,17 @@ def _extract_line_spans(
             text = (span.get("text") or "").strip()
             if not text:
                 continue
-            raw.append(_make_span_dict(
-                page_idx,
-                span.get("bbox") or [0, 0, 0, 0],
-                text,
-                span.get("font") or "",
-                span.get("size") or 0,
-                span.get("color"),
-                granularity,
-            ))
+            raw.append(
+                _make_span_dict(
+                    page_idx,
+                    span.get("bbox") or [0, 0, 0, 0],
+                    text,
+                    span.get("font") or "",
+                    span.get("size") or 0,
+                    span.get("color"),
+                    granularity,
+                )
+            )
         if not raw:
             continue
         if granularity == "line":
@@ -729,12 +761,14 @@ def _extract_line_spans(
             ]
             head = raw[0]
             joined = " ".join(s["text"] for s in raw)
-            line_results.append({
-                **head,
-                "rect": [float(b) for b in line_bbox],
-                "text": joined,
-                "granularity": "line",
-            })
+            line_results.append(
+                {
+                    **head,
+                    "rect": [float(b) for b in line_bbox],
+                    "text": joined,
+                    "granularity": "line",
+                }
+            )
         elif merge_adjacent:
             line_results.extend(_merge_consecutive_spans(raw))
         else:
@@ -750,15 +784,17 @@ def _extract_block_spans(block: dict, page_idx: int) -> list[dict]:
             text = (span.get("text") or "").strip()
             if not text:
                 continue
-            raw.append(_make_span_dict(
-                page_idx,
-                span.get("bbox") or [0, 0, 0, 0],
-                text,
-                span.get("font") or "",
-                span.get("size") or 0,
-                span.get("color"),
-                "block",
-            ))
+            raw.append(
+                _make_span_dict(
+                    page_idx,
+                    span.get("bbox") or [0, 0, 0, 0],
+                    text,
+                    span.get("font") or "",
+                    span.get("size") or 0,
+                    span.get("color"),
+                    "block",
+                )
+            )
     if not raw:
         return []
     block_bbox = block.get("bbox") or [
@@ -768,10 +804,7 @@ def _extract_block_spans(block: dict, page_idx: int) -> list[dict]:
         max(s["rect"][3] for s in raw),
     ]
     head = raw[0]
-    joined = "\n".join(
-        " ".join(s["text"] for s in raw[i:i + 1])
-        for i in range(len(raw))
-    )
+    joined = "\n".join(" ".join(s["text"] for s in raw[i : i + 1]) for i in range(len(raw)))
     # Better: group raw by line y, join lines with \n, words with space
     # (approximate; PyMuPDF already preserves order)
     lines_text: list[list[str]] = []
@@ -783,16 +816,21 @@ def _extract_block_spans(block: dict, page_idx: int) -> list[dict]:
             last_y = y0
         lines_text[-1].append(s["text"])
     joined = "\n".join(" ".join(parts) for parts in lines_text)
-    return [{
-        **head,
-        "rect": [float(b) for b in block_bbox],
-        "text": joined,
-        "granularity": "block",
-    }]
+    return [
+        {
+            **head,
+            "rect": [float(b) for b in block_bbox],
+            "text": joined,
+            "granularity": "block",
+        }
+    ]
 
 
 def _sample_bg_color(
-    page: Any, rect: Any, *, padding: float = 4.0,
+    page: Any,
+    rect: Any,
+    *,
+    padding: float = 4.0,
 ) -> tuple[float, float, float]:
     """Sample the most-common color in the strip around ``rect``.
 
@@ -804,8 +842,9 @@ def _sample_bg_color(
     strips, each ``padding`` points wide) at 72 DPI, then take the mode of
     the pixel colors. This avoids picking glyph ink from inside the rect.
     """
-    import fitz
     from collections import Counter
+
+    import fitz
 
     try:
         h_pad = padding
@@ -814,8 +853,8 @@ def _sample_bg_color(
         strips = [
             fitz.Rect(rect.x0 - h_pad, rect.y0 - v_pad, rect.x1 + h_pad, rect.y0),  # top
             fitz.Rect(rect.x0 - h_pad, rect.y1, rect.x1 + h_pad, rect.y1 + v_pad),  # bottom
-            fitz.Rect(rect.x0 - h_pad, rect.y0, rect.x0, rect.y1),                  # left
-            fitz.Rect(rect.x1, rect.y0, rect.x1 + h_pad, rect.y1),                  # right
+            fitz.Rect(rect.x0 - h_pad, rect.y0, rect.x0, rect.y1),  # left
+            fitz.Rect(rect.x1, rect.y0, rect.x1 + h_pad, rect.y1),  # right
         ]
         page_rect = page.rect
         counter: Counter = Counter()
@@ -842,7 +881,9 @@ def _sample_bg_color(
 
 
 def _try_extract_embedded_font(
-    doc: Any, page: Any, font_name: str,
+    doc: Any,
+    page: Any,
+    font_name: str,
 ) -> bytes | None:
     """Pull the byte buffer for an embedded font matching ``font_name``.
 
@@ -882,7 +923,7 @@ def _try_extract_embedded_font(
             content = data[3] if len(data) >= 4 else None
             if isinstance(content, (bytes, bytearray)) and len(content) > 100:
                 return bytes(content)
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             logger.debug("extract_font(%s) failed: %s", font_name, e)
             continue
     return None
@@ -960,7 +1001,8 @@ def _fit_fontsize_to_rect(
 
 
 def _apply_replace_ops_for_page(
-    page: Any, ops_with_indices: list[tuple[int, dict]],
+    page: Any,
+    ops_with_indices: list[tuple[int, dict]],
 ) -> list[tuple[int, str | None]]:
     """Apply all "replace" ops queued for one page.
 
@@ -992,14 +1034,14 @@ def _apply_replace_ops_for_page(
             pending_inserts.append((idx, op, rect))
         except ValueError as e:
             results.append((idx, sanitize_error(e)))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             results.append((idx, sanitize_error(e)))
 
     # Phase 2 — apply once for the whole page
     if pending_inserts:
         try:
             page.apply_redactions()
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             for idx, _op, _rect in pending_inserts:
                 results.append((idx, f"apply_redactions başarısız: {sanitize_error(e)}"))
             return results
@@ -1033,11 +1075,18 @@ def _apply_replace_ops_for_page(
                 if total > 0 and covered < total:
                     logger.debug(
                         "embedded font misses %d/%d glyphs — using bundled",
-                        total - covered, total,
+                        total - covered,
+                        total,
                     )
                     font_buffer = None
-            font_path = None if font_buffer else resolve_editor_font(
-                family_id, bold=bold, italic=italic,
+            font_path = (
+                None
+                if font_buffer
+                else resolve_editor_font(
+                    family_id,
+                    bold=bold,
+                    italic=italic,
+                )
             )
 
             # Fit-to-rect: if the new text is wider than the original area,
@@ -1080,7 +1129,7 @@ def _apply_replace_ops_for_page(
                 else:
                     raise
             results.append((idx, None))
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             results.append((idx, sanitize_error(e)))
     return results
 
@@ -1126,10 +1175,14 @@ def apply_editor_operations(
         for i, op in enumerate(operations):
             if not isinstance(op, dict):
                 skipped += 1
-                errors.append({
-                    "index": i, "type": None, "page": None,
-                    "error": "Operasyon bir nesne olmalı.",
-                })
+                errors.append(
+                    {
+                        "index": i,
+                        "type": None,
+                        "page": None,
+                        "error": "Operasyon bir nesne olmalı.",
+                    }
+                )
                 continue
             try:
                 page_no = int(op.get("page", 0))
@@ -1137,10 +1190,14 @@ def apply_editor_operations(
                 page_no = 0
             if page_no < 1 or page_no > total_pages:
                 skipped += 1
-                errors.append({
-                    "index": i, "type": op.get("type"), "page": page_no,
-                    "error": f"Sayfa numarası geçersiz: {page_no} (1-{total_pages}).",
-                })
+                errors.append(
+                    {
+                        "index": i,
+                        "type": op.get("type"),
+                        "page": page_no,
+                        "error": f"Sayfa numarası geçersiz: {page_no} (1-{total_pages}).",
+                    }
+                )
                 continue
             if op.get("type") == "replace":
                 replace_by_page.setdefault(page_no, []).append((i, op))
@@ -1150,16 +1207,24 @@ def apply_editor_operations(
                 applied += 1
             except ValueError as e:
                 skipped += 1
-                errors.append({
-                    "index": i, "type": op.get("type"), "page": page_no,
-                    "error": sanitize_error(e),
-                })
-            except Exception as e:  # noqa: BLE001 — pymupdf raises various exotic errors
+                errors.append(
+                    {
+                        "index": i,
+                        "type": op.get("type"),
+                        "page": page_no,
+                        "error": sanitize_error(e),
+                    }
+                )
+            except Exception as e:
                 skipped += 1
-                errors.append({
-                    "index": i, "type": op.get("type"), "page": page_no,
-                    "error": sanitize_error(e),
-                })
+                errors.append(
+                    {
+                        "index": i,
+                        "type": op.get("type"),
+                        "page": page_no,
+                        "error": sanitize_error(e),
+                    }
+                )
                 logger.debug("editor op #%d unexpected failure: %s", i, e)
 
         # Now process replace ops, page by page
@@ -1174,16 +1239,15 @@ def apply_editor_operations(
                         (op for i, op in ops_with_idx if i == op_idx),
                         {"type": "replace"},
                     )
-                    errors.append({
-                        "index": op_idx,
-                        "type": src_op.get("type"),
-                        "page": page_no,
-                        "error": error_msg,
-                    })
+                    errors.append(
+                        {
+                            "index": op_idx,
+                            "type": src_op.get("type"),
+                            "page": page_no,
+                            "error": error_msg,
+                        }
+                    )
 
         _save_pdf(doc, output)
 
     return {"applied": applied, "skipped": skipped, "errors": errors}
-
-
-

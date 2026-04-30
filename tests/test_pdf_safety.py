@@ -8,6 +8,7 @@ Cover:
     with the X-Safety-Verdict response header
   - convert endpoint rejects a dangerous PDF (integration)
 """
+
 from __future__ import annotations
 
 import io
@@ -19,7 +20,7 @@ import fitz
 import pytest
 
 import pdf_safety
-from pdf_safety import UnsafePDFError, assert_safe, full_scan, clamav_scan, pdfid_scan
+from pdf_safety import UnsafePDFError, assert_safe, clamav_scan, full_scan, pdfid_scan
 
 
 # ---------------------------------------------------------------------------
@@ -83,8 +84,9 @@ def test_assert_safe_warn_policy_returns_even_when_dangerous(dangerous_pdf: Path
     assert scan["policy"] == "warn"
 
 
-def test_assert_safe_off_policy_skips_scan(dangerous_pdf: Path,
-                                             monkeypatch: pytest.MonkeyPatch) -> None:
+def test_assert_safe_off_policy_skips_scan(
+    dangerous_pdf: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """policy='off' must short-circuit before calling full_scan."""
     called = {"n": 0}
 
@@ -99,8 +101,9 @@ def test_assert_safe_off_policy_skips_scan(dangerous_pdf: Path,
     assert called["n"] == 0
 
 
-def test_assert_safe_uses_settings_when_policy_omitted(clean_pdf: Path,
-                                                         monkeypatch: pytest.MonkeyPatch) -> None:
+def test_assert_safe_uses_settings_when_policy_omitted(
+    clean_pdf: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """When policy=None, the live settings.safety_policy is consulted."""
     import settings as settings_mod
 
@@ -112,20 +115,17 @@ def test_assert_safe_uses_settings_when_policy_omitted(clean_pdf: Path,
 # ---------------------------------------------------------------------------
 # clamav_scan / pdfid_scan / mpcmdrun_scan — missing tool fallback
 # ---------------------------------------------------------------------------
-def test_clamav_returns_none_when_missing(monkeypatch: pytest.MonkeyPatch,
-                                            clean_pdf: Path) -> None:
+def test_clamav_returns_none_when_missing(monkeypatch: pytest.MonkeyPatch, clean_pdf: Path) -> None:
     monkeypatch.setattr(pdf_safety, "_find_clamscan", lambda: None)
     assert clamav_scan(clean_pdf) is None
 
 
-def test_pdfid_returns_none_when_missing(monkeypatch: pytest.MonkeyPatch,
-                                          clean_pdf: Path) -> None:
+def test_pdfid_returns_none_when_missing(monkeypatch: pytest.MonkeyPatch, clean_pdf: Path) -> None:
     monkeypatch.setattr(pdf_safety, "_find_pdfid", lambda: None)
     assert pdfid_scan(clean_pdf) is None
 
 
-def test_clamav_timeout_returns_unsafe(monkeypatch: pytest.MonkeyPatch,
-                                         clean_pdf: Path) -> None:
+def test_clamav_timeout_returns_unsafe(monkeypatch: pytest.MonkeyPatch, clean_pdf: Path) -> None:
     """A clamscan TimeoutExpired must not raise; it must return a structured
     dict so the caller can decide what to do."""
     monkeypatch.setattr(pdf_safety, "_find_clamscan", lambda: "clamscan")
@@ -140,8 +140,9 @@ def test_clamav_timeout_returns_unsafe(monkeypatch: pytest.MonkeyPatch,
     assert out["exit_code"] == -1
 
 
-def test_clamav_malformed_output_does_not_crash(monkeypatch: pytest.MonkeyPatch,
-                                                 clean_pdf: Path) -> None:
+def test_clamav_malformed_output_does_not_crash(
+    monkeypatch: pytest.MonkeyPatch, clean_pdf: Path
+) -> None:
     """Garbage stdout is ignored; the scan resolves with the exit code."""
     monkeypatch.setattr(pdf_safety, "_find_clamscan", lambda: "clamscan")
 
@@ -162,20 +163,21 @@ def test_clamav_malformed_output_does_not_crash(monkeypatch: pytest.MonkeyPatch,
 # ---------------------------------------------------------------------------
 def test_full_scan_contains_expected_keys(clean_pdf: Path) -> None:
     scan = full_scan(clean_pdf)
-    for key in ["overall", "structure", "antivirus", "av_available",
-                "pdfid", "defender"]:
+    for key in ["overall", "structure", "antivirus", "av_available", "pdfid", "defender"]:
         assert key in scan
 
 
 # ---------------------------------------------------------------------------
 # Endpoint integration — gate returns 400 + X-Safety-Verdict
 # ---------------------------------------------------------------------------
-def test_convert_endpoint_rejects_dangerous_pdf(monkeypatch: pytest.MonkeyPatch,
-                                                  dangerous_pdf: Path) -> None:
+def test_convert_endpoint_rejects_dangerous_pdf(
+    monkeypatch: pytest.MonkeyPatch, dangerous_pdf: Path
+) -> None:
     """POST /convert with a /JavaScript-bearing PDF must return 400 + header."""
     from fastapi.testclient import TestClient
-    import core
+
     import app
+    import core
 
     monkeypatch.setattr(core, "is_local_request", lambda req: True)
     monkeypatch.setattr("core.is_local_request", lambda req: True)
@@ -191,13 +193,15 @@ def test_convert_endpoint_rejects_dangerous_pdf(monkeypatch: pytest.MonkeyPatch,
     assert "Güvensiz" in response.json().get("detail", "")
 
 
-def test_convert_endpoint_passes_clean_pdf_through_gate(monkeypatch: pytest.MonkeyPatch,
-                                                          clean_pdf: Path) -> None:
+def test_convert_endpoint_passes_clean_pdf_through_gate(
+    monkeypatch: pytest.MonkeyPatch, clean_pdf: Path
+) -> None:
     """Clean PDF must NOT be blocked by the safety gate (it may still fail
     later for unrelated reasons — we only check we cleared the gate)."""
     from fastapi.testclient import TestClient
-    import core
+
     import app
+    import core
 
     monkeypatch.setattr(core, "is_local_request", lambda req: True)
     monkeypatch.setattr("core.is_local_request", lambda req: True)

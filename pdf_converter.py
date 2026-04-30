@@ -28,7 +28,6 @@ from parsers.call_log_360 import (
 )
 from parsers.scanned import ScannedParser
 
-
 BASE_DIR = Path(__file__).resolve().parent
 OUTPUT_DIR = BASE_DIR / "output"
 OUTPUT_DIR.mkdir(exist_ok=True)
@@ -59,16 +58,27 @@ def parse_call_log(doc: fitz.Document) -> list[dict]:
 # Excel yazımı
 # ----------------------------------------------------------------------------
 
+
 def write_call_log_excel(records: list[dict], out_path: Path) -> None:
     from openpyxl import Workbook
-    from openpyxl.styles import Font, Alignment, PatternFill
+    from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.utils import get_column_letter
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Çağrı Kayıtları"
 
-    headers = ["Sıra", "Kayıt No", "Müşteri", "Telefon", "Durum", "Tarih", "Süre"] + CALL_LOG_QUESTIONS + ["AI Özeti (Ham)"]
+    headers = [
+        "Sıra",
+        "Kayıt No",
+        "Müşteri",
+        "Telefon",
+        "Durum",
+        "Tarih",
+        "Süre",
+        *CALL_LOG_QUESTIONS,
+        "AI Özeti (Ham)",
+    ]
 
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill("solid", fgColor="2F5496")
@@ -96,9 +106,20 @@ def write_call_log_excel(records: list[dict], out_path: Path) -> None:
 
     # Sütun genişlikleri
     widths = {
-        "Sıra": 7, "Kayıt No": 10, "Müşteri": 28, "Telefon": 18, "Durum": 12, "Tarih": 18, "Süre": 10,
-        "Ağrı / romatizma": 22, "Termal / kaplıca": 22, "Yaş": 14,
-        "Medeni durum": 16, "Meslek": 22, "İkamet ili": 16, "AI Özeti (Ham)": 50,
+        "Sıra": 7,
+        "Kayıt No": 10,
+        "Müşteri": 28,
+        "Telefon": 18,
+        "Durum": 12,
+        "Tarih": 18,
+        "Süre": 10,
+        "Ağrı / romatizma": 22,
+        "Termal / kaplıca": 22,
+        "Yaş": 14,
+        "Medeni durum": 16,
+        "Meslek": 22,
+        "İkamet ili": 16,
+        "AI Özeti (Ham)": 50,
     }
     for col_idx, h in enumerate(headers, 1):
         ws.column_dimensions[get_column_letter(col_idx)].width = widths.get(h, 18)
@@ -126,6 +147,7 @@ def write_generic_excel(doc: fitz.Document, out_path: Path) -> None:
 # ----------------------------------------------------------------------------
 # Word ve JPG dönüşümleri
 # ----------------------------------------------------------------------------
+
 
 def convert_to_word(pdf_path: Path, out_path: Path) -> None:
     from pdf2docx import Converter as Pdf2DocxConverter

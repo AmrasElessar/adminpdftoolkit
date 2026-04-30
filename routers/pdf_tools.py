@@ -40,7 +40,6 @@ from app_http import (
 )
 from core import logger, sanitize_error
 
-
 router = APIRouter()
 
 _IMAGE_EXT_RE = re.compile(r"\.(jpg|jpeg|png|webp|bmp|tiff?|gif)$", re.IGNORECASE)
@@ -65,8 +64,10 @@ async def pdf_merge_endpoint(
         out = job_dir / "merged.pdf"
         page_count = core.pdf_merge(inputs, out)
         core.log_history(
-            action="pdf-merge", filename=output_name,
-            record_count=page_count, ip=core.client_ip(request),
+            action="pdf-merge",
+            filename=output_name,
+            record_count=page_count,
+            ip=core.client_ip(request),
         )
         return pdf_response(out, output_name, job_dir)
     except HTTPException:
@@ -100,8 +101,10 @@ async def pdf_split_endpoint(
             for p in outs:
                 zf.write(str(p), arcname=p.name)
         core.log_history(
-            action="pdf-split", filename=zip_path.name,
-            record_count=len(outs), ip=core.client_ip(request),
+            action="pdf-split",
+            filename=zip_path.name,
+            record_count=len(outs),
+            ip=core.client_ip(request),
         )
         zip_name = f"{stem}_split.zip"
         ascii_fallback = zip_name.encode("ascii", "ignore").decode("ascii") or "split.zip"
@@ -137,13 +140,16 @@ async def pdf_compress_endpoint(
         stem = Path(file.filename or "compressed").stem
         out_path = job_dir / f"{stem}_compressed.pdf"
         before, after = core.pdf_compress(
-            in_path, out_path,
+            in_path,
+            out_path,
             image_quality=image_quality,
             max_image_dpi=max_image_dpi,
         )
         core.log_history(
-            action="pdf-compress", filename=out_path.name,
-            note=f"{before}→{after} bytes", ip=core.client_ip(request),
+            action="pdf-compress",
+            filename=out_path.name,
+            note=f"{before}→{after} bytes",
+            ip=core.client_ip(request),
         )
         download_name = output_name or f"{stem}_compressed.pdf"
         resp = pdf_response(out_path, download_name, job_dir)
@@ -180,7 +186,8 @@ async def pdf_encrypt_endpoint(
         stem = Path(file.filename or "encrypted").stem
         out_path = job_dir / f"{stem}_protected.pdf"
         core.pdf_encrypt(
-            in_path, out_path,
+            in_path,
+            out_path,
             user_password=user_password,
             owner_password=owner_password or None,
             allow_print=allow_print,
@@ -188,7 +195,9 @@ async def pdf_encrypt_endpoint(
             allow_modify=allow_modify,
         )
         core.log_history(
-            action="pdf-encrypt", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-encrypt",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -216,7 +225,9 @@ async def pdf_decrypt_endpoint(
         out_path = job_dir / f"{stem}_unlocked.pdf"
         core.pdf_decrypt(in_path, out_path, password=password)
         core.log_history(
-            action="pdf-decrypt", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-decrypt",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -249,7 +260,8 @@ async def pdf_watermark_text_endpoint(
         stem = Path(file.filename or "watermarked").stem
         out_path = job_dir / f"{stem}_watermarked.pdf"
         core.pdf_watermark_text(
-            in_path, out_path,
+            in_path,
+            out_path,
             text=text,
             opacity=opacity,
             color=parse_color(color, (0.5, 0.5, 0.5)),
@@ -257,7 +269,9 @@ async def pdf_watermark_text_endpoint(
             fontsize=fontsize,
         )
         core.log_history(
-            action="pdf-watermark-text", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-watermark-text",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -291,13 +305,16 @@ async def pdf_watermark_image_endpoint(
         stem = Path(file.filename or "watermarked").stem
         out_path = job_dir / f"{stem}_stamped.pdf"
         core.pdf_watermark_image(
-            in_path, out_path,
+            in_path,
+            out_path,
             image_path=img_path,
             opacity=opacity,
             scale=scale,
         )
         core.log_history(
-            action="pdf-watermark-image", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-watermark-image",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -328,7 +345,8 @@ async def pdf_page_numbers_endpoint(
         stem = Path(file.filename or "numbered").stem
         out_path = job_dir / f"{stem}_numbered.pdf"
         core.pdf_page_numbers(
-            in_path, out_path,
+            in_path,
+            out_path,
             position=position,
             start_at=start_at,
             fontsize=fontsize,
@@ -336,7 +354,9 @@ async def pdf_page_numbers_endpoint(
             color=parse_color(color, (0, 0, 0)),
         )
         core.log_history(
-            action="pdf-page-numbers", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-page-numbers",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -367,14 +387,17 @@ async def pdf_header_footer_endpoint(
         stem = Path(file.filename or "stamped").stem
         out_path = job_dir / f"{stem}_stamped.pdf"
         core.pdf_header_footer(
-            in_path, out_path,
+            in_path,
+            out_path,
             header=header,
             footer=footer,
             fontsize=fontsize,
             color=parse_color(color, (0.2, 0.2, 0.2)),
         )
         core.log_history(
-            action="pdf-header-footer", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-header-footer",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -405,11 +428,18 @@ async def pdf_crop_endpoint(
         stem = Path(file.filename or "cropped").stem
         out_path = job_dir / f"{stem}_cropped.pdf"
         core.pdf_crop(
-            in_path, out_path,
-            top=top, right=right, bottom=bottom, left=left, unit=unit,
+            in_path,
+            out_path,
+            top=top,
+            right=right,
+            bottom=bottom,
+            left=left,
+            unit=unit,
         )
         core.log_history(
-            action="pdf-crop", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-crop",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -438,7 +468,9 @@ async def pdf_rotate_endpoint(
         page_list = parse_int_list(pages) if pages.strip() else None
         core.pdf_rotate(in_path, out_path, angle=angle, pages=page_list)
         core.log_history(
-            action="pdf-rotate", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-rotate",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -468,7 +500,9 @@ async def pdf_reorder_endpoint(
             raise HTTPException(400, "Sıralama listesi boş.")
         core.pdf_reorder_pages(in_path, out_path, order=order_list)
         core.log_history(
-            action="pdf-reorder", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-reorder",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -498,7 +532,9 @@ async def pdf_delete_pages_endpoint(
             raise HTTPException(400, "Silinecek sayfa belirtilmedi.")
         core.pdf_delete_pages(in_path, out_path, pages=page_list)
         core.log_history(
-            action="pdf-delete-pages", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-delete-pages",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -520,6 +556,7 @@ async def pdf_from_images_endpoint(
     if not files:
         raise HTTPException(400, "En az bir görsel gerekli.")
     from state import MAX_UPLOAD_MB
+
     job_dir = pdf_job_dir()
     try:
         inputs: list[Path] = []
@@ -541,8 +578,10 @@ async def pdf_from_images_endpoint(
         out = job_dir / f"{core.safe_filename(output_name) or 'images'}.pdf"
         page_count = core.image_to_pdf(inputs, out)
         core.log_history(
-            action="pdf-from-images", filename=out.name,
-            record_count=page_count, ip=core.client_ip(request),
+            action="pdf-from-images",
+            filename=out.name,
+            record_count=page_count,
+            ip=core.client_ip(request),
         )
         return pdf_response(out, output_name or out.name, job_dir)
     except HTTPException:
@@ -571,8 +610,10 @@ async def pdf_to_markdown_endpoint(
         out_path = job_dir / core.safe_filename(download)
         page_count = core.pdf_to_markdown(in_path, out_path)
         core.log_history(
-            action="pdf-to-markdown", filename=out_path.name,
-            record_count=page_count, ip=core.client_ip(request),
+            action="pdf-to-markdown",
+            filename=out_path.name,
+            record_count=page_count,
+            ip=core.client_ip(request),
         )
         return file_response_with_name(out_path, download, "text/markdown", job_dir)
     except HTTPException:
@@ -604,13 +645,16 @@ async def pdf_to_csv_endpoint(
             download += ".csv"
         out_path = job_dir / core.safe_filename(download)
         rows = core.pdf_to_csv(
-            in_path, out_path,
+            in_path,
+            out_path,
             table_index=(table_index or None),
             delimiter=delimiter,
         )
         core.log_history(
-            action="pdf-to-csv", filename=out_path.name,
-            record_count=rows, ip=core.client_ip(request),
+            action="pdf-to-csv",
+            filename=out_path.name,
+            record_count=rows,
+            ip=core.client_ip(request),
         )
         return file_response_with_name(out_path, download, "text/csv", job_dir)
     except HTTPException:
@@ -631,6 +675,7 @@ async def pdf_from_docx_endpoint(
     if not file.filename or not file.filename.lower().endswith(".docx"):
         raise HTTPException(400, "Yalnızca .docx (modern Word) kabul edilir — .doc desteklenmez.")
     from state import MAX_UPLOAD_MB
+
     job_dir = pdf_job_dir()
     try:
         in_path = job_dir / "input.docx"
@@ -645,7 +690,9 @@ async def pdf_from_docx_endpoint(
         out_path = job_dir / f"{stem}.pdf"
         core.docx_to_pdf(in_path, out_path)
         core.log_history(
-            action="pdf-from-docx", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-from-docx",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -667,6 +714,7 @@ async def pdf_from_xlsx_endpoint(
     if not file.filename or not file.filename.lower().endswith(".xlsx"):
         raise HTTPException(400, "Yalnızca .xlsx (modern Excel) kabul edilir — .xls desteklenmez.")
     from state import MAX_UPLOAD_MB
+
     job_dir = pdf_job_dir()
     try:
         in_path = job_dir / "input.xlsx"
@@ -681,7 +729,9 @@ async def pdf_from_xlsx_endpoint(
         out_path = job_dir / f"{stem}.pdf"
         core.xlsx_to_pdf(in_path, out_path, sheet=(sheet.strip() or None))
         core.log_history(
-            action="pdf-from-xlsx", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-from-xlsx",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -702,6 +752,7 @@ async def pdf_from_html_endpoint(
     if not html.strip():
         raise HTTPException(400, "HTML içeriği boş.")
     from state import MAX_UPLOAD_MB
+
     if len(html.encode("utf-8")) > MAX_UPLOAD_MB * 1024 * 1024:
         raise HTTPException(413, f"HTML içeriği {MAX_UPLOAD_MB} MB sınırını aşıyor.")
     job_dir = pdf_job_dir()
@@ -709,7 +760,9 @@ async def pdf_from_html_endpoint(
         out_path = job_dir / f"{core.safe_filename(output_name) or 'document'}.pdf"
         core.html_to_pdf(html, out_path)
         core.log_history(
-            action="pdf-from-html", filename=out_path.name, ip=core.client_ip(request),
+            action="pdf-from-html",
+            filename=out_path.name,
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -733,8 +786,10 @@ async def pdf_from_url_endpoint(
         out_path = job_dir / f"{core.safe_filename(stem) or 'page'}.pdf"
         core.url_to_pdf(url, out_path)
         core.log_history(
-            action="pdf-from-url", filename=out_path.name,
-            note=url[:200], ip=core.client_ip(request),
+            action="pdf-from-url",
+            filename=out_path.name,
+            note=url[:200],
+            ip=core.client_ip(request),
         )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
@@ -764,15 +819,19 @@ async def pdf_find_endpoint(
         in_path = job_dir / "input.pdf"
         await save_pdf_upload(file, in_path)
         results = core.find_text(
-            in_path, query,
+            in_path,
+            query,
             case_sensitive=case_sensitive,
             whole_words=whole_words,
             max_pages=(None if max_pages <= 0 else max_pages),
             max_results=max(1, min(5000, max_results)),
         )
         core.log_history(
-            action="pdf-find", filename=file.filename or "?",
-            record_count=len(results), note=query[:80], ip=core.client_ip(request),
+            action="pdf-find",
+            filename=file.filename or "?",
+            record_count=len(results),
+            note=query[:80],
+            ip=core.client_ip(request),
         )
         return {"query": query, "count": len(results), "matches": results}
     except HTTPException:
@@ -840,13 +899,16 @@ async def pdf_set_metadata_endpoint(
         stem = Path(file.filename or "doc").stem
         out_path = job_dir / f"{stem}_meta.pdf"
         core.set_metadata(
-            in_path, out_path,
+            in_path,
+            out_path,
             title=title or None,
             author=author or None,
             subject=subject or None,
             keywords=keywords or None,
         )
-        core.log_history(action="pdf-set-metadata", filename=out_path.name, ip=core.client_ip(request))
+        core.log_history(
+            action="pdf-set-metadata", filename=out_path.name, ip=core.client_ip(request)
+        )
         return pdf_response(out_path, output_name or out_path.name, job_dir)
     except HTTPException:
         shutil.rmtree(job_dir, ignore_errors=True)
@@ -872,7 +934,10 @@ async def pdf_extract_images_endpoint(
         out_dir = job_dir / "images"
         page_arg: int | None = None if page <= 0 else page
         images = core.extract_images(
-            in_path, out_dir, min_size=max(1, min_size), page=page_arg,
+            in_path,
+            out_dir,
+            min_size=max(1, min_size),
+            page=page_arg,
         )
         if not images:
             raise HTTPException(400, "Görsel bulunamadı (veya hepsi minimum boyut altında).")
@@ -884,8 +949,10 @@ async def pdf_extract_images_endpoint(
                 if src.is_file():
                     zf.write(str(src), arcname=img["filename"])
         core.log_history(
-            action="pdf-extract-images", filename=zip_path.name,
-            record_count=len(images), ip=core.client_ip(request),
+            action="pdf-extract-images",
+            filename=zip_path.name,
+            record_count=len(images),
+            ip=core.client_ip(request),
         )
         zip_name = f"{stem}_images.zip"
         ascii_fallback = zip_name.encode("ascii", "ignore").decode("ascii") or "images.zip"
@@ -1001,8 +1068,10 @@ async def pdf_detect_blank_endpoint(
         with __import__("fitz").open(str(in_path)) as doc:
             total = doc.page_count
         core.log_history(
-            action="pdf-detect-blank", filename=file.filename or "?",
-            record_count=len(blanks), ip=core.client_ip(request),
+            action="pdf-detect-blank",
+            filename=file.filename or "?",
+            record_count=len(blanks),
+            ip=core.client_ip(request),
         )
         return {
             "total_pages": total,
@@ -1034,11 +1103,16 @@ async def pdf_remove_blank_endpoint(
         stem = Path(file.filename or "doc").stem
         out_path = job_dir / f"{stem}_no-blank.pdf"
         kept, removed = core.remove_blank_pages(
-            in_path, out_path, threshold=threshold, dpi=dpi,
+            in_path,
+            out_path,
+            threshold=threshold,
+            dpi=dpi,
         )
         core.log_history(
-            action="pdf-remove-blank", filename=out_path.name,
-            record_count=removed, ip=core.client_ip(request),
+            action="pdf-remove-blank",
+            filename=out_path.name,
+            record_count=removed,
+            ip=core.client_ip(request),
         )
         resp = pdf_response(out_path, output_name or out_path.name, job_dir)
         resp.headers["X-Pages-Kept"] = str(kept)
@@ -1064,8 +1138,10 @@ async def pdf_detect_signatures_endpoint(
         await save_pdf_upload(file, in_path)
         result = core.detect_signatures(in_path)
         core.log_history(
-            action="pdf-detect-signatures", filename=file.filename or "?",
-            record_count=result.get("field_count", 0), ip=core.client_ip(request),
+            action="pdf-detect-signatures",
+            filename=file.filename or "?",
+            record_count=result.get("field_count", 0),
+            ip=core.client_ip(request),
         )
         return result
     except HTTPException:
@@ -1091,8 +1167,10 @@ async def pdf_classify_endpoint(
         await save_pdf_upload(file, in_path)
         result = core.classify_pdf(in_path, max_pages=max_pages)
         core.log_history(
-            action="pdf-classify", filename=file.filename or "?",
-            note=result.get("category", ""), ip=core.client_ip(request),
+            action="pdf-classify",
+            filename=file.filename or "?",
+            note=result.get("category", ""),
+            ip=core.client_ip(request),
         )
         return result
     except HTTPException:
@@ -1108,6 +1186,7 @@ async def pdf_classify_endpoint(
 # Batch dispatcher — Hero'da birden fazla PDF olduğunda tek tool'u her dosyaya
 # uygulamak için. Tek çıktı varsa direkt dosya, çoklu çıktıda ZIP döner.
 # ===========================================================================
+
 
 def _b_get(params: dict, key: str, default: str = "") -> str:
     v = params.get(key, default)
@@ -1136,11 +1215,14 @@ def _b_float(params: dict, key: str, default: float) -> float:
         return default
 
 
-def _bh_compress(in_path: Path, out_dir: Path, original: str, params: dict) -> tuple[Path, str, str]:
+def _bh_compress(
+    in_path: Path, out_dir: Path, original: str, params: dict
+) -> tuple[Path, str, str]:
     stem = Path(original).stem or "compressed"
     out = out_dir / f"{stem}_compressed.pdf"
     core.pdf_compress(
-        in_path, out,
+        in_path,
+        out,
         image_quality=_b_int(params, "image_quality", 60),
         max_image_dpi=_b_int(params, "max_image_dpi", 150),
     )
@@ -1154,7 +1236,8 @@ def _bh_encrypt(in_path: Path, out_dir: Path, original: str, params: dict) -> tu
     if not user_pw:
         raise HTTPException(400, "Kullanıcı şifresi boş olamaz.")
     core.pdf_encrypt(
-        in_path, out,
+        in_path,
+        out,
         user_password=user_pw,
         owner_password=_b_get(params, "owner_password") or None,
         allow_print=_b_get(params, "allow_print", "true").lower() == "true",
@@ -1171,14 +1254,17 @@ def _bh_decrypt(in_path: Path, out_dir: Path, original: str, params: dict) -> tu
     return out, out.name, "application/pdf"
 
 
-def _bh_watermark_text(in_path: Path, out_dir: Path, original: str, params: dict) -> tuple[Path, str, str]:
+def _bh_watermark_text(
+    in_path: Path, out_dir: Path, original: str, params: dict
+) -> tuple[Path, str, str]:
     stem = Path(original).stem or "watermarked"
     out = out_dir / f"{stem}_watermarked.pdf"
     text = _b_get(params, "text").strip()
     if not text:
         raise HTTPException(400, "Watermark metni boş olamaz.")
     core.pdf_watermark_text(
-        in_path, out,
+        in_path,
+        out,
         text=text,
         opacity=_b_float(params, "opacity", 0.25),
         color=parse_color(_b_get(params, "color", "#808080"), (0.5, 0.5, 0.5)),
@@ -1188,11 +1274,14 @@ def _bh_watermark_text(in_path: Path, out_dir: Path, original: str, params: dict
     return out, out.name, "application/pdf"
 
 
-def _bh_page_numbers(in_path: Path, out_dir: Path, original: str, params: dict) -> tuple[Path, str, str]:
+def _bh_page_numbers(
+    in_path: Path, out_dir: Path, original: str, params: dict
+) -> tuple[Path, str, str]:
     stem = Path(original).stem or "numbered"
     out = out_dir / f"{stem}_numbered.pdf"
     core.pdf_page_numbers(
-        in_path, out,
+        in_path,
+        out,
         position=_b_get(params, "position", "bottom-center"),
         start_at=_b_int(params, "start_at", 1),
         fontsize=_b_int(params, "fontsize", 10),
@@ -1202,7 +1291,9 @@ def _bh_page_numbers(in_path: Path, out_dir: Path, original: str, params: dict) 
     return out, out.name, "application/pdf"
 
 
-def _bh_header_footer(in_path: Path, out_dir: Path, original: str, params: dict) -> tuple[Path, str, str]:
+def _bh_header_footer(
+    in_path: Path, out_dir: Path, original: str, params: dict
+) -> tuple[Path, str, str]:
     stem = Path(original).stem or "stamped"
     out = out_dir / f"{stem}_stamped.pdf"
     header = _b_get(params, "header")
@@ -1210,8 +1301,10 @@ def _bh_header_footer(in_path: Path, out_dir: Path, original: str, params: dict)
     if not header.strip() and not footer.strip():
         raise HTTPException(400, "Header ve footer ikisi de boş.")
     core.pdf_header_footer(
-        in_path, out,
-        header=header, footer=footer,
+        in_path,
+        out,
+        header=header,
+        footer=footer,
         fontsize=_b_int(params, "fontsize", 9),
         color=parse_color(_b_get(params, "color", "#333333"), (0.2, 0.2, 0.2)),
     )
@@ -1222,7 +1315,8 @@ def _bh_crop(in_path: Path, out_dir: Path, original: str, params: dict) -> tuple
     stem = Path(original).stem or "cropped"
     out = out_dir / f"{stem}_cropped.pdf"
     core.pdf_crop(
-        in_path, out,
+        in_path,
+        out,
         top=_b_float(params, "top", 0),
         right=_b_float(params, "right", 0),
         bottom=_b_float(params, "bottom", 0),
@@ -1241,7 +1335,9 @@ def _bh_rotate(in_path: Path, out_dir: Path, original: str, params: dict) -> tup
     return out, out.name, "application/pdf"
 
 
-def _bh_delete_pages(in_path: Path, out_dir: Path, original: str, params: dict) -> tuple[Path, str, str]:
+def _bh_delete_pages(
+    in_path: Path, out_dir: Path, original: str, params: dict
+) -> tuple[Path, str, str]:
     stem = Path(original).stem or "trimmed"
     out = out_dir / f"{stem}_trimmed.pdf"
     page_list = parse_int_list(_b_get(params, "pages"))
@@ -1258,25 +1354,31 @@ def _bh_to_csv(in_path: Path, out_dir: Path, original: str, params: dict) -> tup
     stem = Path(original).stem or "tables"
     out = out_dir / f"{stem}.csv"
     core.pdf_to_csv(
-        in_path, out,
+        in_path,
+        out,
         table_index=(_b_int(params, "table_index", 0) or None),
         delimiter=delim,
     )
     return out, out.name, "text/csv"
 
 
-def _bh_to_markdown(in_path: Path, out_dir: Path, original: str, params: dict) -> tuple[Path, str, str]:
+def _bh_to_markdown(
+    in_path: Path, out_dir: Path, original: str, params: dict
+) -> tuple[Path, str, str]:
     stem = Path(original).stem or "doc"
     out = out_dir / f"{stem}.md"
     core.pdf_to_markdown(in_path, out)
     return out, out.name, "text/markdown"
 
 
-def _bh_remove_blank(in_path: Path, out_dir: Path, original: str, params: dict) -> tuple[Path, str, str]:
+def _bh_remove_blank(
+    in_path: Path, out_dir: Path, original: str, params: dict
+) -> tuple[Path, str, str]:
     stem = Path(original).stem or "doc"
     out = out_dir / f"{stem}_no-blank.pdf"
     core.remove_blank_pages(
-        in_path, out,
+        in_path,
+        out,
         threshold=_b_float(params, "threshold", 0.995),
         dpi=_b_int(params, "dpi", 50),
     )
@@ -1284,18 +1386,18 @@ def _bh_remove_blank(in_path: Path, out_dir: Path, original: str, params: dict) 
 
 
 _BATCH_HANDLERS = {
-    "compress":       _bh_compress,
-    "encrypt":        _bh_encrypt,
-    "decrypt":        _bh_decrypt,
+    "compress": _bh_compress,
+    "encrypt": _bh_encrypt,
+    "decrypt": _bh_decrypt,
     "watermark-text": _bh_watermark_text,
-    "page-numbers":   _bh_page_numbers,
-    "header-footer":  _bh_header_footer,
-    "crop":           _bh_crop,
-    "rotate":         _bh_rotate,
-    "delete-pages":   _bh_delete_pages,
-    "to-csv":         _bh_to_csv,
-    "to-markdown":    _bh_to_markdown,
-    "remove-blank":   _bh_remove_blank,
+    "page-numbers": _bh_page_numbers,
+    "header-footer": _bh_header_footer,
+    "crop": _bh_crop,
+    "rotate": _bh_rotate,
+    "delete-pages": _bh_delete_pages,
+    "to-csv": _bh_to_csv,
+    "to-markdown": _bh_to_markdown,
+    "remove-blank": _bh_remove_blank,
 }
 
 
@@ -1305,6 +1407,7 @@ async def pdf_batch_endpoint(request: Request):
     1 dosya → tek çıktı doğrudan iner; 2+ dosya → her birinin çıktısı ZIP'lenir.
     """
     from starlette.datastructures import UploadFile as _SUploadFile
+
     form = await request.form()
     raw_tool = form.get("tool")
     tool = raw_tool.strip() if isinstance(raw_tool, str) else ""
@@ -1321,7 +1424,7 @@ async def pdf_batch_endpoint(request: Request):
         raise HTTPException(400, "Hiç dosya yüklenmedi.")
 
     params: dict[str, str] = {}
-    for k in form.keys():
+    for k in form:
         if k in ("tool", "files", "file"):
             continue
         raw = form.get(k)
@@ -1364,7 +1467,9 @@ async def pdf_batch_endpoint(request: Request):
         if len(outputs) == 1 and not errors:
             out_path, name, mime = outputs[0]
             core.log_history(
-                action=f"pdf-{tool}", filename=name, ip=core.client_ip(request),
+                action=f"pdf-{tool}",
+                filename=name,
+                ip=core.client_ip(request),
             )
             return file_response_with_name(out_path, name, mime, job_dir)
 
@@ -1388,7 +1493,8 @@ async def pdf_batch_endpoint(request: Request):
                     err_lines.append(f"- {n}: {m}\n")
                 zf.writestr("HATA_RAPORU.txt", "".join(err_lines))
         core.log_history(
-            action=f"pdf-{tool}-batch", filename=zip_name,
+            action=f"pdf-{tool}-batch",
+            filename=zip_name,
             record_count=len(outputs),
             note=(f"{len(errors)} hata" if errors else None),
             ip=core.client_ip(request),

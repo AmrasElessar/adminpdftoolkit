@@ -5,6 +5,7 @@ Hem `/pdf/to-csv` (CSV çıktısı) hem batch-analyze preview (raw rows) hem de
 ``core.extract_generic_table`` ve ``core.pdf_to_csv`` aynı işi iki yerde
 yapıyordu.
 """
+
 from __future__ import annotations
 
 import csv
@@ -56,7 +57,7 @@ class GenericTableParser(BaseParser):
 
         with pdfplumber.open(str(input_path)) as pdf:
             for page in pdf.pages:
-                for tbl in (page.extract_tables() or []):
+                for tbl in page.extract_tables() or []:
                     table_count += 1
                     if target is not None:
                         if table_count - 1 != target:
@@ -75,9 +76,7 @@ class GenericTableParser(BaseParser):
 
         if not rows:
             if target is not None:
-                raise ValueError(
-                    f"PDF'te {table_index}. tablo bulunamadı (toplam {table_count})."
-                )
+                raise ValueError(f"PDF'te {table_index}. tablo bulunamadı (toplam {table_count}).")
             raise ValueError("Bu PDF formatına uygun parser yok.")
 
         output.parent.mkdir(parents=True, exist_ok=True)

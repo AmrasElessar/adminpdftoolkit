@@ -2,17 +2,18 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 import time
 from pathlib import Path
 from typing import Any
 
 from state import (
-    convert_jobs,
     batch_jobs,
-    ocr_jobs,
-    convert_lock,
     batch_lock,
+    convert_jobs,
+    convert_lock,
+    ocr_jobs,
     ocr_lock,
 )
 
@@ -25,6 +26,7 @@ from .logging_setup import logger
 def check_job_timeout(job: dict) -> dict:
     """Mark a job as errored if it has run past MAX_JOB_TIMEOUT_SECONDS."""
     import core
+
     if job.get("done") or job.get("error"):
         return job
     started = job.get("started_at")
@@ -41,6 +43,7 @@ def check_job_timeout(job: dict) -> dict:
 
 def state_path(kind: str, token: str) -> Path:
     import core
+
     sub = core.STATE_DIR / kind
     sub.mkdir(parents=True, exist_ok=True)
     return sub / f"{token}.json"
@@ -82,10 +85,8 @@ def load_persisted_state(kind: str, token: str) -> dict | None:
 
 
 def drop_persisted_state(kind: str, token: str) -> None:
-    try:
+    with contextlib.suppress(Exception):
         state_path(kind, token).unlink(missing_ok=True)
-    except Exception:
-        pass
 
 
 def job_snapshot(kind: str, token: str) -> dict | None:

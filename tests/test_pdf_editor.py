@@ -10,6 +10,7 @@ Phase 4a only ships the plumbing:
 Editing semantics (annot / overlay / replace) come in Phase 4b/4c/4d and
 their tests will land alongside that code.
 """
+
 from __future__ import annotations
 
 import json
@@ -71,6 +72,7 @@ def test_fonts_endpoint_includes_noto_when_present(client: TestClient) -> None:
     yet (clean clones, CI without the setup step).
     """
     from state import BASE_DIR
+
     if not (BASE_DIR / "static" / "fonts" / "NotoSans-Regular.ttf").is_file():
         pytest.skip("static/fonts/ not populated — run scripts/setup_editor_assets.py")
     r = client.get("/pdf/edit/fonts").json()
@@ -101,7 +103,7 @@ def test_save_counts_received_operations(client: TestClient) -> None:
     # Unknown op types are accepted but skipped at apply time
     ops = [
         {"type": "exotic", "page": 1, "bbox": [10, 20, 100, 40]},
-        {"type": "annot",  "page": 2, "text": "note"},
+        {"type": "annot", "page": 2, "text": "note"},
     ]
     r = client.post(
         "/pdf/edit/save",
@@ -143,12 +145,12 @@ def test_save_rejects_non_list_operations(client: TestClient) -> None:
 # ---------------------------------------------------------------------------
 # Phase 4b — apply_editor_operations (annotation modes)
 # ---------------------------------------------------------------------------
-import core  # noqa: E402
 
 
 def _png_data_url() -> str:
     """Return a tiny 4x4 red PNG as a data URL (for image-op tests)."""
     import base64
+
     pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 4, 4))
     pix.set_rect(pix.irect, (255, 0, 0))
     png = pix.tobytes("png")
@@ -159,15 +161,24 @@ def test_apply_highlight(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "highlight", "page": 1, "rect": [50, 80, 200, 105], "color": [1.0, 0.92, 0.23]},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {
+                "type": "highlight",
+                "page": 1,
+                "rect": [50, 80, 200, 105],
+                "color": [1.0, 0.92, 0.23],
+            },
+        ],
+    )
     assert summary["applied"] == 1, summary
     assert summary["skipped"] == 0, summary
     # PyMuPDF requires annot inspection while the page is still open
     type_strs: list[str] = []
     with fitz.open(str(out)) as d:
-        for annot in (d[0].annots() or []):
+        for annot in d[0].annots() or []:
             t = annot.type
             type_strs.append(str(t[1] if isinstance(t, tuple) and len(t) > 1 else t).lower())
     assert len(type_strs) == 1
@@ -179,14 +190,22 @@ def test_apply_all_annot_types(tmp_path):
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
     ops = [
-        {"type": "highlight",  "page": 1, "rect": [50, 80, 200, 105]},
-        {"type": "underline",  "page": 1, "rect": [50, 110, 200, 130]},
-        {"type": "strikeout",  "page": 1, "rect": [50, 140, 200, 160]},
-        {"type": "sticky",     "page": 1, "point": [300, 100], "content": "Test note"},
-        {"type": "ink",        "page": 1,
-         "strokes": [[[20, 200], [40, 220], [60, 210]]], "color": [0, 0, 1]},
-        {"type": "image",      "page": 1, "rect": [100, 250, 180, 320],
-         "image_data_url": _png_data_url()},
+        {"type": "highlight", "page": 1, "rect": [50, 80, 200, 105]},
+        {"type": "underline", "page": 1, "rect": [50, 110, 200, 130]},
+        {"type": "strikeout", "page": 1, "rect": [50, 140, 200, 160]},
+        {"type": "sticky", "page": 1, "point": [300, 100], "content": "Test note"},
+        {
+            "type": "ink",
+            "page": 1,
+            "strokes": [[[20, 200], [40, 220], [60, 210]]],
+            "color": [0, 0, 1],
+        },
+        {
+            "type": "image",
+            "page": 1,
+            "rect": [100, 250, 180, 320],
+            "image_data_url": _png_data_url(),
+        },
     ]
     summary = core.apply_editor_operations(inp, out, ops)
     assert summary["applied"] == 6, summary
@@ -219,7 +238,7 @@ def test_apply_unknown_type_skips(tmp_path):
     out = tmp_path / "out.pdf"
     ops = [
         {"type": "highlight", "page": 1, "rect": [50, 80, 200, 105]},
-        {"type": "exotic",    "page": 1, "rect": [10, 10, 50, 50]},
+        {"type": "exotic", "page": 1, "rect": [10, 10, 50, 50]},
     ]
     summary = core.apply_editor_operations(inp, out, ops)
     assert summary["applied"] == 1
@@ -244,9 +263,13 @@ def test_apply_rect_outside_page_skips(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "highlight", "page": 1, "rect": [-200, -200, -100, -100]},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {"type": "highlight", "page": 1, "rect": [-200, -200, -100, -100]},
+        ],
+    )
     assert summary["applied"] == 0
     assert summary["skipped"] == 1
 
@@ -255,9 +278,13 @@ def test_apply_ink_requires_2_points(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "ink", "page": 1, "strokes": [[[10, 10]]]},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {"type": "ink", "page": 1, "strokes": [[[10, 10]]]},
+        ],
+    )
     assert summary["skipped"] == 1
 
 
@@ -265,9 +292,13 @@ def test_apply_image_requires_data_url(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "image", "page": 1, "rect": [10, 10, 50, 50]},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {"type": "image", "page": 1, "rect": [10, 10, 50, 50]},
+        ],
+    )
     assert summary["skipped"] == 1
 
 
@@ -314,17 +345,29 @@ def test_apply_text_inserts_visible_string(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {
-            "type": "text", "page": 1,
-            "point": [80, 200], "text": "Türkçe metin",
-            "font_id": "noto-sans", "fontsize": 14,
-            "color": [0.1, 0.2, 0.7], "bold": False, "italic": False,
-        },
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {
+                "type": "text",
+                "page": 1,
+                "point": [80, 200],
+                "text": "Türkçe metin",
+                "font_id": "noto-sans",
+                "fontsize": 14,
+                "color": [0.1, 0.2, 0.7],
+                "bold": False,
+                "italic": False,
+            },
+        ],
+    )
     assert summary["applied"] == 1, summary
     with fitz.open(str(out)) as d:
-        text = d[0].get_text()
+        # PyMuPDF's get_text() sometimes encodes the space between glyphs as
+        # U+00A0 depending on font metrics — collapse it back to a regular
+        # space before the substring check.
+        text = d[0].get_text().replace("\xa0", " ")
     assert "Türkçe metin" in text
 
 
@@ -332,10 +375,21 @@ def test_apply_text_uses_bold_variant(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "text", "page": 1, "point": [80, 100], "text": "Kalın",
-         "font_id": "noto-sans", "fontsize": 12, "bold": True},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {
+                "type": "text",
+                "page": 1,
+                "point": [80, 100],
+                "text": "Kalın",
+                "font_id": "noto-sans",
+                "fontsize": 12,
+                "bold": True,
+            },
+        ],
+    )
     assert summary["applied"] == 1, summary
 
 
@@ -343,9 +397,13 @@ def test_apply_text_empty_skipped(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "text", "page": 1, "point": [80, 100], "text": "  "},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {"type": "text", "page": 1, "point": [80, 100], "text": "  "},
+        ],
+    )
     assert summary["skipped"] == 1
 
 
@@ -353,10 +411,19 @@ def test_apply_rect_draws_outline(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "rect", "page": 1, "rect": [50, 80, 200, 200],
-         "color": [1, 0, 0], "stroke_width": 2.0},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {
+                "type": "rect",
+                "page": 1,
+                "rect": [50, 80, 200, 200],
+                "color": [1, 0, 0],
+                "stroke_width": 2.0,
+            },
+        ],
+    )
     assert summary["applied"] == 1, summary
     with fitz.open(str(out)) as d:
         drawings = d[0].get_drawings()
@@ -368,10 +435,19 @@ def test_apply_ellipse(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "ellipse", "page": 1, "rect": [100, 100, 250, 200],
-         "color": [0, 0, 1], "fill": [0.8, 0.9, 1.0]},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {
+                "type": "ellipse",
+                "page": 1,
+                "rect": [100, 100, 250, 200],
+                "color": [0, 0, 1],
+                "fill": [0.8, 0.9, 1.0],
+            },
+        ],
+    )
     assert summary["applied"] == 1, summary
 
 
@@ -379,10 +455,20 @@ def test_apply_line(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "line", "page": 1, "p1": [50, 50], "p2": [200, 200],
-         "color": [0, 0, 0], "stroke_width": 1.5},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {
+                "type": "line",
+                "page": 1,
+                "p1": [50, 50],
+                "p2": [200, 200],
+                "color": [0, 0, 0],
+                "stroke_width": 1.5,
+            },
+        ],
+    )
     assert summary["applied"] == 1, summary
 
 
@@ -390,9 +476,13 @@ def test_apply_line_zero_length_skipped(tmp_path):
     inp = tmp_path / "in.pdf"
     inp.write_bytes(_pdf_bytes(1))
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(inp, out, [
-        {"type": "line", "page": 1, "p1": [100, 100], "p2": [100, 100]},
-    ])
+    summary = core.apply_editor_operations(
+        inp,
+        out,
+        [
+            {"type": "line", "page": 1, "p1": [100, 100], "p2": [100, 100]},
+        ],
+    )
     assert summary["skipped"] == 1
 
 
@@ -400,9 +490,11 @@ def test_apply_line_zero_length_skipped(tmp_path):
 # Font catalog + resolver
 # ---------------------------------------------------------------------------
 def test_editor_font_catalog_returns_families():
-    cat = core.editor_font_catalog()
-    if not cat:
+    from state import BASE_DIR
+
+    if not (BASE_DIR / "static" / "fonts" / "NotoSans-Regular.ttf").is_file():
         pytest.skip("static/fonts/ not populated — run scripts/setup_editor_assets.py")
+    cat = core.editor_font_catalog()
     ids = {f["id"] for f in cat}
     assert "noto-sans" in ids
     noto = next(f for f in cat if f["id"] == "noto-sans")
@@ -412,6 +504,7 @@ def test_editor_font_catalog_returns_families():
 
 def test_resolve_editor_font_picks_bold():
     from state import BASE_DIR
+
     if not (BASE_DIR / "static" / "fonts" / "NotoSans-Bold.ttf").is_file():
         pytest.skip("NotoSans-Bold.ttf missing")
     path = core.resolve_editor_font("noto-sans", bold=True)
@@ -475,13 +568,13 @@ def test_font_name_mapping_helvetica_is_sans():
 
 
 def test_font_name_mapping_arial_bold():
-    fam, bold, italic = core._map_font_name_to_family("Arial-BoldMT")
+    fam, bold, _italic = core._map_font_name_to_family("Arial-BoldMT")
     assert fam == "noto-sans"
     assert bold is True
 
 
 def test_font_name_mapping_times_italic():
-    fam, bold, italic = core._map_font_name_to_family("Times-Italic")
+    fam, _bold, italic = core._map_font_name_to_family("Times-Italic")
     assert fam == "noto-serif"
     assert italic is True
 
@@ -496,14 +589,24 @@ def test_apply_replace_swaps_text(text_pdf, tmp_path):
     assert spans
     target = spans[0]
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(text_pdf, out, [
-        {"type": "replace", "page": target["page"], "rect": target["rect"],
-         "text": "Yeni Metin", "font_id": "noto-sans", "fontsize": 12,
-         "color": [0, 0, 0]},
-    ])
+    summary = core.apply_editor_operations(
+        text_pdf,
+        out,
+        [
+            {
+                "type": "replace",
+                "page": target["page"],
+                "rect": target["rect"],
+                "text": "Yeni Metin",
+                "font_id": "noto-sans",
+                "fontsize": 12,
+                "color": [0, 0, 0],
+            },
+        ],
+    )
     assert summary["applied"] == 1, summary
     with fitz.open(str(out)) as d:
-        text = d[0].get_text()
+        text = d[0].get_text().replace("\xa0", " ")
     assert "Yeni Metin" in text
     assert "Original" not in text  # redacted
 
@@ -512,10 +615,13 @@ def test_apply_replace_empty_text_just_removes(text_pdf, tmp_path):
     spans = core.extract_text_spans(text_pdf)
     target = spans[0]
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(text_pdf, out, [
-        {"type": "replace", "page": target["page"], "rect": target["rect"],
-         "text": ""},
-    ])
+    summary = core.apply_editor_operations(
+        text_pdf,
+        out,
+        [
+            {"type": "replace", "page": target["page"], "rect": target["rect"], "text": ""},
+        ],
+    )
     assert summary["applied"] == 1, summary
     with fitz.open(str(out)) as d:
         text = d[0].get_text()
@@ -531,16 +637,20 @@ def test_apply_replace_shrinks_long_text(text_pdf, tmp_path):
     # Pick a string much longer than the original
     long_text = "X" * (len(target["text"]) * 5 + 50)
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(text_pdf, out, [
-        {
-            "type": "replace",
-            "page": target["page"],
-            "rect": target["rect"],
-            "text": long_text,
-            "font_id": "noto-sans",
-            "fontsize": float(target["fontsize"]),
-        },
-    ])
+    summary = core.apply_editor_operations(
+        text_pdf,
+        out,
+        [
+            {
+                "type": "replace",
+                "page": target["page"],
+                "rect": target["rect"],
+                "text": long_text,
+                "font_id": "noto-sans",
+                "fontsize": float(target["fontsize"]),
+            },
+        ],
+    )
     assert summary["applied"] == 1, summary
     # Verify the new text actually appears in the saved PDF
     with fitz.open(str(out)) as d:
@@ -550,14 +660,19 @@ def test_apply_replace_shrinks_long_text(text_pdf, tmp_path):
 
 def test_fit_fontsize_helper_shrinks_when_wide():
     import fitz as _fitz
+
     bundled = core.resolve_editor_font("noto-sans")
     if bundled is None or not bundled.is_file():
         pytest.skip("Noto Sans not bundled")
     rect = _fitz.Rect(0, 0, 100, 20)  # narrow box
     long_text = "Bu çok uzun bir metin parçasıdır ve sığmamalı"
     fitted = core._fit_fontsize_to_rect(
-        long_text, rect=rect, requested_fontsize=12.0,
-        font_path=bundled, font_buffer=None, min_fontsize=4.0,
+        long_text,
+        rect=rect,
+        requested_fontsize=12.0,
+        font_path=bundled,
+        font_buffer=None,
+        min_fontsize=4.0,
     )
     assert fitted < 12.0
     assert fitted >= 4.0
@@ -565,23 +680,32 @@ def test_fit_fontsize_helper_shrinks_when_wide():
 
 def test_fit_fontsize_helper_keeps_size_when_fits():
     import fitz as _fitz
+
     bundled = core.resolve_editor_font("noto-sans")
     if bundled is None or not bundled.is_file():
         pytest.skip("Noto Sans not bundled")
     rect = _fitz.Rect(0, 0, 500, 20)
     short_text = "Kısa"
     fitted = core._fit_fontsize_to_rect(
-        short_text, rect=rect, requested_fontsize=12.0,
-        font_path=bundled, font_buffer=None, min_fontsize=4.0,
+        short_text,
+        rect=rect,
+        requested_fontsize=12.0,
+        font_path=bundled,
+        font_buffer=None,
+        min_fontsize=4.0,
     )
     assert fitted == 12.0  # already fits, must not grow or shrink
 
 
 def test_apply_replace_invalid_rect_skipped(text_pdf, tmp_path):
     out = tmp_path / "out.pdf"
-    summary = core.apply_editor_operations(text_pdf, out, [
-        {"type": "replace", "page": 1, "rect": [-100, -100, -50, -50], "text": "x"},
-    ])
+    summary = core.apply_editor_operations(
+        text_pdf,
+        out,
+        [
+            {"type": "replace", "page": 1, "rect": [-100, -100, -50, -50], "text": "x"},
+        ],
+    )
     assert summary["applied"] == 0
     assert summary["skipped"] == 1
 
@@ -711,6 +835,7 @@ def test_word_granularity_merge_adjacent_reduces_count(multi_line_pdf):
 # ---------------------------------------------------------------------------
 def test_font_glyph_coverage_full():
     from state import BASE_DIR
+
     p = BASE_DIR / "static" / "fonts" / "NotoSans-Regular.ttf"
     if not p.is_file():
         pytest.skip("NotoSans-Regular.ttf not bundled")
@@ -721,6 +846,7 @@ def test_font_glyph_coverage_full():
 
 def test_font_glyph_coverage_with_missing():
     from state import BASE_DIR
+
     p = BASE_DIR / "static" / "fonts" / "NotoSans-Regular.ttf"
     if not p.is_file():
         pytest.skip("NotoSans-Regular.ttf not bundled")
@@ -805,12 +931,19 @@ def test_endpoint_save_applies_replace(client: TestClient, text_pdf):
         files={"file": ("t.pdf", text_pdf.read_bytes(), "application/pdf")},
     ).json()
     target = spans_resp["spans"][0]
-    ops = [{
-        "type": "replace", "page": target["page"], "rect": target["rect"],
-        "text": "Replaced", "font_id": target["font_id"],
-        "fontsize": target["fontsize"], "color": target["color"],
-        "bold": target["bold"], "italic": target["italic"],
-    }]
+    ops = [
+        {
+            "type": "replace",
+            "page": target["page"],
+            "rect": target["rect"],
+            "text": "Replaced",
+            "font_id": target["font_id"],
+            "fontsize": target["fontsize"],
+            "color": target["color"],
+            "bold": target["bold"],
+            "italic": target["italic"],
+        }
+    ]
     r = client.post(
         "/pdf/edit/save",
         files={"file": ("t.pdf", text_pdf.read_bytes(), "application/pdf")},

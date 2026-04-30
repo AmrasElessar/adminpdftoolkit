@@ -30,9 +30,7 @@ STATE_DIR.mkdir(exist_ok=True)
 # Single source of truth for the history DB path. Settings field is relative
 # by default; if the operator provides an absolute path it's honoured as-is.
 HISTORY_DB_PATH: Path = (
-    settings.history_db
-    if settings.history_db.is_absolute()
-    else BASE_DIR / settings.history_db
+    settings.history_db if settings.history_db.is_absolute() else BASE_DIR / settings.history_db
 )
 HISTORY_DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 

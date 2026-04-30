@@ -19,6 +19,7 @@ verdict 'danger' ise UnsafePDFError fırlatır.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import shutil
@@ -46,16 +47,16 @@ class UnsafePDFError(Exception):
 # Ağırlık: low (bilgi), med (dikkat), high (tehlikeli)
 _SUSPICIOUS_PATTERNS: list[tuple[str, str, str, str]] = [
     ("/JavaScript", r"/JavaScript", "JavaScript çalıştırılabilir kodu", "high"),
-    ("/JS",         r"/JS\b",       "JavaScript referansı", "high"),
+    ("/JS", r"/JS\b", "JavaScript referansı", "high"),
     ("/OpenAction", r"/OpenAction", "Dosya açılınca otomatik tetiklenen aksiyon", "med"),
-    ("/AA",         r"/AA\b",       "Additional Actions (sayfa olayları)", "med"),
-    ("/Launch",     r"/Launch",     "Komut/uygulama başlatma", "high"),
+    ("/AA", r"/AA\b", "Additional Actions (sayfa olayları)", "med"),
+    ("/Launch", r"/Launch", "Komut/uygulama başlatma", "high"),
     ("/EmbeddedFile", r"/EmbeddedFile", "Gömülü dosya (gizli ek)", "med"),
-    ("/RichMedia",  r"/RichMedia",  "Flash/multimedya gömme", "med"),
+    ("/RichMedia", r"/RichMedia", "Flash/multimedya gömme", "med"),
     ("/SubmitForm", r"/SubmitForm", "Form gönderme aksiyonu", "med"),
-    ("/GoToR",      r"/GoToR",      "Dış dosyaya bağlantı", "low"),
-    ("/URI",        r"/URI\b",      "Dış URL bağlantısı", "low"),
-    ("/XFA",        r"/XFA\b",      "XFA form (eski/karmaşık)", "low"),
+    ("/GoToR", r"/GoToR", "Dış dosyaya bağlantı", "low"),
+    ("/URI", r"/URI\b", "Dış URL bağlantısı", "low"),
+    ("/XFA", r"/XFA\b", "XFA form (eski/karmaşık)", "low"),
 ]
 
 
@@ -69,13 +70,10 @@ def check_structure(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]
     findings: list[dict[str, Any]] = []
     encrypted = False
     page_count = 0
-    has_images_only = False
     file_size_mb = 0.0
 
-    try:
+    with contextlib.suppress(OSError):
         file_size_mb = pdf_path.stat().st_size / (1024 * 1024)
-    except OSError:
-        pass
 
     # PyMuPDF ile temel bilgiler — pre-opened doc varsa onu kullan
     if doc is not None:
@@ -112,12 +110,14 @@ def check_structure(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]
         for label, pattern, desc, weight in _SUSPICIOUS_PATTERNS:
             count = len(re.findall(pattern, text))
             if count > 0:
-                findings.append({
-                    "label": label,
-                    "count": count,
-                    "description": desc,
-                    "severity": weight,
-                })
+                findings.append(
+                    {
+                        "label": label,
+                        "count": count,
+                        "description": desc,
+                        "severity": weight,
+                    }
+                )
     except Exception:
         pass
 
@@ -135,7 +135,7 @@ def check_structure(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]
         verdict = "clean"
 
     return {
-        "verdict": verdict,           # clean / notice / warning / danger
+        "verdict": verdict,  # clean / notice / warning / danger
         "page_count": page_count,
         "encrypted": encrypted,
         "file_size_mb": round(file_size_mb, 2),
@@ -260,25 +260,23 @@ def pdfid_scan(pdf_path: Path, timeout: int = 15) -> dict[str, Any] | None:
         return None
     try:
         # pdfid.py [-f] file — count keywords; -f forces extra patterns
-        if exe.endswith(".py"):
-            cmd = ["python", exe, str(pdf_path)]
-        else:
-            cmd = [exe, str(pdf_path)]
+        cmd = ["python", exe, str(pdf_path)] if exe.endswith(".py") else [exe, str(pdf_path)]
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=timeout,
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
-        out = (result.stdout or "")
+        out = result.stdout or ""
         counts: dict[str, int] = {}
         # Output rows: "  /JavaScript     2"
         for line in out.splitlines():
             line = line.strip()
             for kw in _PDFID_DANGEROUS:
                 if line.startswith(kw):
-                    rest = line[len(kw):].strip()
-                    try:
+                    rest = line[len(kw) :].strip()
+                    with contextlib.suppress(ValueError, IndexError):
                         counts[kw] = int(rest.split()[0])
-                    except (ValueError, IndexError):
-                        pass
         dangerous_total = sum(counts.values())
         return {
             "available": True,
@@ -287,11 +285,21 @@ def pdfid_scan(pdf_path: Path, timeout: int = 15) -> dict[str, Any] | None:
             "verdict": "danger" if dangerous_total > 0 else "clean",
         }
     except subprocess.TimeoutExpired:
-        return {"available": True, "counts": {}, "dangerous_total": 0,
-                "verdict": "unknown", "error": "timeout"}
+        return {
+            "available": True,
+            "counts": {},
+            "dangerous_total": 0,
+            "verdict": "unknown",
+            "error": "timeout",
+        }
     except Exception as e:
-        return {"available": True, "counts": {}, "dangerous_total": 0,
-                "verdict": "unknown", "error": f"error: {e}"}
+        return {
+            "available": True,
+            "counts": {},
+            "dangerous_total": 0,
+            "verdict": "unknown",
+            "error": f"error: {e}",
+        }
 
 
 # ----------------------------------------------------------------------------
@@ -371,20 +379,20 @@ def mpcmdrun_scan(pdf_path: Path, timeout: int = 60) -> dict[str, Any] | None:
             status = "error"  # unknown non-zero — be conservative, don't block
         return {
             "clean": status == "clean",
-            "status": status,             # clean | infected | error
+            "status": status,  # clean | infected | error
             "exit_code": result.returncode,
             "raw": out[-1000:],
         }
     except subprocess.TimeoutExpired:
         return {"clean": False, "status": "error", "exit_code": -1, "raw": "timeout"}
     except Exception as e:
-        return {"clean": True, "status": "error", "exit_code": -2,
-                "raw": f"error: {e}"}
+        return {"clean": True, "status": "error", "exit_code": -2, "raw": f"error: {e}"}
 
 
 # ----------------------------------------------------------------------------
 # Birleşik tarama
 # ----------------------------------------------------------------------------
+
 
 def full_scan(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]:
     """Run every available scanner. ``doc`` is forwarded to ``check_structure``
@@ -413,10 +421,10 @@ def full_scan(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]:
     return {
         "overall": overall,
         "structure": structure,
-        "antivirus": av,                         # None ise ClamAV yok
+        "antivirus": av,  # None ise ClamAV yok
         "av_available": clamav_available(),
-        "pdfid": pdfid,                          # None ise pdfid.py yok
-        "defender": mpcmd,                       # None ise Defender yok / atlanmış
+        "pdfid": pdfid,  # None ise pdfid.py yok
+        "defender": mpcmd,  # None ise Defender yok / atlanmış
     }
 
 
@@ -433,12 +441,19 @@ def assert_safe(pdf_path: Path, *, policy: str | None = None) -> dict[str, Any]:
     if policy is None:
         # Lazy import — allows pdf_safety.py to be used standalone in tests
         from settings import settings as _settings
+
         policy = _settings.safety_policy
 
     if policy == "off":
-        return {"overall": "clean", "structure": None, "antivirus": None,
-                "av_available": False, "pdfid": None, "defender": None,
-                "policy": "off"}
+        return {
+            "overall": "clean",
+            "structure": None,
+            "antivirus": None,
+            "av_available": False,
+            "pdfid": None,
+            "defender": None,
+            "policy": "off",
+        }
 
     scan = full_scan(pdf_path)
     scan["policy"] = policy

@@ -53,12 +53,13 @@ def _synthesize_pdf(out_path: Path, *, pages: int = 10) -> None:
     for i in range(pages):
         page = doc.new_page()
         page.insert_text((72, 72), f"Sample page {i + 1}", fontsize=16)
-        page.insert_text((72, 110), "Lorem ipsum dolor sit amet, "
-                         "consectetur adipiscing elit. " * 4, fontsize=10)
+        page.insert_text(
+            (72, 110), "Lorem ipsum dolor sit amet, consectetur adipiscing elit. " * 4, fontsize=10
+        )
         for r in range(5):
-            page.insert_text((72, 200 + r * 16),
-                             f"Row {r + 1} | Col A | Col B | {1234 + r}",
-                             fontsize=10)
+            page.insert_text(
+                (72, 200 + r * 16), f"Row {r + 1} | Col A | Col B | {1234 + r}", fontsize=10
+            )
     doc.save(str(out_path), garbage=4, deflate=True)
     doc.close()
 
@@ -93,7 +94,7 @@ def _timeit(fn, *, repeat: int = 3) -> dict:
             tracemalloc.stop()
             return {"error": str(e)}
         t1 = time.perf_counter()
-        cur, peak = tracemalloc.get_traced_memory()
+        _cur, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         samples.append((t1 - t0) * 1000)
         peak_mem = max(peak_mem, peak)
@@ -133,9 +134,10 @@ def bench_extract_metadata(pdfs: list[Path]) -> dict:
 
 def bench_log_history(_pdfs: list[Path], *, rows: int = 1000) -> dict:
     """Hot path #3 — was sqlite3.connect per row, now one shared connection."""
-    from core.history_db import init_history_db, log_history
-    import core
     import tempfile
+
+    import core
+    from core.history_db import init_history_db, log_history
 
     tmp = Path(tempfile.mkdtemp(prefix="bench_history_"))
     db_path = tmp / "bench_history.db"
@@ -144,18 +146,19 @@ def bench_log_history(_pdfs: list[Path], *, rows: int = 1000) -> dict:
         core.HISTORY_DB_PATH = db_path
         # Reset cached connection so it picks up the new path
         from core import history_db as _hdb
+
         _hdb._conn_cache = None
         init_history_db()
 
         def run():
             for i in range(rows):
-                log_history(action="bench", filename=f"f{i}.pdf",
-                            record_count=i, ip="127.0.0.1")
+                log_history(action="bench", filename=f"f{i}.pdf", record_count=i, ip="127.0.0.1")
 
         return _timeit(run, repeat=3) | {"rows_per_call": rows}
     finally:
         core.HISTORY_DB_PATH = original
         from core import history_db as _hdb
+
         _hdb._conn_cache = None
 
 
@@ -174,8 +177,9 @@ def bench_parse_pdf_for_batch(pdfs: list[Path]) -> dict:
 
 def bench_pdf_safety(pdfs: list[Path]) -> dict:
     """Hot path #6 — safety scan with reused doc handle."""
-    from pdf_safety import full_scan
     import fitz
+
+    from pdf_safety import full_scan
 
     def run():
         for p in pdfs:
@@ -210,18 +214,24 @@ def bench_convert_to_jpg(pdfs: list[Path]) -> dict:
 # ---------------------------------------------------------------------------
 def bench_deep_analyze_pre(pdfs: list[Path]) -> dict:
     """Pre-perf simulator: each helper opens its own ``fitz.Document``."""
-    from core.metadata import extract_metadata, extract_outline, detect_headers_footers, detect_text_columns
-    from core.editor import classify_pdf_extractability
     import fitz
+
+    from core.editor import classify_pdf_extractability
+    from core.metadata import (
+        detect_headers_footers,
+        detect_text_columns,
+        extract_metadata,
+        extract_outline,
+    )
 
     def run():
         for p in pdfs:
-            extractability = classify_pdf_extractability(p)   # open #1
-            extract_metadata(p)                                # open #2
-            extract_outline(p)                                 # open #3
+            extractability = classify_pdf_extractability(p)  # open #1
+            extract_metadata(p)  # open #2
+            extract_outline(p)  # open #3
             if extractability["extractable"]:
-                detect_headers_footers(p)                      # open #4
-            with fitz.open(str(p)) as doc:                     # open #5
+                detect_headers_footers(p)  # open #4
+            with fitz.open(str(p)) as doc:  # open #5
                 for page in doc:
                     text = page.get_text()
                     if text and text.strip():
@@ -252,8 +262,15 @@ def bench_log_history_pre(_pdfs: list[Path], *, rows: int = 1000) -> dict:
                 conn.execute(
                     "INSERT INTO history (ts, action, target, filename, "
                     "record_count, note, ip) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (datetime.now().isoformat(timespec="seconds"), "bench",
-                     None, f"f{i}.pdf", i, None, "127.0.0.1"),
+                    (
+                        datetime.now().isoformat(timespec="seconds"),
+                        "bench",
+                        None,
+                        f"f{i}.pdf",
+                        i,
+                        None,
+                        "127.0.0.1",
+                    ),
                 )
                 conn.commit()
             finally:
@@ -264,14 +281,15 @@ def bench_log_history_pre(_pdfs: list[Path], *, rows: int = 1000) -> dict:
 
 def bench_pdf_safety_pre(pdfs: list[Path]) -> dict:
     """Pre-perf simulator: full_scan opens its own doc, no doc reuse."""
-    from pdf_safety import full_scan
     import fitz
+
+    from pdf_safety import full_scan
 
     def run():
         for p in pdfs:
-            doc = fitz.open(str(p))   # caller's open (mimic kind detection)
+            doc = fitz.open(str(p))  # caller's open (mimic kind detection)
             try:
-                full_scan(p)          # full_scan opens AGAIN internally — pre-perf behavior
+                full_scan(p)  # full_scan opens AGAIN internally — pre-perf behavior
             finally:
                 doc.close()
 
@@ -282,18 +300,18 @@ def bench_pdf_safety_pre(pdfs: list[Path]) -> dict:
 # Driver
 # ---------------------------------------------------------------------------
 BENCHMARKS = {
-    "deep_analyze":      bench_deep_analyze,
-    "extract_metadata":  bench_extract_metadata,
-    "log_history":       bench_log_history,
+    "deep_analyze": bench_deep_analyze,
+    "extract_metadata": bench_extract_metadata,
+    "log_history": bench_log_history,
     "parse_pdf_for_batch": bench_parse_pdf_for_batch,
     "pdf_safety_full_scan": bench_pdf_safety,
-    "convert_to_jpg":    bench_convert_to_jpg,
+    "convert_to_jpg": bench_convert_to_jpg,
 }
 
 # Pre-perf simulators keyed by the same metric name so the diff aligns.
 PRE_PERF_BENCHMARKS = {
-    "deep_analyze":         bench_deep_analyze_pre,
-    "log_history":          bench_log_history_pre,
+    "deep_analyze": bench_deep_analyze_pre,
+    "log_history": bench_log_history_pre,
     "pdf_safety_full_scan": bench_pdf_safety_pre,
 }
 
@@ -318,15 +336,18 @@ def run_all(pdfs: list[Path], *, pre_perf: bool = False) -> dict:
         if "error" in r:
             print(f"ERROR: {r['error']}")
         else:
-            print(f"min={r['min_ms']:.2f}ms  med={r['median_ms']:.2f}ms  "
-                  f"peak={r['peak_mem_kb']/1024:.1f}MB")
+            print(
+                f"min={r['min_ms']:.2f}ms  med={r['median_ms']:.2f}ms  "
+                f"peak={r['peak_mem_kb'] / 1024:.1f}MB"
+            )
     return results
 
 
 def print_compare(current: dict, baseline: dict) -> None:
     print()
-    print(f"{'metric':<26} {'baseline med':>14} {'current med':>14} "
-          f"{'delta ms':>10} {'delta %':>9}")
+    print(
+        f"{'metric':<26} {'baseline med':>14} {'current med':>14} {'delta ms':>10} {'delta %':>9}"
+    )
     print("-" * 80)
     for name in BENCHMARKS:
         b = baseline.get(name, {})
@@ -339,22 +360,28 @@ def print_compare(current: dict, baseline: dict) -> None:
         delta = cm - bm
         pct = (delta / bm * 100) if bm else 0
         marker = " WIN" if delta < -1 else (" REG" if delta > 1 else "    ")
-        print(f"{name:<26} {bm:>14.2f} {cm:>14.2f} "
-              f"{delta:>+10.2f} {pct:>+8.1f}% {marker}")
+        print(f"{name:<26} {bm:>14.2f} {cm:>14.2f} {delta:>+10.2f} {pct:>+8.1f}% {marker}")
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--save", metavar="FILE",
-                   help="Write current run as a JSON baseline.")
-    p.add_argument("--compare", metavar="FILE",
-                   help="Compare current run against a saved baseline.")
-    p.add_argument("--simulate-pre-perf", action="store_true",
-                   help="Run the inefficient pre-perf-pass paths (no git checkout needed).")
-    p.add_argument("--ab", action="store_true",
-                   help="One-shot before+after: runs --simulate-pre-perf first, "
-                        "then current code, prints the diff. Skips --save / --compare.")
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument("--save", metavar="FILE", help="Write current run as a JSON baseline.")
+    p.add_argument(
+        "--compare", metavar="FILE", help="Compare current run against a saved baseline."
+    )
+    p.add_argument(
+        "--simulate-pre-perf",
+        action="store_true",
+        help="Run the inefficient pre-perf-pass paths (no git checkout needed).",
+    )
+    p.add_argument(
+        "--ab",
+        action="store_true",
+        help="One-shot before+after: runs --simulate-pre-perf first, "
+        "then current code, prints the diff. Skips --save / --compare.",
+    )
     args = p.parse_args()
 
     pdfs, tmp_holder = _resolve_samples()

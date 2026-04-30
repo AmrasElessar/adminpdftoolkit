@@ -21,7 +21,8 @@ def parse_pdf_for_batch(args: tuple) -> dict:
     the lightweight modules — no FastAPI app instantiation per worker.
     """
     import fitz
-    from pdf_converter import is_call_log_pdf, parse_call_log, CALL_LOG_QUESTIONS
+
+    from pdf_converter import CALL_LOG_QUESTIONS, is_call_log_pdf, parse_call_log
 
     filename, pdf_path_str, mapping, target_schema = args
     pdf_path = Path(pdf_path_str)
@@ -33,16 +34,18 @@ def parse_pdf_for_batch(args: tuple) -> dict:
         try:
             if is_call_log_pdf(doc):
                 for rec in parse_call_log(doc):
-                    records.append({
-                        "Kayıt No": rec.get("#", ""),
-                        "Müşteri": rec.get("Müşteri", ""),
-                        "Telefon": rec.get("Telefon", ""),
-                        "Durum": rec.get("Durum", ""),
-                        "Tarih": rec.get("Tarih", ""),
-                        "Süre": rec.get("Süre", ""),
-                        **{q: rec.get(q, "") for q in CALL_LOG_QUESTIONS},
-                        "AI Özeti (Ham)": rec.get("AI Özeti (Ham)", ""),
-                    })
+                    records.append(
+                        {
+                            "Kayıt No": rec.get("#", ""),
+                            "Müşteri": rec.get("Müşteri", ""),
+                            "Telefon": rec.get("Telefon", ""),
+                            "Durum": rec.get("Durum", ""),
+                            "Tarih": rec.get("Tarih", ""),
+                            "Süre": rec.get("Süre", ""),
+                            **{q: rec.get(q, "") for q in CALL_LOG_QUESTIONS},
+                            "AI Özeti (Ham)": rec.get("AI Özeti (Ham)", ""),
+                        }
+                    )
             elif mapping:
                 table = extract_generic_table(pdf_path)
                 if not table or len(table) < 2:

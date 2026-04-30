@@ -34,8 +34,8 @@ subprocess-runner; tests should monkeypatch ``subprocess.run`` and
 
 from __future__ import annotations
 
+import contextlib
 import json
-import os
 import subprocess
 import time
 from pathlib import Path
@@ -60,6 +60,7 @@ def _clamav_dir() -> Path:
     """Resolve the bundled ClamAV folder. Read at call time so tests can
     monkeypatch ``core.BASE_DIR`` and have it picked up."""
     import core
+
     return core.BASE_DIR / "clamav"
 
 
@@ -71,6 +72,7 @@ def _state_file() -> Path:
     """Per-install state — lives under WORK_DIR so portable installs can
     keep the bundle dir read-only if they want."""
     import core
+
     p = core.WORK_DIR / "clamav_state.json"
     return p
 
@@ -92,7 +94,8 @@ def _read_state() -> dict[str, Any]:
     if not sf.exists():
         return {}
     try:
-        return json.loads(sf.read_text(encoding="utf-8"))
+        loaded: dict[str, Any] = json.loads(sf.read_text(encoding="utf-8"))
+        return loaded
     except Exception as e:
         logger.debug("clamav state read failed: %s", e)
         return {}
@@ -126,10 +129,8 @@ def _db_age_seconds() -> float | None:
     for name in _DB_FILES:
         f = dd / name
         if f.exists():
-            try:
+            with contextlib.suppress(OSError):
                 mtimes.append(f.stat().st_mtime)
-            except OSError:
-                pass
     if not mtimes:
         return None
     return time.time() - max(mtimes)
@@ -171,9 +172,12 @@ def update_signatures(*, timeout: int = FRESHCLAM_TIMEOUT_SECONDS) -> dict[str, 
     state["last_attempt_ts"] = started
 
     if exe is None:
-        result = {"ok": False, "took_s": 0.0,
-                  "error": "freshclam not bundled (no ./clamav/freshclam.exe)",
-                  "stdout_tail": ""}
+        result = {
+            "ok": False,
+            "took_s": 0.0,
+            "error": "freshclam not bundled (no ./clamav/freshclam.exe)",
+            "stdout_tail": "",
+        }
         state["last_error"] = result["error"]
         _write_state(state)
         return result
@@ -204,9 +208,12 @@ def update_signatures(*, timeout: int = FRESHCLAM_TIMEOUT_SECONDS) -> dict[str, 
         # (also treated as ok). Anything else is a failure.
         ok = proc.returncode in (0, 1)
         tail = "\n".join(out.splitlines()[-15:])
-        result = {"ok": ok, "took_s": round(took, 2),
-                  "error": None if ok else f"exit={proc.returncode}",
-                  "stdout_tail": tail}
+        result = {
+            "ok": ok,
+            "took_s": round(took, 2),
+            "error": None if ok else f"exit={proc.returncode}",
+            "stdout_tail": tail,
+        }
         if ok:
             state["last_success_ts"] = time.time()
             state.pop("last_error", None)
@@ -220,17 +227,19 @@ def update_signatures(*, timeout: int = FRESHCLAM_TIMEOUT_SECONDS) -> dict[str, 
         return result
     except subprocess.TimeoutExpired:
         took = time.time() - started
-        result = {"ok": False, "took_s": round(took, 2),
-                  "error": f"timeout after {timeout}s",
-                  "stdout_tail": ""}
+        result = {
+            "ok": False,
+            "took_s": round(took, 2),
+            "error": f"timeout after {timeout}s",
+            "stdout_tail": "",
+        }
         state["last_error"] = result["error"]
         _write_state(state)
         logger.warning("freshclam timed out after %ss", timeout)
         return result
     except Exception as e:
         took = time.time() - started
-        result = {"ok": False, "took_s": round(took, 2),
-                  "error": str(e), "stdout_tail": ""}
+        result = {"ok": False, "took_s": round(took, 2), "error": str(e), "stdout_tail": ""}
         state["last_error"] = str(e)
         _write_state(state)
         logger.warning("freshclam failed: %s", e)

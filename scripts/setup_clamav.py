@@ -29,9 +29,11 @@ so this script only handles Windows. On other OSes, ``pdf_safety`` will
 fall back to whatever ``clamscan`` it finds on PATH; signature updates
 are managed by the OS package.
 """
+
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import shutil
 import subprocess
@@ -45,10 +47,8 @@ from pathlib import Path
 for _stream_name in ("stdout", "stderr"):
     _stream = getattr(sys, _stream_name, None)
     if _stream is not None and hasattr(_stream, "reconfigure"):
-        try:
+        with contextlib.suppress(Exception):
             _stream.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
-            pass
 
 ROOT = Path(__file__).resolve().parent.parent
 CLAMAV_DIR = ROOT / "clamav"
@@ -93,7 +93,7 @@ def _download(url: str, dest: Path) -> None:
     info(f"  -> {dest}")
     dest.parent.mkdir(parents=True, exist_ok=True)
     try:
-        with urllib.request.urlopen(url, timeout=120) as resp:  # noqa: S310 — official HTTPS
+        with urllib.request.urlopen(url, timeout=120) as resp:
             total = int(resp.headers.get("Content-Length") or 0)
             written = 0
             with dest.open("wb") as fp:
@@ -105,11 +105,14 @@ def _download(url: str, dest: Path) -> None:
                     written += len(chunk)
                     if total:
                         pct = written / total * 100
-                        print(f"\r  {written/1e6:6.1f} / {total/1e6:.1f} MB "
-                              f"({pct:5.1f}%)", end="", flush=True)
+                        print(
+                            f"\r  {written / 1e6:6.1f} / {total / 1e6:.1f} MB ({pct:5.1f}%)",
+                            end="",
+                            flush=True,
+                        )
             if total:
                 print()  # newline after progress
-        info(f"  downloaded {written/1e6:.1f} MB")
+        info(f"  downloaded {written / 1e6:.1f} MB")
     except (urllib.error.URLError, urllib.error.HTTPError) as e:
         info(f"  ! download failed: {e}")
         if dest.exists():
@@ -140,8 +143,14 @@ def _extract(zip_path: Path, target: Path) -> None:
         "newsfeed/",
     )
     SKIP_FILE_SUFFIXES = (
-        ".lib", ".pdb", ".exp", ".h", ".pc",
-        ".md", ".txt", ".rst",
+        ".lib",
+        ".pdb",
+        ".exp",
+        ".h",
+        ".pc",
+        ".md",
+        ".txt",
+        ".rst",
     )
 
     kept = 0
@@ -151,10 +160,7 @@ def _extract(zip_path: Path, target: Path) -> None:
             if member.endswith("/"):
                 continue
             parts = member.split("/", 1)
-            if len(parts) == 2 and parts[0].startswith("clamav-"):
-                rel = parts[1]
-            else:
-                rel = member
+            rel = parts[1] if len(parts) == 2 and parts[0].startswith("clamav-") else member
             lower = rel.lower().replace("\\", "/")
 
             # Drop entire doc/manual/header/lib trees
@@ -162,7 +168,9 @@ def _extract(zip_path: Path, target: Path) -> None:
                 skipped += 1
                 continue
             # Drop non-runtime file types
-            if lower.endswith(SKIP_FILE_SUFFIXES) and not any(lower.endswith(k) for k in KEEP_PATTERNS):
+            if lower.endswith(SKIP_FILE_SUFFIXES) and not any(
+                lower.endswith(k) for k in KEEP_PATTERNS
+            ):
                 skipped += 1
                 continue
 
@@ -186,10 +194,16 @@ def _write_freshclam_conf() -> None:
 def _write_marker() -> None:
     """Drop a small JSON next to the binary so we know which version landed."""
     marker = CLAMAV_DIR / "INSTALL_INFO.json"
-    marker.write_text(json.dumps({
-        "version": CLAMAV_VERSION,
-        "source": ZIP_URL,
-    }, indent=2), encoding="utf-8")
+    marker.write_text(
+        json.dumps(
+            {
+                "version": CLAMAV_VERSION,
+                "source": ZIP_URL,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
 
 
 def _run_initial_freshclam(timeout: int = 600) -> bool:
@@ -243,22 +257,33 @@ def _run_initial_freshclam(timeout: int = 600) -> bool:
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__,
-                                formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--force", action="store_true",
-                   help="Re-download binaries even if ./clamav/ already has them. "
-                        "Database is preserved.")
-    p.add_argument("--keep-zip", action="store_true",
-                   help="Keep the downloaded ZIP at clamav/_download.zip "
-                        "instead of deleting after extraction.")
-    p.add_argument("--skip-signatures", action="store_true",
-                   help="Install binaries only; let the lifespan thread fetch "
-                        "the signature DB on first server boot.")
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    p.add_argument(
+        "--force",
+        action="store_true",
+        help="Re-download binaries even if ./clamav/ already has them. Database is preserved.",
+    )
+    p.add_argument(
+        "--keep-zip",
+        action="store_true",
+        help="Keep the downloaded ZIP at clamav/_download.zip "
+        "instead of deleting after extraction.",
+    )
+    p.add_argument(
+        "--skip-signatures",
+        action="store_true",
+        help="Install binaries only; let the lifespan thread fetch "
+        "the signature DB on first server boot.",
+    )
     args = p.parse_args()
 
     if sys.platform != "win32":
-        info("Not Windows — skipping. ClamAV on Linux/macOS is expected to be "
-             "installed via the system package manager.")
+        info(
+            "Not Windows — skipping. ClamAV on Linux/macOS is expected to be "
+            "installed via the system package manager."
+        )
         return 0
 
     binaries_already = already_installed()
@@ -308,14 +333,15 @@ def main() -> int:
 
     # Signatures: pull synchronously unless explicitly skipped
     if args.skip_signatures:
-        info("--skip-signatures: imza veritabani sonra (lifespan thread'inde) "
-             "indirilecek.")
+        info("--skip-signatures: imza veritabani sonra (lifespan thread'inde) indirilecek.")
     elif not signatures_present():
         ok = _run_initial_freshclam()
         if not ok:
-            info("UYARI: Imza indirme basarisiz oldu. Yapisal kontrol + "
-                 "Defender ile devam edilebilir; ClamAV bir sonraki acilista "
-                 "tekrar deneyecek.")
+            info(
+                "UYARI: Imza indirme basarisiz oldu. Yapisal kontrol + "
+                "Defender ile devam edilebilir; ClamAV bir sonraki acilista "
+                "tekrar deneyecek."
+            )
     else:
         info("Imza veritabani zaten yerinde — atlandi.")
 

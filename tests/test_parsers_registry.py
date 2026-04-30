@@ -3,6 +3,7 @@
 Lightweight unit tests — exercise registry order, lookup, and the
 ``GenericTableParser`` fallback semantics without needing real PDF fixtures.
 """
+
 from __future__ import annotations
 
 from types import SimpleNamespace
@@ -31,8 +32,7 @@ class _FakePage:
 class _FakeDoc:
     def __init__(self, page_texts: tuple[str, ...], image_pages: int) -> None:
         self._pages = [
-            _FakePage(text, has_image=(i < image_pages))
-            for i, text in enumerate(page_texts)
+            _FakePage(text, has_image=(i < image_pages)) for i, text in enumerate(page_texts)
         ]
 
     def __len__(self) -> int:
@@ -136,6 +136,7 @@ def test_pdf_to_csv_message_uses_parser_friendly_text(tmp_path) -> None:
     """The 'no parser fits' message replaces the old 'tablo bulunamadı' string."""
     # Empty PDF: pdfplumber will return zero tables → ValueError with new wording
     import fitz
+
     pdf = tmp_path / "blank.pdf"
     doc = fitz.open()
     doc.new_page()

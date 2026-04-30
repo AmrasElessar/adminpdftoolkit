@@ -4,6 +4,7 @@ Covers system font discovery, metadata read/write, outline extraction,
 text search, image extraction, thumbnails, layout detection, and the
 deep-analyze combinator. Also exercises the matching HTTP endpoints.
 """
+
 from __future__ import annotations
 
 import json
@@ -36,23 +37,28 @@ def rich_pdf(tmp_path: Path) -> Path:
     for i in range(3):
         page = doc.new_page()
         page.insert_text((72, 80), f"Bölüm {i + 1}", fontsize=18, fontname="helv")
-        page.insert_text((72, 120), f"Buradaki içerik sayfa {i + 1} için.",
-                         fontsize=11, fontname="helv")
+        page.insert_text(
+            (72, 120), f"Buradaki içerik sayfa {i + 1} için.", fontsize=11, fontname="helv"
+        )
         # Repeating header + footer so detect_headers_footers has something
         page.insert_text((250, 30), "Şirket Raporu", fontsize=9, fontname="helv")
         page.insert_text((250, 820), f"Sayfa {i + 1}", fontsize=9, fontname="helv")
     # TOC
-    doc.set_toc([
-        [1, "Bölüm 1", 1],
-        [1, "Bölüm 2", 2],
-        [1, "Bölüm 3", 3],
-    ])
-    doc.set_metadata({
-        "title": "Test Dokümanı",
-        "author": "Engin",
-        "subject": "Mühendislik",
-        "keywords": "pdf, engine, test",
-    })
+    doc.set_toc(
+        [
+            [1, "Bölüm 1", 1],
+            [1, "Bölüm 2", 2],
+            [1, "Bölüm 3", 3],
+        ]
+    )
+    doc.set_metadata(
+        {
+            "title": "Test Dokümanı",
+            "author": "Engin",
+            "subject": "Mühendislik",
+            "keywords": "pdf, engine, test",
+        }
+    )
     # Embed an image on page 1
     pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 60, 60))
     pix.set_rect(pix.irect, (0, 80, 200))

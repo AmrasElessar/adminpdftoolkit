@@ -39,7 +39,8 @@ from pdf_converter import (
     is_scanned_pdf,
     parse_call_log,
 )
-from pdf_safety import clamav_available, full_scan as pdf_safety_scan
+from pdf_safety import clamav_available
+from pdf_safety import full_scan as pdf_safety_scan
 from pipelines.batch_convert import (
     batch_convert_worker,
     load_distribution,
@@ -49,7 +50,6 @@ from pipelines.batch_convert import (
 )
 from pipelines.convert import batch_files_worker
 from state import batch_store
-
 
 router = APIRouter()
 
@@ -69,13 +69,15 @@ async def batch_analyze(files: list[UploadFile] = File(...)) -> dict:
 
     for f in files:
         if not f.filename or not f.filename.lower().endswith(".pdf"):
-            items.append({
-                "name": f.filename or "(adsız)",
-                "compatible": False,
-                "kind": "invalid",
-                "kind_label": "PDF değil",
-                "message": "Yalnızca PDF kabul edilir.",
-            })
+            items.append(
+                {
+                    "name": f.filename or "(adsız)",
+                    "compatible": False,
+                    "kind": "invalid",
+                    "kind_label": "PDF değil",
+                    "message": "Yalnızca PDF kabul edilir.",
+                }
+            )
             incompatible += 1
             continue
 
@@ -90,57 +92,65 @@ async def batch_analyze(files: list[UploadFile] = File(...)) -> dict:
                 safety = pdf_safety_scan(p, doc=doc)
                 page_count = len(doc)
                 if is_scanned_pdf(doc):
-                    items.append({
-                        "name": f.filename,
-                        "compatible": False,
-                        "kind": "scanned",
-                        "kind_label": "📸 Görselden PDF",
-                        "page_count": page_count,
-                        "record_count": 0,
-                        "safety": safety,
-                        "message": "Görselden (taranmış) PDF — metin çıkarılamaz, birleştirmeye dahil edilemez.",
-                    })
+                    items.append(
+                        {
+                            "name": f.filename,
+                            "compatible": False,
+                            "kind": "scanned",
+                            "kind_label": "📸 Görselden PDF",
+                            "page_count": page_count,
+                            "record_count": 0,
+                            "safety": safety,
+                            "message": "Görselden (taranmış) PDF — metin çıkarılamaz, birleştirmeye dahil edilemez.",
+                        }
+                    )
                     incompatible += 1
                     continue
                 if is_call_log_pdf(doc):
                     records = parse_call_log(doc)
-                    items.append({
-                        "name": f.filename,
-                        "compatible": True,
-                        "kind": "call_log",
-                        "kind_label": "Çağrı kayıtları",
-                        "page_count": page_count,
-                        "record_count": len(records),
-                        "safety": safety,
-                    })
+                    items.append(
+                        {
+                            "name": f.filename,
+                            "compatible": True,
+                            "kind": "call_log",
+                            "kind_label": "Çağrı kayıtları",
+                            "page_count": page_count,
+                            "record_count": len(records),
+                            "safety": safety,
+                        }
+                    )
                     compatible += 1
                     total += len(records)
                 else:
                     table = core.extract_generic_table(p)
                     if table and len(table) >= 2:
-                        items.append({
-                            "name": f.filename,
-                            "compatible": False,
-                            "kind": "other_table",
-                            "kind_label": "Farklı tablo yapısı",
-                            "page_count": page_count,
-                            "record_count": len(table) - 1,
-                            "source_headers": table[0],
-                            "sample_rows": table[1:4],
-                            "safety": safety,
-                            "message": "Çağrı kaydı değil — sütunları eşleyerek dahil edebilirsiniz.",
-                        })
+                        items.append(
+                            {
+                                "name": f.filename,
+                                "compatible": False,
+                                "kind": "other_table",
+                                "kind_label": "Farklı tablo yapısı",
+                                "page_count": page_count,
+                                "record_count": len(table) - 1,
+                                "source_headers": table[0],
+                                "sample_rows": table[1:4],
+                                "safety": safety,
+                                "message": "Çağrı kaydı değil — sütunları eşleyerek dahil edebilirsiniz.",
+                            }
+                        )
                     else:
-                        items.append({
-                            "name": f.filename,
-                            "compatible": False,
-                            "kind": "other",
-                            "kind_label": "Tablo yok",
-                            "page_count": page_count,
-                            "record_count": 0,
-                            "safety": safety,
-                            "message": "Tablo içermiyor — birleşik Excel'e dahil edilemez.",
-                        })
+                        items.append(
+                            {
+                                "name": f.filename,
+                                "compatible": False,
+                                "kind": "other",
+                                "kind_label": "Tablo yok",
+                                "page_count": page_count,
+                                "record_count": 0,
+                                "safety": safety,
+                                "message": "Tablo içermiyor — birleşik Excel'e dahil edilemez.",
+                            }
+                        )
                     incompatible += 1
             finally:
                 doc.close()
@@ -175,7 +185,7 @@ async def batch_files(
     try:
         custom_names: list[str] = [str(x) for x in json.loads(names or "[]")]
     except json.JSONDecodeError:
-        raise HTTPException(400, "Geçersiz names JSON.")
+        raise HTTPException(400, "Geçersiz names JSON.") from None
 
     job_dir = core.make_job_dir("batch", uuid4().hex)
 
@@ -268,8 +278,11 @@ async def batch_files_download(token: str, request: Request):
     job_dir = job.get("job_dir")
 
     core.log_history(
-        action="batch_files", target=target, filename=out_name,
-        record_count=produced, ip=core.client_ip(request),
+        action="batch_files",
+        target=target,
+        filename=out_name,
+        record_count=produced,
+        ip=core.client_ip(request),
         note=f"{produced} dosya",
     )
 
@@ -304,7 +317,7 @@ async def batch_convert(
     try:
         mappings_obj: dict[str, dict[str, int | None]] = json.loads(mappings or "{}")
     except json.JSONDecodeError:
-        raise HTTPException(400, "Geçersiz mapping JSON.")
+        raise HTTPException(400, "Geçersiz mapping JSON.") from None
     if not isinstance(mappings_obj, dict):
         raise HTTPException(400, "Mapping bir nesne (dict) olmalı.")
     for fname, mp in mappings_obj.items():
@@ -319,12 +332,12 @@ async def batch_convert(
                 raise HTTPException(
                     400,
                     f"Mapping[{fname}][{tgt}] geçersiz sütun indeksi: {src_idx!r}",
-                )
+                ) from None
 
     try:
         skip_list: list[str] = json.loads(skip or "[]")
     except json.JSONDecodeError:
-        raise HTTPException(400, "Geçersiz skip JSON.")
+        raise HTTPException(400, "Geçersiz skip JSON.") from None
     if not isinstance(skip_list, list):
         raise HTTPException(400, "Skip bir liste olmalı.")
     skip_list = [str(x) for x in skip_list]
@@ -402,9 +415,9 @@ async def batch_preview(token: str) -> dict:
             dup_flags.append(1 if seen[p] == 1 else 2)
 
     target_schema = list(getattr(core, "TARGET_SCHEMA", []))
-    headers = ["Sıra", "Kaynak PDF", "Kayıt No"] + target_schema
+    headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema]
     rows = []
-    for rec, src in zip(records, sources):
+    for rec, src in zip(records, sources, strict=False):
         row = []
         for h in headers:
             if h == "Kaynak PDF":
@@ -482,7 +495,7 @@ async def batch_filter(
     try:
         filters_obj: dict[str, list[str]] = json.loads(filters or "{}")
     except json.JSONDecodeError:
-        raise HTTPException(400, "Geçersiz filters JSON.")
+        raise HTTPException(400, "Geçersiz filters JSON.") from None
 
     cleaned = {col: vals for col, vals in filters_obj.items() if vals}
     data = load_job(token)
@@ -504,8 +517,11 @@ async def batch_download(token: str, request: Request):
     if not xlsx.exists():
         raise HTTPException(404, "Excel dosyası bulunamadı.")
     core.log_history(
-        action="batch_excel", target="excel", filename=data["filename"],
-        record_count=len(data.get("records", [])), ip=core.client_ip(request),
+        action="batch_excel",
+        target="excel",
+        filename=data["filename"],
+        record_count=len(data.get("records", [])),
+        ip=core.client_ip(request),
     )
     return FileResponse(
         str(xlsx),
@@ -531,7 +547,7 @@ async def batch_distribute(
     try:
         team_list: list[str] = [str(t).strip() for t in json.loads(teams) if str(t).strip()]
     except json.JSONDecodeError:
-        raise HTTPException(400, "Geçersiz teams JSON.")
+        raise HTTPException(400, "Geçersiz teams JSON.") from None
     if not team_list:
         raise HTTPException(400, "En az bir ekip gerekli.")
     if len(set(team_list)) != len(team_list):
@@ -540,9 +556,9 @@ async def batch_distribute(
     try:
         ratio_list: list[float] = [float(r) for r in json.loads(ratios)]
     except (json.JSONDecodeError, ValueError):
-        raise HTTPException(400, "Geçersiz ratios JSON.")
+        raise HTTPException(400, "Geçersiz ratios JSON.") from None
 
-    indexed = list(zip(records, sources))
+    indexed = list(zip(records, sources, strict=False))
 
     if strategy == "sequential":
         assigned = core.distribute_sequential(indexed, team_list)
@@ -552,7 +568,7 @@ async def batch_distribute(
         try:
             assigned = core.distribute_custom(indexed, team_list, ratio_list)
         except ValueError as e:
-            raise HTTPException(400, str(e))
+            raise HTTPException(400, str(e)) from e
     else:
         raise HTTPException(400, f"Bilinmeyen dağıtım tipi: {strategy}")
 
@@ -588,9 +604,9 @@ async def batch_distribute_team(token: str, team_idx: int) -> dict:
         raise HTTPException(404, "Ekip bulunamadı.")
     a = dist["assignments"][team_idx]
     target_schema = list(getattr(core, "TARGET_SCHEMA", []))
-    headers = ["Sıra", "Kaynak PDF", "Kayıt No"] + target_schema
+    headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema]
     rows = []
-    for rec, src in zip(a["records"], a["sources"]):
+    for rec, src in zip(a["records"], a["sources"], strict=False):
         row = []
         for h in headers:
             if h == "Kaynak PDF":
@@ -626,9 +642,12 @@ async def batch_distribute_download(token: str, request: Request):
     ascii_fallback = zip_name.encode("ascii", "ignore").decode("ascii") or "distribution.zip"
     cd = f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(zip_name)}"
     core.log_history(
-        action="distribute", target="zip", filename=zip_name,
-        record_count=total, ip=core.client_ip(request),
-        note=f"{len(dist['assignments'])} ekip · {dist.get('strategy','')}",
+        action="distribute",
+        target="zip",
+        filename=zip_name,
+        record_count=total,
+        ip=core.client_ip(request),
+        note=f"{len(dist['assignments'])} ekip · {dist.get('strategy', '')}",
     )
     return StreamingResponse(
         zip_buf,

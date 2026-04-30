@@ -25,7 +25,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # ----- App identity -----
     app_name: str = Field(default="Admin PDF Toolkit", description="Visible product name")
-    app_version: str = Field(default="1.10.0", description="Semver string (also exposed in /health)")
+    app_version: str = Field(
+        default="1.10.0", description="Semver string (also exposed in /health)"
+    )
 
     # ----- Deployment profile -----
     profile: str = Field(
@@ -156,6 +158,7 @@ class Settings(BaseSettings):
         this is a LAN tool gated by mobile-auth middleware.)
         """
         import os as _os
+
         if self.profile == "dev":
             if "HT_DOCS_URL" not in _os.environ:
                 object.__setattr__(self, "docs_url", "/docs")

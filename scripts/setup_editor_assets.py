@@ -17,9 +17,11 @@ Sources (all OFL / Apache-2.0 / public CDN, no auth required):
 The script is idempotent: existing files are not re-downloaded unless
 ``--force`` is passed.
 """
+
 from __future__ import annotations
 
 import argparse
+import contextlib
 import hashlib
 import sys
 import urllib.error
@@ -30,10 +32,8 @@ from pathlib import Path
 for _stream_name in ("stdout", "stderr"):
     _stream = getattr(sys, _stream_name, None)
     if _stream is not None and hasattr(_stream, "reconfigure"):
-        try:
+        with contextlib.suppress(Exception):
             _stream.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
-            pass
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / "static"
@@ -42,9 +42,7 @@ FONTS_DIR = STATIC / "fonts"
 
 # pdf.js — pin a specific release for reproducibility
 PDFJS_VERSION = "4.10.38"
-PDFJS_BASE = (
-    f"https://cdn.jsdelivr.net/npm/pdfjs-dist@{PDFJS_VERSION}/legacy/build"
-)
+PDFJS_BASE = f"https://cdn.jsdelivr.net/npm/pdfjs-dist@{PDFJS_VERSION}/legacy/build"
 PDFJS_FILES = [
     ("pdf.min.mjs", f"{PDFJS_BASE}/pdf.min.mjs"),
     ("pdf.worker.min.mjs", f"{PDFJS_BASE}/pdf.worker.min.mjs"),
@@ -54,26 +52,26 @@ PDFJS_FILES = [
 NOTO_BASE = "https://cdn.jsdelivr.net/gh/notofonts/notofonts.github.io@main/fonts"
 NOTO_FILES = [
     # Noto Sans (Latin + Turkish glyphs, primary UI font)
-    ("NotoSans-Regular.ttf",     f"{NOTO_BASE}/NotoSans/hinted/ttf/NotoSans-Regular.ttf"),
-    ("NotoSans-Bold.ttf",        f"{NOTO_BASE}/NotoSans/hinted/ttf/NotoSans-Bold.ttf"),
-    ("NotoSans-Italic.ttf",      f"{NOTO_BASE}/NotoSans/hinted/ttf/NotoSans-Italic.ttf"),
-    ("NotoSans-BoldItalic.ttf",  f"{NOTO_BASE}/NotoSans/hinted/ttf/NotoSans-BoldItalic.ttf"),
+    ("NotoSans-Regular.ttf", f"{NOTO_BASE}/NotoSans/hinted/ttf/NotoSans-Regular.ttf"),
+    ("NotoSans-Bold.ttf", f"{NOTO_BASE}/NotoSans/hinted/ttf/NotoSans-Bold.ttf"),
+    ("NotoSans-Italic.ttf", f"{NOTO_BASE}/NotoSans/hinted/ttf/NotoSans-Italic.ttf"),
+    ("NotoSans-BoldItalic.ttf", f"{NOTO_BASE}/NotoSans/hinted/ttf/NotoSans-BoldItalic.ttf"),
     # Noto Serif (Times / Garamond replacement)
-    ("NotoSerif-Regular.ttf",    f"{NOTO_BASE}/NotoSerif/hinted/ttf/NotoSerif-Regular.ttf"),
-    ("NotoSerif-Bold.ttf",       f"{NOTO_BASE}/NotoSerif/hinted/ttf/NotoSerif-Bold.ttf"),
-    ("NotoSerif-Italic.ttf",     f"{NOTO_BASE}/NotoSerif/hinted/ttf/NotoSerif-Italic.ttf"),
+    ("NotoSerif-Regular.ttf", f"{NOTO_BASE}/NotoSerif/hinted/ttf/NotoSerif-Regular.ttf"),
+    ("NotoSerif-Bold.ttf", f"{NOTO_BASE}/NotoSerif/hinted/ttf/NotoSerif-Bold.ttf"),
+    ("NotoSerif-Italic.ttf", f"{NOTO_BASE}/NotoSerif/hinted/ttf/NotoSerif-Italic.ttf"),
     ("NotoSerif-BoldItalic.ttf", f"{NOTO_BASE}/NotoSerif/hinted/ttf/NotoSerif-BoldItalic.ttf"),
     # Noto Sans Mono (Courier replacement)
     ("NotoSansMono-Regular.ttf", f"{NOTO_BASE}/NotoSansMono/hinted/ttf/NotoSansMono-Regular.ttf"),
-    ("NotoSansMono-Bold.ttf",    f"{NOTO_BASE}/NotoSansMono/hinted/ttf/NotoSansMono-Bold.ttf"),
+    ("NotoSansMono-Bold.ttf", f"{NOTO_BASE}/NotoSansMono/hinted/ttf/NotoSansMono-Bold.ttf"),
 ]
 
 DEJAVU_BASE = "https://cdn.jsdelivr.net/npm/dejavu-fonts-ttf@2.37.3/ttf"
 DEJAVU_FILES = [
-    ("DejaVuSans.ttf",        f"{DEJAVU_BASE}/DejaVuSans.ttf"),
-    ("DejaVuSans-Bold.ttf",   f"{DEJAVU_BASE}/DejaVuSans-Bold.ttf"),
-    ("DejaVuSerif.ttf",       f"{DEJAVU_BASE}/DejaVuSerif.ttf"),
-    ("DejaVuSansMono.ttf",    f"{DEJAVU_BASE}/DejaVuSansMono.ttf"),
+    ("DejaVuSans.ttf", f"{DEJAVU_BASE}/DejaVuSans.ttf"),
+    ("DejaVuSans-Bold.ttf", f"{DEJAVU_BASE}/DejaVuSans-Bold.ttf"),
+    ("DejaVuSerif.ttf", f"{DEJAVU_BASE}/DejaVuSerif.ttf"),
+    ("DejaVuSansMono.ttf", f"{DEJAVU_BASE}/DejaVuSansMono.ttf"),
 ]
 
 
@@ -84,10 +82,8 @@ def fetch(url: str, dest: Path, force: bool) -> bool:
     dest.parent.mkdir(parents=True, exist_ok=True)
     print(f"  ↓ {url}")
     try:
-        req = urllib.request.Request(
-            url, headers={"User-Agent": "ht-pdf-editor-setup/1.0"}
-        )
-        with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310 — https only
+        req = urllib.request.Request(url, headers={"User-Agent": "ht-pdf-editor-setup/1.0"})
+        with urllib.request.urlopen(req, timeout=30) as resp:
             data = resp.read()
         dest.write_bytes(data)
         size_kb = len(data) / 1024
@@ -101,8 +97,7 @@ def fetch(url: str, dest: Path, force: bool) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Download PDF editor assets.")
-    parser.add_argument("--force", action="store_true",
-                        help="Re-download even if files exist.")
+    parser.add_argument("--force", action="store_true", help="Re-download even if files exist.")
     parser.add_argument("--pdfjs-only", action="store_true")
     parser.add_argument("--fonts-only", action="store_true")
     args = parser.parse_args()

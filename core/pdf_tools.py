@@ -81,7 +81,6 @@ def _insert_text_unicode(
     characters identically. Silently falls back to Helvetica if no system
     Unicode font is found.
     """
-    import fitz
 
     font_path = _find_unicode_font()
     kwargs: dict[str, Any] = {
@@ -111,7 +110,6 @@ def _insert_text_unicode(
 
 def _save_pdf(doc: Any, output: Path, *, encryption: dict | None = None) -> None:
     """Wrapper around ``doc.save`` with the project-standard compact options."""
-    import fitz
 
     save_kwargs: dict[str, Any] = {
         "garbage": 4,
@@ -257,12 +255,16 @@ def pdf_compress(
                             scale_y = target_h / max(1, pix.height)
                             scale = min(scale_x, scale_y, 1.0)
                             if 0 < scale < 1.0:
-                                m = fitz.Matrix(scale, scale)
+                                fitz.Matrix(scale, scale)
                                 pix = fitz.Pixmap(pix, 0)  # detach
-                                pix = fitz.Pixmap(
-                                    fitz.csRGB,
-                                    fitz.Pixmap(doc, xref).tobytes("png"),
-                                ) if False else pix  # noop guard
+                                pix = (
+                                    fitz.Pixmap(
+                                        fitz.csRGB,
+                                        fitz.Pixmap(doc, xref).tobytes("png"),
+                                    )
+                                    if False
+                                    else pix
+                                )  # noop guard
                     jpg = pix.tobytes("jpeg", jpg_quality=image_quality)
                     doc.update_stream(xref, jpg)
                 except Exception as e:
@@ -314,9 +316,8 @@ def pdf_decrypt(input_path: Path, output: Path, *, password: str) -> None:
     import fitz
 
     with fitz.open(str(input_path)) as doc:
-        if doc.is_encrypted:
-            if not doc.authenticate(password or ""):
-                raise ValueError("Şifre yanlış.")
+        if doc.is_encrypted and not doc.authenticate(password or ""):
+            raise ValueError("Şifre yanlış.")
         _save_pdf(doc, output, encryption={"encryption": fitz.PDF_ENCRYPT_NONE})
 
 
@@ -406,19 +407,22 @@ def pdf_watermark_image(
 
 # ----- page numbers / header / footer -------------------------------------
 _POSITIONS = {
-    "top-left", "top-center", "top-right",
-    "bottom-left", "bottom-center", "bottom-right",
+    "top-left",
+    "top-center",
+    "top-right",
+    "bottom-left",
+    "bottom-center",
+    "bottom-right",
 }
 
 
-def _position_xy(rect: Any, position: str, fontsize: float, margin: float = 24.0) -> tuple[float, float]:
+def _position_xy(
+    rect: Any, position: str, fontsize: float, margin: float = 24.0
+) -> tuple[float, float]:
     if position not in _POSITIONS:
         position = "bottom-center"
     horiz, vert = position.split("-")
-    if vert == "top":
-        y = margin + fontsize
-    else:
-        y = rect.height - margin
+    y = margin + fontsize if vert == "top" else rect.height - margin
     if horiz == "left":
         x = margin
     elif horiz == "right":
@@ -497,13 +501,13 @@ def pdf_crop(
     if all(v <= 0 for v in (top, right, bottom, left)):
         raise ValueError("En az bir kenar > 0 olmalı.")
     factor = {"pt": 1.0, "mm": 2.83465, "in": 72.0}.get(unit, 1.0)
-    t, r, b, l = (v * factor for v in (top, right, bottom, left))
+    t, r, b, lf = (v * factor for v in (top, right, bottom, left))
     with fitz.open(str(input_path)) as doc:
         if doc.is_encrypted and not doc.authenticate(""):
             raise ValueError("Şifreli PDF — önce şifreyi kaldırın.")
         for page in doc:
             mb = page.mediabox
-            new = fitz.Rect(mb.x0 + l, mb.y0 + t, mb.x1 - r, mb.y1 - b)
+            new = fitz.Rect(mb.x0 + lf, mb.y0 + t, mb.x1 - r, mb.y1 - b)
             if new.width <= 1 or new.height <= 1:
                 raise ValueError("Kırpma sonrası sayfa çok küçük.")
             page.set_cropbox(new)

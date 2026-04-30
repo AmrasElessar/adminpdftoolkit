@@ -115,12 +115,26 @@ select = [
     "RUF", # ruff-specific
 ]
 ignore = [
-    "E501",  # line too long (formatter handles)
-    "B008",  # function call in default argument (FastAPI Depends pattern)
+    "E501",   # line too long (formatter handles)
+    "B008",   # function call in default argument (FastAPI Depends pattern)
+    # Turkish characters trip the "ambiguous unicode" lints across strings,
+    # docstrings, and comments — this is a TR-language codebase, not a
+    # homoglyph attack surface.
+    "RUF001", # ambiguous-unicode-character-string
+    "RUF002", # ambiguous-unicode-character-docstring
+    "RUF003", # ambiguous-unicode-character-comment
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["B011", "F401"]
+# Tests use compact `path = ...; path.write_bytes(...)` setup idioms and
+# don't need exception-chaining or regex-escaping rigor.
+"tests/*" = ["B011", "F401", "E702", "B904", "RUF043"]
+# Package __init__.py files re-export public surface; the imports look
+# unused to pyflakes but are intentional API.
+"__init__.py" = ["F401", "E402"]
+# app.py reconfigures stdout/stderr and adjusts sys.path before importing
+# the rest of the app — those imports cannot be moved to the top.
+"app.py" = ["E402"]
 
 [tool.ruff.format]
 quote-style = "double"

@@ -11,6 +11,7 @@ regardless of what the operator configured locally, so we pin
 ``HT_SAFETY_POLICY=block_danger`` (the default — but explicit beats implicit
 when running in CI).
 """
+
 from __future__ import annotations
 
 import os

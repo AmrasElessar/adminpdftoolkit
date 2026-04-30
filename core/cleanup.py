@@ -7,17 +7,17 @@ import threading
 import time
 
 from state import (
-    WORK_DIR,
-    STATE_DIR,
-    WORK_TTL,
-    JOB_MEMORY_TTL,
     CLEANUP_INTERVAL,
+    JOB_MEMORY_TTL,
     MAX_JOB_TIMEOUT_SECONDS,
-    convert_jobs,
+    STATE_DIR,
+    WORK_DIR,
+    WORK_TTL,
     batch_jobs,
-    ocr_jobs,
-    convert_lock,
     batch_lock,
+    convert_jobs,
+    convert_lock,
+    ocr_jobs,
     ocr_lock,
 )
 

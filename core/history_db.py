@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import shutil
 import sqlite3
 import threading
@@ -31,20 +32,17 @@ def _get_conn() -> sqlite3.Connection:
     """
     global _conn_cache
     import core
+
     path = core.HISTORY_DB_PATH
     if _conn_cache is not None and _conn_cache[0] == path:
         return _conn_cache[1]
     if _conn_cache is not None:
-        try:
+        with contextlib.suppress(Exception):
             _conn_cache[1].close()
-        except Exception:
-            pass
         _conn_cache = None
     conn = sqlite3.connect(str(path), check_same_thread=False)
-    try:
+    with contextlib.suppress(sqlite3.DatabaseError):
         conn.execute("PRAGMA journal_mode=WAL")
-    except sqlite3.DatabaseError:
-        pass
     _conn_cache = (path, conn)
     return conn
 
@@ -57,6 +55,7 @@ def _migrate_legacy_history_db() -> None:
     their audit trail — move it across once on first init, idempotent.
     """
     import core
+
     legacy = core.BASE_DIR / "history.db"
     if legacy == core.HISTORY_DB_PATH:
         return

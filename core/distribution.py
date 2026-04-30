@@ -41,7 +41,7 @@ def distribute_custom(
     total = sum(ratios)
     if total <= 0:
         return out
-    counts = [int(round(len(records) * r / total)) for r in ratios]
+    counts = [round(len(records) * r / total) for r in ratios]
     diff = len(records) - sum(counts)
     if diff != 0:
         counts[0] += diff

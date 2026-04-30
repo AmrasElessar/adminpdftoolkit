@@ -21,8 +21,10 @@ __license__ = "AGPL-3.0-or-later"
 
 # Embedded/portable Python'da script dizini sys.path'e otomatik eklenmiyor.
 # Bu yüzden pdf_converter import edilemiyor. Manuel olarak ekleyelim.
+import contextlib
 import os as _bootstrap_os
 import sys as _bootstrap_sys
+
 _HERE = _bootstrap_os.path.dirname(_bootstrap_os.path.abspath(__file__))
 if _HERE not in _bootstrap_sys.path:
     _bootstrap_sys.path.insert(0, _HERE)
@@ -32,10 +34,8 @@ if _HERE not in _bootstrap_sys.path:
 for _stream_name in ("stdout", "stderr"):
     _stream = getattr(_bootstrap_sys, _stream_name, None)
     if _stream is not None and hasattr(_stream, "reconfigure"):
-        try:
+        with contextlib.suppress(Exception):
             _stream.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
-            pass
 
 import hmac
 import mimetypes
@@ -44,7 +44,7 @@ import shutil
 import socket
 import threading
 import time
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from typing import Any
 
 import uvicorn
@@ -82,10 +82,9 @@ from state import (
     ocr_lock,
 )
 
-
 # Mirror to core so the process-pool worker (parse_pdf_for_batch) sees the
 # call-log target schema without importing the FastAPI app file.
-core.TARGET_SCHEMA = ["Müşteri", "Telefon", "Durum", "Tarih", "Süre"] + CALL_LOG_QUESTIONS
+core.TARGET_SCHEMA = ["Müşteri", "Telefon", "Durum", "Tarih", "Süre", *CALL_LOG_QUESTIONS]
 
 
 def _prewarm_caches() -> None:
@@ -103,9 +102,10 @@ def _prewarm_caches() -> None:
     the HTTP listener from coming up.
     """
     try:
-        from core.pdf_tools import _find_unicode_font
-        from core.converters import _patch_pisa_for_local_fonts, _ensure_pisa_unicode_font
+        from core.converters import _ensure_pisa_unicode_font, _patch_pisa_for_local_fonts
         from core.fonts import discover_system_fonts
+        from core.pdf_tools import _find_unicode_font
+
         _find_unicode_font()
         _patch_pisa_for_local_fonts()
         _ensure_pisa_unicode_font()
@@ -125,6 +125,7 @@ def _maybe_update_clamav() -> None:
     """
     try:
         from core.clamav_update import maybe_update
+
         result = maybe_update()
         if result is not None:
             if result["ok"]:
@@ -172,7 +173,8 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 # Mount every router-based endpoint group. The split is documented in
 # ``routers/__init__.py``; new endpoints should land in (or get a new file
 # under) ``routers/`` rather than this bootstrap.
-from routers import ALL as _ROUTERS  # noqa: E402  -- imported after `app`
+from routers import ALL as _ROUTERS
+
 for _r in _ROUTERS:
     app.include_router(_r)
 
@@ -246,12 +248,14 @@ async def _mobile_auth_middleware(request: Request, call_next):
 async def index(request: Request) -> HTMLResponse:
     scheme = "https" if request.url.scheme == "https" else "http"
     response = templates.TemplateResponse(
-        request, "index.html", {
+        request,
+        "index.html",
+        {
             "max_mb": MAX_UPLOAD_MB,
             "lan_ip": core.lan_ip(),
             "port": int(os.environ.get("PORT", "8000")),
             "scheme": scheme,
-        }
+        },
     )
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -279,10 +283,8 @@ async def health() -> dict:
         pass
 
     free_bytes = None
-    try:
+    with suppress(Exception):
         free_bytes = shutil.disk_usage(str(WORK_DIR)).free
-    except Exception:
-        pass
 
     with convert_lock:
         convert_running = sum(1 for j in convert_jobs.values() if not j.get("done"))
@@ -304,8 +306,8 @@ async def health() -> dict:
         "disk_free_bytes": free_bytes,
         "jobs": {
             "convert": {"running": convert_running, "total": convert_total},
-            "batch":   {"running": batch_running,   "total": batch_total},
-            "ocr":     {"running": ocr_running,     "total": ocr_total},
+            "batch": {"running": batch_running, "total": batch_total},
+            "ocr": {"running": ocr_running, "total": ocr_total},
         },
     }
 
@@ -324,7 +326,7 @@ def main() -> None:
         probe.close()
         print("=" * 60)
         print(f"  [UYARI] {port} portu zaten kullanımda.")
-        print(f"  Sunucu muhtemelen zaten çalışıyor:")
+        print("  Sunucu muhtemelen zaten çalışıyor:")
         print(f"     {scheme}://127.0.0.1:{port}")
         print(f"     {scheme}://{lan}:{port}")
         print("  Yeni bir kopya başlatılmayacak. Pencereyi kapatabilirsiniz.")
@@ -351,7 +353,7 @@ def main() -> None:
     print("=" * 60)
     print(f"  Bu makineden  : {scheme}://127.0.0.1:{port}")
     print(f"  Ağdan (LAN)   : {scheme}://{lan}:{port}")
-    print(f"  Telefondan aynı Wi-Fi'daysanız yukarıdaki LAN adresine girin.")
+    print("  Telefondan aynı Wi-Fi'daysanız yukarıdaki LAN adresine girin.")
     if use_https:
         print()
         print("  ℹ İlk girişte tarayıcıda 'sertifika güvensiz' uyarısı çıkar:")

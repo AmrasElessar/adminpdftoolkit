@@ -12,6 +12,7 @@ Each scenario is driven on the main thread (``parallel_batch_workers=1``
 forces serial mode) and stubs ``core.parse_pdf_for_batch`` so the test
 isn't coupled to real PDF parsing.
 """
+
 from __future__ import annotations
 
 import json
@@ -81,10 +82,12 @@ def _seed_job(progress_token: str, job_dir: Path, total: int) -> None:
 # Happy path — two PDFs, both parse cleanly, merged Excel + data.json land
 # ---------------------------------------------------------------------------
 def test_worker_merges_two_pdfs_and_writes_outputs(
-        monkeypatch: pytest.MonkeyPatch, job_dir: Path,
-        job_token: str, progress_token: str) -> None:
-    a = job_dir / "in_0.pdf"; a.write_bytes(b"%PDF-1.4\n%%EOF\n")
-    b = job_dir / "in_1.pdf"; b.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    monkeypatch: pytest.MonkeyPatch, job_dir: Path, job_token: str, progress_token: str
+) -> None:
+    a = job_dir / "in_0.pdf"
+    a.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    b = job_dir / "in_1.pdf"
+    b.write_bytes(b"%PDF-1.4\n%%EOF\n")
 
     def fake_parse(args):
         filename, _path, _mapping, _schema = args
@@ -93,15 +96,19 @@ def test_worker_merges_two_pdfs_and_writes_outputs(
             "records": [{"Telefon": "5551112233", "Müşteri": filename}],
             "warning": None,
         }
+
     monkeypatch.setattr(core, "parse_pdf_for_batch", fake_parse)
     monkeypatch.setattr(core, "TARGET_SCHEMA", ["Müşteri", "Telefon"])
 
     _seed_job(progress_token, job_dir, total=2)
 
     batch_convert_worker(
-        progress_token, [("a.pdf", a), ("b.pdf", b)],
-        mappings_obj={}, skip_list=[],
-        job_token=job_token, file_count=2,
+        progress_token,
+        [("a.pdf", a), ("b.pdf", b)],
+        mappings_obj={},
+        skip_list=[],
+        job_token=job_token,
+        file_count=2,
     )
 
     snap = batch_store.snapshot(progress_token)
@@ -134,62 +141,71 @@ def test_worker_merges_two_pdfs_and_writes_outputs(
 # follows input order
 # ---------------------------------------------------------------------------
 def test_worker_preserves_input_order_when_parses_complete_out_of_order(
-        monkeypatch: pytest.MonkeyPatch, job_dir: Path,
-        job_token: str, progress_token: str) -> None:
+    monkeypatch: pytest.MonkeyPatch, job_dir: Path, job_token: str, progress_token: str
+) -> None:
     """Serial mode iterates ``parse_args`` in order and stores results
     at the original index, so the merged output matches input order
     independent of whether the parse was fast or slow on each file."""
-    a = job_dir / "in_0.pdf"; a.write_bytes(b"%PDF-1.4\n%%EOF\n")
-    b = job_dir / "in_1.pdf"; b.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    a = job_dir / "in_0.pdf"
+    a.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    b = job_dir / "in_1.pdf"
+    b.write_bytes(b"%PDF-1.4\n%%EOF\n")
 
     def fake_parse(args):
         filename, _, _, _ = args
         # Record numbers chosen to make the merged Sıra easy to verify
         recs = [{"Müşteri": f"{filename}-1"}, {"Müşteri": f"{filename}-2"}]
         return {"filename": filename, "records": recs, "warning": None}
+
     monkeypatch.setattr(core, "parse_pdf_for_batch", fake_parse)
     monkeypatch.setattr(core, "TARGET_SCHEMA", ["Müşteri"])
 
     _seed_job(progress_token, job_dir, total=2)
     batch_convert_worker(
-        progress_token, [("first.pdf", a), ("second.pdf", b)],
-        mappings_obj={}, skip_list=[],
-        job_token=job_token, file_count=2,
+        progress_token,
+        [("first.pdf", a), ("second.pdf", b)],
+        mappings_obj={},
+        skip_list=[],
+        job_token=job_token,
+        file_count=2,
     )
 
     data = json.loads((job_dir / "data.json").read_text(encoding="utf-8"))
     # Records: first.pdf-1, first.pdf-2, second.pdf-1, second.pdf-2
     musteri_order = [r["Müşteri"] for r in data["records"]]
-    assert musteri_order == ["first.pdf-1", "first.pdf-2",
-                              "second.pdf-1", "second.pdf-2"]
+    assert musteri_order == ["first.pdf-1", "first.pdf-2", "second.pdf-1", "second.pdf-2"]
     # Source-file column should mirror that
-    assert data["source_files"] == ["first.pdf", "first.pdf",
-                                      "second.pdf", "second.pdf"]
+    assert data["source_files"] == ["first.pdf", "first.pdf", "second.pdf", "second.pdf"]
 
 
 # ---------------------------------------------------------------------------
 # Skip list — a filename in skip_list is NOT parsed, status="skipped"
 # ---------------------------------------------------------------------------
 def test_worker_skips_files_in_skip_list(
-        monkeypatch: pytest.MonkeyPatch, job_dir: Path,
-        job_token: str, progress_token: str) -> None:
-    a = job_dir / "in_0.pdf"; a.write_bytes(b"%PDF-1.4\n%%EOF\n")
-    b = job_dir / "in_1.pdf"; b.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    monkeypatch: pytest.MonkeyPatch, job_dir: Path, job_token: str, progress_token: str
+) -> None:
+    a = job_dir / "in_0.pdf"
+    a.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    b = job_dir / "in_1.pdf"
+    b.write_bytes(b"%PDF-1.4\n%%EOF\n")
 
     parsed_names: list[str] = []
 
     def fake_parse(args):
         parsed_names.append(args[0])
-        return {"filename": args[0], "records": [{"Müşteri": "x"}],
-                 "warning": None}
+        return {"filename": args[0], "records": [{"Müşteri": "x"}], "warning": None}
+
     monkeypatch.setattr(core, "parse_pdf_for_batch", fake_parse)
     monkeypatch.setattr(core, "TARGET_SCHEMA", ["Müşteri"])
 
     _seed_job(progress_token, job_dir, total=2)
     batch_convert_worker(
-        progress_token, [("good.pdf", a), ("ignore.pdf", b)],
-        mappings_obj={}, skip_list=["ignore.pdf"],
-        job_token=job_token, file_count=2,
+        progress_token,
+        [("good.pdf", a), ("ignore.pdf", b)],
+        mappings_obj={},
+        skip_list=["ignore.pdf"],
+        job_token=job_token,
+        file_count=2,
     )
 
     # Only one file went through the parser
@@ -206,27 +222,32 @@ def test_worker_skips_files_in_skip_list(
 # Per-file parse failure → warning row, batch survives, status="error"
 # ---------------------------------------------------------------------------
 def test_worker_records_parse_warning_without_aborting_batch(
-        monkeypatch: pytest.MonkeyPatch, job_dir: Path,
-        job_token: str, progress_token: str) -> None:
+    monkeypatch: pytest.MonkeyPatch, job_dir: Path, job_token: str, progress_token: str
+) -> None:
     """One PDF blowing up shouldn't kill the whole batch — the worker
     converts the exception into a per-file warning and keeps merging."""
-    a = job_dir / "in_0.pdf"; a.write_bytes(b"%PDF-1.4\n%%EOF\n")
-    b = job_dir / "in_1.pdf"; b.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    a = job_dir / "in_0.pdf"
+    a.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    b = job_dir / "in_1.pdf"
+    b.write_bytes(b"%PDF-1.4\n%%EOF\n")
 
     def fake_parse(args):
         filename = args[0]
         if filename == "broken.pdf":
             raise RuntimeError("simulated parser failure")
-        return {"filename": filename, "records": [{"Müşteri": "ok"}],
-                 "warning": None}
+        return {"filename": filename, "records": [{"Müşteri": "ok"}], "warning": None}
+
     monkeypatch.setattr(core, "parse_pdf_for_batch", fake_parse)
     monkeypatch.setattr(core, "TARGET_SCHEMA", ["Müşteri"])
 
     _seed_job(progress_token, job_dir, total=2)
     batch_convert_worker(
-        progress_token, [("good.pdf", a), ("broken.pdf", b)],
-        mappings_obj={}, skip_list=[],
-        job_token=job_token, file_count=2,
+        progress_token,
+        [("good.pdf", a), ("broken.pdf", b)],
+        mappings_obj={},
+        skip_list=[],
+        job_token=job_token,
+        file_count=2,
     )
 
     snap = batch_store.snapshot(progress_token)
@@ -245,21 +266,25 @@ def test_worker_records_parse_warning_without_aborting_batch(
 # All-PDFs-fail → batch reports a clean RuntimeError
 # ---------------------------------------------------------------------------
 def test_worker_marks_done_with_error_when_no_records(
-        monkeypatch: pytest.MonkeyPatch, job_dir: Path,
-        job_token: str, progress_token: str) -> None:
-    a = job_dir / "in_0.pdf"; a.write_bytes(b"%PDF-1.4\n%%EOF\n")
+    monkeypatch: pytest.MonkeyPatch, job_dir: Path, job_token: str, progress_token: str
+) -> None:
+    a = job_dir / "in_0.pdf"
+    a.write_bytes(b"%PDF-1.4\n%%EOF\n")
 
     def fake_parse(args):
-        return {"filename": args[0], "records": [],
-                 "warning": "boş tablo"}
+        return {"filename": args[0], "records": [], "warning": "boş tablo"}
+
     monkeypatch.setattr(core, "parse_pdf_for_batch", fake_parse)
     monkeypatch.setattr(core, "TARGET_SCHEMA", ["Müşteri"])
 
     _seed_job(progress_token, job_dir, total=1)
     batch_convert_worker(
-        progress_token, [("empty.pdf", a)],
-        mappings_obj={}, skip_list=[],
-        job_token=job_token, file_count=1,
+        progress_token,
+        [("empty.pdf", a)],
+        mappings_obj={},
+        skip_list=[],
+        job_token=job_token,
+        file_count=1,
     )
 
     snap = batch_store.snapshot(progress_token)

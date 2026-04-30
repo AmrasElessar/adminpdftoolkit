@@ -63,6 +63,7 @@ def convert_worker(
     """Single-PDF convert worker. ``target`` ∈ ``{word, excel, jpg}``."""
     try:
         import fitz as _fitz
+
         stem = Path(orig_filename).stem
         safe_custom = core.safe_filename(custom_name.strip()) if custom_name else ""
         final_stem = safe_custom or core.safe_filename(stem)
@@ -89,7 +90,7 @@ def convert_worker(
             try:
                 for i, page in enumerate(doc):
                     pix = page.get_pixmap(matrix=mat, alpha=False)
-                    out = jpg_dir / f"sayfa_{i+1:03d}.jpg"
+                    out = jpg_dir / f"sayfa_{i + 1:03d}.jpg"
                     pix.save(str(out), jpg_quality=90)
                     pix = None  # release Pixmap eagerly so 100+ page batches don't bloat
                     files.append(out)
@@ -159,9 +160,7 @@ def convert_worker(
             current=total_pages,
             output_path=str(out),
             output_name=f"{final_stem}.xlsx",
-            media_type=(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            ),
+            media_type=("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
             record_count=record_count,
             phase="done",
             done=True,

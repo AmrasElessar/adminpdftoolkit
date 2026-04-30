@@ -12,7 +12,8 @@ Public surface:
 To add a new parser, drop a module under ``parsers/`` defining a subclass of
 ``BaseParser`` and register it in ``parsers.registry``.
 """
+
 from .base import BaseParser
 from .registry import PARSERS, classify, get_parser
 
-__all__ = ["BaseParser", "PARSERS", "classify", "get_parser"]
+__all__ = ["PARSERS", "BaseParser", "classify", "get_parser"]

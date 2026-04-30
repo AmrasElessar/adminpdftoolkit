@@ -5,9 +5,9 @@ from __future__ import annotations
 import re
 
 _PATH_SCRUB_PATTERNS = [
-    re.compile(r"[A-Za-z]:[\\/][^\s'\"]+"),               # Windows abs paths
-    re.compile(r"/(?:home|root|tmp|var|opt)/[^\s'\"]+"),   # POSIX abs paths
-    re.compile(r"File \"[^\"]+\""),                        # traceback "File ..." prefix
+    re.compile(r"[A-Za-z]:[\\/][^\s'\"]+"),  # Windows abs paths
+    re.compile(r"/(?:home|root|tmp|var|opt)/[^\s'\"]+"),  # POSIX abs paths
+    re.compile(r"File \"[^\"]+\""),  # traceback "File ..." prefix
 ]
 MAX_ERROR_CHARS = 200
 

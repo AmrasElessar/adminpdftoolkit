@@ -8,6 +8,7 @@ Callers use ``parsers.classify(doc)`` to dispatch and then check what the
 returned parser supports — or, when the conversion target is fixed, look up
 a specific parser via ``parsers.get_parser(name)``.
 """
+
 from __future__ import annotations
 
 from typing import Any

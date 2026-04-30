@@ -4,6 +4,7 @@ Covers ``detect_blank_pages``, ``remove_blank_pages``, ``detect_signatures``
 and ``classify_pdf`` plus their endpoints. No model downloads — these are
 heuristic / pattern-based, so the suite stays fast and offline.
 """
+
 from __future__ import annotations
 
 from pathlib import Path

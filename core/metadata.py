@@ -150,7 +150,6 @@ def find_text(
             page_text = page.get_text() or ""
             haystack = page_text if case_sensitive else page_text.casefold()
             try:
-                flags = 0
                 # PyMuPDF ≥ 1.18 supports flags: TEXT_PRESERVE_LIGATURES, etc.
                 if not case_sensitive:
                     # search_for is case-insensitive by default in recent versions
@@ -178,12 +177,14 @@ def find_text(
                     post = page_text[pos + len(query)] if pos + len(query) < len(page_text) else " "
                     if pre.isalnum() or post.isalnum():
                         continue
-                out.append({
-                    "page": pno + 1,
-                    "rect": [float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1)],
-                    "text": query,
-                    "context": ctx,
-                })
+                out.append(
+                    {
+                        "page": pno + 1,
+                        "rect": [float(rect.x0), float(rect.y0), float(rect.x1), float(rect.y1)],
+                        "text": query,
+                        "context": ctx,
+                    }
+                )
     return out
 
 
@@ -210,10 +211,7 @@ def extract_images(
         if doc.is_encrypted and not doc.authenticate(""):
             raise ValueError("Şifreli PDF — önce şifreyi kaldırın.")
         seen: set[int] = set()  # dedupe shared xrefs (logos repeated across pages)
-        page_iter = (
-            [(page - 1, doc[page - 1])] if page is not None
-            else list(enumerate(doc))
-        )
+        page_iter = [(page - 1, doc[page - 1])] if page is not None else list(enumerate(doc))
         for pno, p in page_iter:
             for idx, img_info in enumerate(p.get_images(full=True)):
                 xref = img_info[0]
@@ -232,14 +230,16 @@ def extract_images(
                     out_path = output_dir / filename
                     pix.save(str(out_path))
                     pix = None
-                    out.append({
-                        "page": pno + 1,
-                        "index": idx + 1,
-                        "filename": filename,
-                        "width": img_info[2],
-                        "height": img_info[3],
-                        "xref": xref,
-                    })
+                    out.append(
+                        {
+                            "page": pno + 1,
+                            "index": idx + 1,
+                            "filename": filename,
+                            "width": img_info[2],
+                            "height": img_info[3],
+                            "xref": xref,
+                        }
+                    )
                     seen.add(xref)
                 except Exception as e:
                     logger.debug("extract_images: xref %s skipped (%s)", xref, e)
@@ -318,7 +318,10 @@ def detect_text_columns(page: Any, *, threshold_ratio: float = 0.6) -> int:
 
 # ----- Layout: header / footer detection ----------------------------------
 def _headers_footers_from_doc(
-    doc: Any, *, top_pct: float = 0.10, bottom_pct: float = 0.10,
+    doc: Any,
+    *,
+    top_pct: float = 0.10,
+    bottom_pct: float = 0.10,
 ) -> dict[str, list[str]]:
     """Inner: detect repeating headers/footers from an already-open doc."""
     top_lines: dict[str, int] = {}
@@ -338,8 +341,7 @@ def _headers_footers_from_doc(
                 if not bbox:
                     continue
                 text = " ".join(
-                    (s.get("text") or "").strip()
-                    for s in line.get("spans", [])
+                    (s.get("text") or "").strip() for s in line.get("spans", [])
                 ).strip()
                 if not text:
                     continue
@@ -355,7 +357,9 @@ def _headers_footers_from_doc(
     return {"headers": headers, "footers": footers}
 
 
-def detect_headers_footers(input_path: Path, *, top_pct: float = 0.10, bottom_pct: float = 0.10) -> dict[str, list[str]]:
+def detect_headers_footers(
+    input_path: Path, *, top_pct: float = 0.10, bottom_pct: float = 0.10
+) -> dict[str, list[str]]:
     """Find lines that repeat at the top / bottom of multiple pages.
 
     A line is flagged as a header/footer if it appears (case-insensitive,
@@ -387,22 +391,25 @@ def deep_analyze(input_path: Path) -> dict[str, Any]:
         metadata = _metadata_from_doc(doc)
         outline = _outline_from_doc(doc)
         headers_footers = (
-            _headers_footers_from_doc(doc) if extractability["extractable"]
+            _headers_footers_from_doc(doc)
+            if extractability["extractable"]
             else {"headers": [], "footers": []}
         )
 
         pages_info: list[dict[str, Any]] = []
         for pno, page in enumerate(doc):
             text = page.get_text() or ""
-            pages_info.append({
-                "page": pno + 1,
-                "width": float(page.rect.width),
-                "height": float(page.rect.height),
-                "rotation": int(page.rotation),
-                "char_count": len(text.strip()),
-                "image_count": len(page.get_images(full=False)),
-                "columns": detect_text_columns(page) if text.strip() else 0,
-            })
+            pages_info.append(
+                {
+                    "page": pno + 1,
+                    "width": float(page.rect.width),
+                    "height": float(page.rect.height),
+                    "rotation": int(page.rotation),
+                    "char_count": len(text.strip()),
+                    "image_count": len(page.get_images(full=False)),
+                    "columns": detect_text_columns(page) if text.strip() else 0,
+                }
+            )
 
     return {
         "extractability": extractability,

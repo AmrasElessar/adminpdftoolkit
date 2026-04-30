@@ -26,6 +26,7 @@ def ocr_worker(
     demand) and write a Word doc or one-sheet-per-page workbook."""
     try:
         import fitz as _fitz
+
         stem = Path(orig_name).stem
 
         if target == "jpg":
@@ -40,7 +41,7 @@ def ocr_worker(
             try:
                 for i, page in enumerate(doc):
                     pix = page.get_pixmap(matrix=mat, alpha=False)
-                    out = jpg_dir / f"sayfa_{i+1:03d}.jpg"
+                    out = jpg_dir / f"sayfa_{i + 1:03d}.jpg"
                     pix.save(str(out), jpg_quality=90)
                     pix = None  # release Pixmap eagerly so 100+ page batches don't bloat
                     files.append(out)
@@ -62,6 +63,7 @@ def ocr_worker(
             return
 
         from pdf_converter import get_ocr_reader
+
         ocr_store.update(token, phase="loading_model")
         reader = get_ocr_reader()
 
@@ -87,6 +89,7 @@ def ocr_worker(
 
         if target == "word":
             from docx import Document as DocxDocument
+
             d = DocxDocument()
             d.add_heading(f"OCR Sonucu: {orig_name}", level=1)
             for idx, txt in enumerate(pages_text, 1):
@@ -98,6 +101,7 @@ def ocr_worker(
             media = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         else:  # excel
             from openpyxl import Workbook
+
             wb = Workbook()
             wb.remove(wb.active)
             for idx, txt in enumerate(pages_text, 1):

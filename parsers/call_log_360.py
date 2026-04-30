@@ -4,13 +4,13 @@ Ham PDF metnini satır listesine açar, kayıt başlangıcını rakam-only satı
 yakalar, müşteri/telefon/durum/tarih/süre alanlarını ve S:/C: soru-cevap
 bloklarını ayrıştırıp dict listesi döner.
 """
+
 from __future__ import annotations
 
 import re
 from typing import Any
 
 from .base import BaseParser
-
 
 CALL_LOG_QUESTIONS = [
     "Ağrı / romatizma",
@@ -115,7 +115,9 @@ class CallLog360Parser(BaseParser):
                 i += 1
 
             duration_parts: list[str] = []
-            while i < n and not all_lines[i].startswith("S:") and not _is_record_start(all_lines[i]):
+            while (
+                i < n and not all_lines[i].startswith("S:") and not _is_record_start(all_lines[i])
+            ):
                 duration_parts.append(all_lines[i])
                 i += 1
             duration = " ".join(duration_parts).strip()

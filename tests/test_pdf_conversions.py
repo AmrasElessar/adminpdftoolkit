@@ -5,6 +5,7 @@ Covers ``image_to_pdf``, ``pdf_to_markdown``, ``pdf_to_csv``, ``docx_to_pdf``,
 exercised against an in-process FastAPI test server so we never reach the real
 internet.
 """
+
 from __future__ import annotations
 
 import io
@@ -52,8 +53,7 @@ def sample_pdf_with_text(tmp_path: Path) -> Path:
     doc = fitz.open()
     p1 = doc.new_page()
     p1.insert_text((72, 80), "BAS LIK", fontsize=24, fontname="helv")
-    p1.insert_text((72, 130), "Bu bir paragraf metnidir.",
-                   fontsize=11, fontname="helv")
+    p1.insert_text((72, 130), "Bu bir paragraf metnidir.", fontsize=11, fontname="helv")
     p2 = doc.new_page()
     p2.insert_text((72, 80), "Ikinci sayfa", fontsize=11, fontname="helv")
     doc.save(str(out))
@@ -79,11 +79,11 @@ def sample_pdf_with_table(tmp_path: Path) -> Path:
     rh = 24.0
     for r, row in enumerate(cells):
         for c, value in enumerate(row):
-            rect = fitz.Rect(x0 + c * cw, y0 + r * rh,
-                             x0 + (c + 1) * cw, y0 + (r + 1) * rh)
+            rect = fitz.Rect(x0 + c * cw, y0 + r * rh, x0 + (c + 1) * cw, y0 + (r + 1) * rh)
             page.draw_rect(rect, color=(0, 0, 0), width=0.5)
-            page.insert_textbox(rect, value, fontsize=10, fontname="helv",
-                                align=fitz.TEXT_ALIGN_CENTER)
+            page.insert_textbox(
+                rect, value, fontsize=10, fontname="helv", align=fitz.TEXT_ALIGN_CENTER
+            )
     doc.save(str(out))
     doc.close()
     return out
@@ -139,7 +139,9 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
 # ---------------------------------------------------------------------------
 # core.image_to_pdf
 # ---------------------------------------------------------------------------
-def test_image_to_pdf_concatenates(sample_image: Path, sample_image_2: Path, tmp_path: Path) -> None:
+def test_image_to_pdf_concatenates(
+    sample_image: Path, sample_image_2: Path, tmp_path: Path
+) -> None:
     out = tmp_path / "imgs.pdf"
     n = core.image_to_pdf([sample_image, sample_image_2], out)
     assert n == 2
@@ -264,6 +266,7 @@ def test_xlsx_to_pdf_unknown_sheet_raises(sample_xlsx: Path, tmp_path: Path) -> 
 def _local_html_server(html: str):
     """Spin up a tiny HTTP server returning ``html`` on /, on a random port."""
     import socket
+
     import uvicorn
 
     sub_app = FastAPI()
@@ -277,8 +280,9 @@ def _local_html_server(html: str):
     port = sock.getsockname()[1]
     sock.close()
 
-    config = uvicorn.Config(sub_app, host="127.0.0.1", port=port,
-                            log_level="error", access_log=False)
+    config = uvicorn.Config(
+        sub_app, host="127.0.0.1", port=port, log_level="error", access_log=False
+    )
     server = uvicorn.Server(config)
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
@@ -375,8 +379,13 @@ def test_endpoint_to_csv_no_table_400(client: TestClient, sample_pdf_with_text: 
 def test_endpoint_from_docx(client: TestClient, sample_docx: Path) -> None:
     r = client.post(
         "/pdf/from-docx",
-        files={"file": ("doc.docx", sample_docx.read_bytes(),
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+        files={
+            "file": (
+                "doc.docx",
+                sample_docx.read_bytes(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
     )
     assert r.status_code == 200, r.text
     assert r.headers["content-type"] == "application/pdf"
@@ -396,8 +405,13 @@ def test_endpoint_from_docx_rejects_old_doc(client: TestClient) -> None:
 def test_endpoint_from_xlsx(client: TestClient, sample_xlsx: Path) -> None:
     r = client.post(
         "/pdf/from-xlsx",
-        files={"file": ("d.xlsx", sample_xlsx.read_bytes(),
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        files={
+            "file": (
+                "d.xlsx",
+                sample_xlsx.read_bytes(),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+        },
     )
     assert r.status_code == 200, r.text
     assert r.headers["content-type"] == "application/pdf"

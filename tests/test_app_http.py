@@ -6,6 +6,7 @@ save_pdf_upload / pdf_response / file_response_with_name). The router
 files lean on them on every request, so a regression here breaks
 everything at once — these tests pin the contract.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -114,13 +115,15 @@ def test_gate_pdf_safety_passes_clean_pdf(tmp_path: Path) -> None:
     p = tmp_path / "ok.pdf"
     doc = fitz.open()
     doc.new_page().insert_text((72, 72), "harmless")
-    doc.save(str(p)); doc.close()
+    doc.save(str(p))
+    doc.close()
     # No exception is the assertion.
     gate_pdf_safety(p)
 
 
-def test_gate_pdf_safety_translates_unsafe_to_http_400(monkeypatch: pytest.MonkeyPatch,
-                                                        tmp_path: Path) -> None:
+def test_gate_pdf_safety_translates_unsafe_to_http_400(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     """Inject a stub that always raises UnsafePDFError; the helper must
     emit HTTPException(400) with the verdict in a response header."""
     from pdf_safety import UnsafePDFError
@@ -160,6 +163,7 @@ def test_pdf_job_dir_creates_unique_dirs() -> None:
         assert a != b
     finally:
         import shutil
+
         shutil.rmtree(a, ignore_errors=True)
         shutil.rmtree(b, ignore_errors=True)
 
@@ -187,6 +191,7 @@ def test_cleanup_task_silent_on_missing_dir(tmp_path: Path) -> None:
 def _make_upload(filename: str, payload: bytes) -> UploadFile:
     """Build an UploadFile that streams ``payload`` once via ``read``."""
     import io
+
     return UploadFile(filename=filename, file=io.BytesIO(payload))
 
 
@@ -213,8 +218,7 @@ def test_save_pdf_upload_rejects_missing_filename(tmp_path: Path) -> None:
     assert exc.value.status_code == 400
 
 
-def test_save_pdf_upload_rejects_oversize(tmp_path: Path,
-                                            monkeypatch: pytest.MonkeyPatch) -> None:
+def test_save_pdf_upload_rejects_oversize(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Pin MAX_UPLOAD_MB to 0 so any payload trips the 413."""
     monkeypatch.setattr(app_http, "MAX_UPLOAD_MB", 0)
     dest = tmp_path / "out.pdf"

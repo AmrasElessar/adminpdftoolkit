@@ -22,9 +22,9 @@ from fastapi.responses import FileResponse
 from starlette.background import BackgroundTask
 
 import core
-from pdf_safety import UnsafePDFError, assert_safe as _pdf_assert_safe
+from pdf_safety import UnsafePDFError
+from pdf_safety import assert_safe as _pdf_assert_safe
 from state import MAX_UPLOAD_MB
-
 
 _IMAGE_EXT_RE = re.compile(r"\.(jpg|jpeg|png|webp|bmp|tiff?|gif)$", re.IGNORECASE)
 
@@ -58,43 +58,34 @@ def pdf_job_dir() -> Path:
 
 def cleanup_task(job_dir: Path) -> BackgroundTask:
     """``FileResponse`` background task that wipes ``job_dir`` after send."""
+
     def _rm() -> None:
         shutil.rmtree(job_dir, ignore_errors=True)
+
     return BackgroundTask(_rm)
 
 
-async def save_pdf_upload(
-    file: UploadFile, dest: Path, *, label: str = "PDF"
-) -> None:
+async def save_pdf_upload(file: UploadFile, dest: Path, *, label: str = "PDF") -> None:
     """Stream a PDF upload to disk, enforcing ``MAX_UPLOAD_MB`` and a
     ``.pdf`` extension."""
     if not file.filename or not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(
-            400, f"{label} için yalnızca .pdf dosyaları kabul edilir."
-        )
+        raise HTTPException(400, f"{label} için yalnızca .pdf dosyaları kabul edilir.")
     written = 0
     with dest.open("wb") as fp:
         while chunk := await file.read(1024 * 1024):
             written += len(chunk)
             if written > MAX_UPLOAD_MB * 1024 * 1024:
-                raise HTTPException(
-                    413, f"Dosya {MAX_UPLOAD_MB} MB sınırını aşıyor."
-                )
+                raise HTTPException(413, f"Dosya {MAX_UPLOAD_MB} MB sınırını aşıyor.")
             fp.write(chunk)
 
 
-def pdf_response(
-    out_path: Path, download_name: str, job_dir: Path
-) -> FileResponse:
+def pdf_response(out_path: Path, download_name: str, job_dir: Path) -> FileResponse:
     """``FileResponse`` for a PDF — UTF-8 filename + auto-cleanup task."""
     safe_name = core.safe_filename(download_name)
     if not safe_name.lower().endswith(".pdf"):
         safe_name += ".pdf"
     ascii_fallback = safe_name.encode("ascii", "ignore").decode("ascii") or "output.pdf"
-    cd = (
-        f"attachment; filename=\"{ascii_fallback}\"; "
-        f"filename*=UTF-8''{quote(safe_name)}"
-    )
+    cd = f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(safe_name)}"
     return FileResponse(
         str(out_path),
         media_type="application/pdf",
@@ -110,10 +101,7 @@ def file_response_with_name(
     no PDF-extension force. Used by markdown/csv/zip outputs."""
     safe_name = core.safe_filename(download_name)
     ascii_fallback = safe_name.encode("ascii", "ignore").decode("ascii") or "output"
-    cd = (
-        f"attachment; filename=\"{ascii_fallback}\"; "
-        f"filename*=UTF-8''{quote(safe_name)}"
-    )
+    cd = f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(safe_name)}"
     return FileResponse(
         str(out_path),
         media_type=media_type,
@@ -122,9 +110,7 @@ def file_response_with_name(
     )
 
 
-def parse_color(
-    value: str, default: tuple[float, float, float]
-) -> tuple[float, float, float]:
+def parse_color(value: str, default: tuple[float, float, float]) -> tuple[float, float, float]:
     """Parse ``"#RRGGBB"`` or ``"r,g,b"`` (0-255 or 0-1) into 0-1 floats."""
     s = (value or "").strip()
     if not s:

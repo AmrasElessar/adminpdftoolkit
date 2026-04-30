@@ -15,6 +15,7 @@ already covered by ``test_pipeline.py``; this file pins the rest:
 Each test gets its own job-dir under ``_work/jobs/<random>`` and tears
 it down at the end, so they don't leak state across runs.
 """
+
 from __future__ import annotations
 
 import json
@@ -50,23 +51,24 @@ def job_dir(job_token: str):
 
 
 def _seed_data_json(job_dir: Path, payload: dict) -> None:
-    (job_dir / "data.json").write_text(
-        json.dumps(payload, ensure_ascii=False), encoding="utf-8"
-    )
+    (job_dir / "data.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
 # load_job — current shape, missing file, legacy migration
 # ---------------------------------------------------------------------------
 def test_load_job_returns_current_shape(job_dir: Path, job_token: str) -> None:
-    _seed_data_json(job_dir, {
-        "records": [{"Telefon": "1"}, {"Telefon": "2"}],
-        "source_files": ["a.pdf", "b.pdf"],
-        "filename": "out.xlsx",
-        "original_records": [{"Telefon": "1"}, {"Telefon": "2"}],
-        "original_sources": ["a.pdf", "b.pdf"],
-        "state": {"deduplicated": False, "filters": {}},
-    })
+    _seed_data_json(
+        job_dir,
+        {
+            "records": [{"Telefon": "1"}, {"Telefon": "2"}],
+            "source_files": ["a.pdf", "b.pdf"],
+            "filename": "out.xlsx",
+            "original_records": [{"Telefon": "1"}, {"Telefon": "2"}],
+            "original_sources": ["a.pdf", "b.pdf"],
+            "state": {"deduplicated": False, "filters": {}},
+        },
+    )
     data = load_job(job_token)
     assert len(data["records"]) == 2
     assert data["filename"] == "out.xlsx"
@@ -86,11 +88,14 @@ def test_load_job_migrates_legacy_shape(job_dir: Path, job_token: str) -> None:
     ``load_job`` upgrades it in place by seeding ``original_*`` and a
     default empty pipeline state. The on-disk file should also be rewritten
     so subsequent loads skip the migration path."""
-    _seed_data_json(job_dir, {
-        "records": [{"Telefon": "555"}],
-        "source_files": ["x.pdf"],
-        "filename": "old.xlsx",
-    })
+    _seed_data_json(
+        job_dir,
+        {
+            "records": [{"Telefon": "555"}],
+            "source_files": ["x.pdf"],
+            "filename": "old.xlsx",
+        },
+    )
     data = load_job(job_token)
     assert data["original_records"] == [{"Telefon": "555"}]
     assert data["original_sources"] == ["x.pdf"]
@@ -105,14 +110,17 @@ def test_load_job_migrates_legacy_shape(job_dir: Path, job_token: str) -> None:
 def test_load_job_seeds_state_when_missing(job_dir: Path, job_token: str) -> None:
     """Variant of the legacy migration: ``original_*`` already present
     but ``state`` was forgotten. Load must add the empty default."""
-    _seed_data_json(job_dir, {
-        "records": [{}],
-        "source_files": ["x.pdf"],
-        "filename": "y.xlsx",
-        "original_records": [{}],
-        "original_sources": ["x.pdf"],
-        # state intentionally absent
-    })
+    _seed_data_json(
+        job_dir,
+        {
+            "records": [{}],
+            "source_files": ["x.pdf"],
+            "filename": "y.xlsx",
+            "original_records": [{}],
+            "original_sources": ["x.pdf"],
+            # state intentionally absent
+        },
+    )
     data = load_job(job_token)
     assert data["state"] == {"deduplicated": False, "filters": {}}
 
@@ -121,22 +129,25 @@ def test_load_job_seeds_state_when_missing(job_dir: Path, job_token: str) -> Non
 # save_view — applies pipeline, rewrites Excel, drops distribution
 # ---------------------------------------------------------------------------
 def test_save_view_dedupe_rewrites_excel_and_data(job_dir: Path, job_token: str) -> None:
-    _seed_data_json(job_dir, {
-        "records": [
-            {"Sıra": 1, "Telefon": "5551112233", "Müşteri": "Ali"},
-            {"Sıra": 2, "Telefon": "5551112233", "Müşteri": "Ali (dup)"},
-            {"Sıra": 3, "Telefon": "5552223344", "Müşteri": "Veli"},
-        ],
-        "source_files": ["a.pdf", "a.pdf", "b.pdf"],
-        "filename": "birlesik_3_kayit.xlsx",
-        "original_records": [
-            {"Sıra": 1, "Telefon": "5551112233", "Müşteri": "Ali"},
-            {"Sıra": 2, "Telefon": "5551112233", "Müşteri": "Ali (dup)"},
-            {"Sıra": 3, "Telefon": "5552223344", "Müşteri": "Veli"},
-        ],
-        "original_sources": ["a.pdf", "a.pdf", "b.pdf"],
-        "state": {"deduplicated": False, "filters": {}},
-    })
+    _seed_data_json(
+        job_dir,
+        {
+            "records": [
+                {"Sıra": 1, "Telefon": "5551112233", "Müşteri": "Ali"},
+                {"Sıra": 2, "Telefon": "5551112233", "Müşteri": "Ali (dup)"},
+                {"Sıra": 3, "Telefon": "5552223344", "Müşteri": "Veli"},
+            ],
+            "source_files": ["a.pdf", "a.pdf", "b.pdf"],
+            "filename": "birlesik_3_kayit.xlsx",
+            "original_records": [
+                {"Sıra": 1, "Telefon": "5551112233", "Müşteri": "Ali"},
+                {"Sıra": 2, "Telefon": "5551112233", "Müşteri": "Ali (dup)"},
+                {"Sıra": 3, "Telefon": "5552223344", "Müşteri": "Veli"},
+            ],
+            "original_sources": ["a.pdf", "a.pdf", "b.pdf"],
+            "state": {"deduplicated": False, "filters": {}},
+        },
+    )
     # Pre-create the previous Excel so we can confirm it gets cleaned up.
     (job_dir / "birlesik_3_kayit.xlsx").write_bytes(b"old")
 
@@ -160,14 +171,17 @@ def test_save_view_drops_stale_distribution(job_dir: Path, job_token: str) -> No
     """Editing the merged view invalidates any prior distribution snapshot;
     ``save_view`` deletes ``distribution.json`` so the UI doesn't keep
     showing assignments built on records that have since been filtered."""
-    _seed_data_json(job_dir, {
-        "records": [{"Telefon": "1"}],
-        "source_files": ["x.pdf"],
-        "filename": "out.xlsx",
-        "original_records": [{"Telefon": "1"}],
-        "original_sources": ["x.pdf"],
-        "state": {"deduplicated": False, "filters": {}},
-    })
+    _seed_data_json(
+        job_dir,
+        {
+            "records": [{"Telefon": "1"}],
+            "source_files": ["x.pdf"],
+            "filename": "out.xlsx",
+            "original_records": [{"Telefon": "1"}],
+            "original_sources": ["x.pdf"],
+            "state": {"deduplicated": False, "filters": {}},
+        },
+    )
     (job_dir / "distribution.json").write_text("{}", encoding="utf-8")
 
     save_view(job_token, {"deduplicated": False, "filters": {}})
@@ -190,7 +204,7 @@ def test_load_distribution_returns_payload(job_dir: Path, job_token: str) -> Non
         "teams": ["A", "B"],
         "assignments": [
             {"name": "A", "records": [{}], "sources": ["a.pdf"]},
-            {"name": "B", "records": [],   "sources": []},
+            {"name": "B", "records": [], "sources": []},
         ],
     }
     (job_dir / "distribution.json").write_text(
@@ -204,8 +218,9 @@ def test_load_distribution_returns_payload(job_dir: Path, job_token: str) -> Non
 # ---------------------------------------------------------------------------
 # write_merged_excel — workbook structure
 # ---------------------------------------------------------------------------
-def test_write_merged_excel_writes_expected_header_row(tmp_path: Path,
-                                                          monkeypatch: pytest.MonkeyPatch) -> None:
+def test_write_merged_excel_writes_expected_header_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Workbook starts with: Sıra, Kaynak PDF, Kayıt No, <TARGET_SCHEMA…>,
     AI Özeti (Ham). app.py mirrors the live schema onto core.TARGET_SCHEMA
     at import time; pin a deterministic copy here to keep this test
@@ -226,8 +241,12 @@ def test_write_merged_excel_writes_expected_header_row(tmp_path: Path,
     ws = wb.active
     headers = [c.value for c in ws[1]]
     assert headers == [
-        "Sıra", "Kaynak PDF", "Kayıt No",
-        "Müşteri", "Telefon", "Durum",
+        "Sıra",
+        "Kaynak PDF",
+        "Kayıt No",
+        "Müşteri",
+        "Telefon",
+        "Durum",
         "AI Özeti (Ham)",
     ]
     # Two data rows
@@ -238,8 +257,9 @@ def test_write_merged_excel_writes_expected_header_row(tmp_path: Path,
     assert ws.auto_filter.ref == ws.dimensions
 
 
-def test_write_merged_excel_preserves_existing_sira(tmp_path: Path,
-                                                      monkeypatch: pytest.MonkeyPatch) -> None:
+def test_write_merged_excel_preserves_existing_sira(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """When a record already carries a Sıra (e.g. after distribution),
     the writer keeps it instead of renumbering — the per-team Excel
     needs to point back at the original merged-table row number."""

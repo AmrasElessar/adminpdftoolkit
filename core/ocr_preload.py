@@ -11,6 +11,7 @@ def preload_ocr_in_background() -> None:
     """Warm up the EasyOCR model so the first user-triggered OCR is fast."""
     try:
         from pdf_converter import get_ocr_reader
+
         t0 = time.time()
         get_ocr_reader()
         logger.info("OCR model preloaded in %.1fs", time.time() - t0)

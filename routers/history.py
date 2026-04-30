@@ -4,15 +4,15 @@ Backed by the SQLite DB owned by ``state.HISTORY_DB_PATH`` (single source
 of truth, see S1). All writes happen via ``core.log_history``; this router
 only reads + bulk-deletes.
 """
+
 from __future__ import annotations
 
 import sqlite3
 
 from fastapi import APIRouter
 
-from core import init_history_db, _history_lock
+from core import _history_lock, init_history_db
 from state import HISTORY_DB_PATH
-
 
 router = APIRouter()
 

@@ -18,8 +18,9 @@ import shutil
 import threading
 import time
 import zipfile
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 from urllib.parse import quote
 from uuid import uuid4
 
@@ -43,7 +44,6 @@ from pdf_converter import (
 )
 from pdf_safety import full_scan as pdf_safety_scan
 from state import ALLOWED_FORMATS, MAX_UPLOAD_MB, convert_store
-
 
 router = APIRouter()
 
@@ -88,7 +88,16 @@ async def preview(file: UploadFile = File(...)) -> dict:
                 }
             if is_call_log_pdf(doc):
                 records = parse_call_log(doc)
-                headers = ["Sıra", "Kayıt No", "Müşteri", "Telefon", "Durum", "Tarih", "Süre"] + CALL_LOG_QUESTIONS
+                headers = [
+                    "Sıra",
+                    "Kayıt No",
+                    "Müşteri",
+                    "Telefon",
+                    "Durum",
+                    "Tarih",
+                    "Süre",
+                    *CALL_LOG_QUESTIONS,
+                ]
                 preview_n = 8
                 rows = []
                 for i, rec in enumerate(records[:preview_n], 1):
@@ -177,6 +186,7 @@ async def convert_start(
     )
 
     from pipelines.convert import convert_worker
+
     threading.Thread(
         target=convert_worker,
         args=(token, pdf_path, target, custom_name, job_dir, file.filename),
@@ -226,8 +236,11 @@ async def convert_download(token: str, request: Request):
     job_dir = job.get("job_dir")
 
     core.log_history(
-        action="convert", target=target, filename=out_name,
-        record_count=record_count, ip=core.client_ip(request),
+        action="convert",
+        target=target,
+        filename=out_name,
+        record_count=record_count,
+        ip=core.client_ip(request),
     )
 
     def _rm() -> None:
@@ -321,8 +334,8 @@ def _render_jpg_zip(
 
 _SYNC_RENDERERS: dict[str, tuple[str, Callable[..., tuple[Any, dict[str, Any]]]]] = {
     "excel": (".xlsx", _render_excel),
-    "word":  (".docx", _render_word),
-    "jpg":   (".zip",  _render_jpg_zip),
+    "word": (".docx", _render_word),
+    "jpg": (".zip", _render_jpg_zip),
 }
 
 

@@ -21,7 +21,9 @@ from .logging_setup import logger
 from .pdf_tools import _find_unicode_font, _save_pdf
 
 # ----- Image → PDF --------------------------------------------------------
-_IMAGE_EXTS: frozenset[str] = frozenset({".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".gif"})
+_IMAGE_EXTS: frozenset[str] = frozenset(
+    {".jpg", ".jpeg", ".png", ".webp", ".bmp", ".tif", ".tiff", ".gif"}
+)
 
 
 def image_to_pdf(images: list[Path], output: Path) -> int:
@@ -49,9 +51,7 @@ def image_to_pdf(images: list[Path], output: Path) -> int:
                 with fitz.open(stream=pdf_bytes, filetype="pdf") as tmp:
                     out_doc.insert_pdf(tmp)
             except Exception as e:
-                raise ValueError(
-                    f"{img_path.name} okunamadı: {sanitize_error(e)}"
-                ) from e
+                raise ValueError(f"{img_path.name} okunamadı: {sanitize_error(e)}") from e
         page_count = int(out_doc.page_count)
         _save_pdf(out_doc, output)
     finally:
@@ -74,6 +74,7 @@ def pdf_to_markdown(input_path: Path, output: Path) -> int:
     so the user gets a clear message instead of an empty .md file.
     """
     import core
+
     extractability = core.classify_pdf_extractability(input_path)
     if not extractability["extractable"]:
         raise ValueError(extractability["message"])
@@ -176,7 +177,10 @@ def pdf_to_csv(
     from parsers.generic_table import GenericTableParser
 
     return GenericTableParser().to_csv(
-        input_path, output, table_index=table_index, delimiter=delimiter,
+        input_path,
+        output,
+        table_index=table_index,
+        delimiter=delimiter,
     )
 
 
@@ -189,8 +193,8 @@ def _sibling_font(regular_path: str, variant: str) -> str | None:
     p = Path(regular_path)
     suffix = p.suffix
     table = {
-        "bold":       ("bd", "-bold", "b"),
-        "italic":     ("i", "-italic", "it"),
+        "bold": ("bd", "-bold", "b"),
+        "italic": ("i", "-italic", "it"),
         "bolditalic": ("bi", "-boldoblique", "z", "-bolditalic"),
     }
     candidates: list[Path] = []
@@ -199,7 +203,9 @@ def _sibling_font(regular_path: str, variant: str) -> str | None:
         for marker in ("-regular", "-Regular", "regular", "Regular"):
             if marker in p.stem:
                 replacement = {
-                    "bold": "Bold", "italic": "Italic", "bolditalic": "BoldItalic",
+                    "bold": "Bold",
+                    "italic": "Italic",
+                    "bolditalic": "BoldItalic",
                 }[variant]
                 candidates.append(p.with_name(p.stem.replace(marker, replacement) + suffix))
     for c in candidates:
@@ -242,7 +248,7 @@ def _resolve_ht_font(uri: str) -> str | None:
     regular = _find_unicode_font()
     if not regular:
         return None
-    variant = uri[len("ht-font://"):]
+    variant = uri[len("ht-font://") :]
     if variant in ("", "regular"):
         return regular
     return _sibling_font(regular, variant) or regular
@@ -360,9 +366,10 @@ def url_to_pdf(url: str, output: Path, *, timeout: int = 15) -> None:
     Only http(s) is allowed. Charset is detected from the Content-Type header
     when possible, otherwise UTF-8 is assumed.
     """
-    import core
     from urllib.parse import urlparse
     from urllib.request import Request, urlopen
+
+    import core
 
     if not url or not url.strip():
         raise ValueError("URL boş.")
@@ -372,7 +379,7 @@ def url_to_pdf(url: str, output: Path, *, timeout: int = 15) -> None:
     core._assert_public_url(parsed)
     req = Request(url, headers={"User-Agent": "ht-pdf-converter/1.x"})
     try:
-        with urlopen(req, timeout=timeout) as resp:  # noqa: S310 — http(s) only enforced above
+        with urlopen(req, timeout=timeout) as resp:
             content_type = resp.headers.get("Content-Type", "")
             charset = "utf-8"
             for piece in content_type.split(";"):
@@ -441,8 +448,7 @@ def _docx_table_html(table: Any) -> str:
         cells: list[str] = []
         for cell in row.cells:
             cell_text = " ".join(
-                _docx_runs_to_html(p.runs) or html.escape(p.text or "")
-                for p in cell.paragraphs
+                _docx_runs_to_html(p.runs) or html.escape(p.text or "") for p in cell.paragraphs
             )
             cells.append(f"<td>{cell_text or '&nbsp;'}</td>")
         rows.append(f"<tr>{''.join(cells)}</tr>")
@@ -490,8 +496,8 @@ def docx_to_pdf(input_path: Path, output: Path) -> None:
     body = doc.element.body
     para_iter = iter(doc.paragraphs)
     table_iter = iter(doc.tables)
-    para_lookup = {p._element: p for p in doc.paragraphs}  # noqa: SLF001 — python-docx idiom
-    table_lookup = {t._element: t for t in doc.tables}     # noqa: SLF001
+    para_lookup = {p._element: p for p in doc.paragraphs}
+    table_lookup = {t._element: t for t in doc.tables}
 
     for child in body.iterchildren():
         if child.tag == qn("w:p"):
@@ -563,9 +569,7 @@ def xlsx_to_pdf(input_path: Path, output: Path, *, sheet: str | None = None) -> 
         if not rows_html:
             continue
         section = (
-            f"<h2>{_html.escape(s_name)}</h2>"
-            f"<table>{''.join(rows_html)}</table>"
-            "<pdf:nextpage />"
+            f"<h2>{_html.escape(s_name)}</h2><table>{''.join(rows_html)}</table><pdf:nextpage />"
         )
         sections.append(section)
     wb.close()

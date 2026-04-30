@@ -19,7 +19,6 @@ import core
 from app_http import gate_pdf_safety
 from state import MAX_UPLOAD_MB, ocr_store
 
-
 router = APIRouter()
 
 
@@ -66,6 +65,7 @@ async def ocr_start(
     )
 
     from pipelines.ocr import ocr_worker
+
     threading.Thread(
         target=ocr_worker,
         args=(token, pdf_path, target, job_dir, file.filename),
@@ -113,7 +113,9 @@ async def ocr_download(token: str, request: Request):
     job_dir = job.get("job_dir")
 
     core.log_history(
-        action="ocr", target=target, filename=out_name,
+        action="ocr",
+        target=target,
+        filename=out_name,
         ip=core.client_ip(request),
     )
 

@@ -16,7 +16,8 @@ Routers (S5 split, 2026-04-28):
   + the batch dispatcher).
 * ``editor``  — ``/pdf/edit/*`` (fonts / spans / save).
 """
-from . import (  # noqa: F401  -- re-exported via include_router
+
+from . import (
     admin,
     batch,
     convert,

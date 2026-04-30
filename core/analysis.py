@@ -36,8 +36,9 @@ def detect_blank_pages(
 
     Pure-Python: pymupdf for text + Pillow for the pixel histogram.
     """
-    import fitz
     from io import BytesIO
+
+    import fitz
     from PIL import Image
 
     if not (0.5 < threshold <= 1.0):
@@ -125,7 +126,7 @@ def detect_signatures(input_path: Path) -> dict[str, Any]:
         if doc.is_encrypted and not doc.authenticate(""):
             raise ValueError("Şifreli PDF — önce şifreyi kaldırın.")
         for pno, page in enumerate(doc):
-            for widget in (page.widgets() or []):
+            for widget in page.widgets() or []:
                 try:
                     is_sig = widget.field_type == fitz.PDF_WIDGET_TYPE_SIGNATURE
                 except AttributeError:
@@ -136,60 +137,95 @@ def detect_signatures(input_path: Path) -> dict[str, Any]:
                 out["field_count"] += 1
                 if filled:
                     out["filled_count"] += 1
-                out["fields"].append({
-                    "page": pno + 1,
-                    "name": widget.field_name or "",
-                    "filled": filled,
-                })
+                out["fields"].append(
+                    {
+                        "page": pno + 1,
+                        "name": widget.field_name or "",
+                        "filled": filled,
+                    }
+                )
         try:
             sigflags = doc.get_sigflags()
             if sigflags and sigflags > 0:
                 out["digital_signature"] = True
         except Exception:
             pass
-    out["is_signed"] = (
-        out["filled_count"] > 0 or out["digital_signature"]
-    )
+    out["is_signed"] = out["filled_count"] > 0 or out["digital_signature"]
     return out
 
 
 # ----- Otomatik kategorizasyon (kural tabanlı) --------------------------
 _CATEGORY_PATTERNS: dict[str, list[str]] = {
     "fatura": [
-        r"\bfatura\b", r"\binvoice\b", r"\bkdv\b", r"\bvergi\s+no\b",
-        r"toplam\s+tutar", r"ödenecek\s+tutar", r"fatura\s+tarih(i)?",
+        r"\bfatura\b",
+        r"\binvoice\b",
+        r"\bkdv\b",
+        r"\bvergi\s+no\b",
+        r"toplam\s+tutar",
+        r"ödenecek\s+tutar",
+        r"fatura\s+tarih(i)?",
     ],
     "dekont": [
-        r"\bdekont\b", r"\bhavale\b", r"\beft\b", r"\btransfer\b",
-        r"alıcı.*iban", r"gönderen.*iban", r"işlem\s+tarih(i)?",
+        r"\bdekont\b",
+        r"\bhavale\b",
+        r"\beft\b",
+        r"\btransfer\b",
+        r"alıcı.*iban",
+        r"gönderen.*iban",
+        r"işlem\s+tarih(i)?",
     ],
     "sözleşme": [
-        r"\bsözleşme\b", r"taraflar(\s+arası)?", r"madde\s+\d", r"\bcontract\b",
-        r"hüküm.*koşul", r"imza.*tarafından", r"yürürlük",
+        r"\bsözleşme\b",
+        r"taraflar(\s+arası)?",
+        r"madde\s+\d",
+        r"\bcontract\b",
+        r"hüküm.*koşul",
+        r"imza.*tarafından",
+        r"yürürlük",
     ],
     "ekstre": [
-        r"\bekstre\b", r"hesap\s+özeti", r"\bstatement\b",
-        r"\bbakiye\b", r"\bborç\b", r"\balacak\b",
+        r"\bekstre\b",
+        r"hesap\s+özeti",
+        r"\bstatement\b",
+        r"\bbakiye\b",
+        r"\bborç\b",
+        r"\balacak\b",
     ],
     "fiş": [
-        r"\bfiş\b", r"\bperakende\b", r"yazar\s*kasa",
-        r"ödeme\s+yapıldı", r"\bz\s+raporu\b",
+        r"\bfiş\b",
+        r"\bperakende\b",
+        r"yazar\s*kasa",
+        r"ödeme\s+yapıldı",
+        r"\bz\s+raporu\b",
     ],
     "mektup": [
-        r"\bsayın\b", r"saygılarımla", r"\bdear\b", r"sincerely",
-        r"konu\s*:", r"ref\s*\.?\s*:",
+        r"\bsayın\b",
+        r"saygılarımla",
+        r"\bdear\b",
+        r"sincerely",
+        r"konu\s*:",
+        r"ref\s*\.?\s*:",
     ],
     "rapor": [
-        r"\brapor\b", r"\breport\b", r"yönetici\s+özeti",
-        r"executive\s+summary", r"\bbölüm\s+\d",
+        r"\brapor\b",
+        r"\breport\b",
+        r"yönetici\s+özeti",
+        r"executive\s+summary",
+        r"\bbölüm\s+\d",
     ],
     "form": [
-        r"\bform\b", r"başvuru\s+formu", r"talep\s+formu",
-        r"lütfen\s+doldur", r"please\s+fill",
+        r"\bform\b",
+        r"başvuru\s+formu",
+        r"talep\s+formu",
+        r"lütfen\s+doldur",
+        r"please\s+fill",
     ],
     "kimlik": [
-        r"\bt\.?c\.?\s*kimlik\b", r"\bkimlik\s+numar(ası|asi)\b",
-        r"nüfus\s+cüzdan(ı|i)", r"\bpasaport\b", r"\bid\s+card\b",
+        r"\bt\.?c\.?\s*kimlik\b",
+        r"\bkimlik\s+numar(ası|asi)\b",
+        r"nüfus\s+cüzdan(ı|i)",
+        r"\bpasaport\b",
+        r"\bid\s+card\b",
     ],
 }
 

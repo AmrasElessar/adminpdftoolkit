@@ -4,6 +4,7 @@ Covers both the core-level functions (``core.pdf_*``) and the FastAPI
 endpoints they back (``/pdf/*``). All fixtures are generated in-memory with
 PyMuPDF so the suite stays self-contained — no on-disk PDF samples needed.
 """
+
 from __future__ import annotations
 
 import io
@@ -28,8 +29,7 @@ def sample_pdf(tmp_path: Path) -> Path:
     doc = fitz.open()
     for i in range(3):
         page = doc.new_page(width=595, height=842)  # A4 portrait
-        page.insert_text((72, 100), f"Sayfa {i + 1} — Türkçe içerik",
-                         fontsize=14, fontname="helv")
+        page.insert_text((72, 100), f"Sayfa {i + 1} — Türkçe içerik", fontsize=14, fontname="helv")
     doc.save(str(out))
     doc.close()
     return out
@@ -42,8 +42,7 @@ def sample_pdf_2(tmp_path: Path) -> Path:
     doc = fitz.open()
     for i in range(2):
         page = doc.new_page()
-        page.insert_text((72, 100), f"İkinci dosya — sayfa {i + 1}",
-                         fontsize=12, fontname="helv")
+        page.insert_text((72, 100), f"İkinci dosya — sayfa {i + 1}", fontsize=12, fontname="helv")
     doc.save(str(out))
     doc.close()
     return out

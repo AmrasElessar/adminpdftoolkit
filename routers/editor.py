@@ -19,7 +19,6 @@ import core
 from app_http import pdf_job_dir, pdf_response, save_pdf_upload
 from core import logger, sanitize_error
 
-
 router = APIRouter()
 
 
@@ -28,8 +27,9 @@ async def pdf_editor_fonts() -> dict:
     families = core.editor_font_catalog()
     return {
         "families": families,
-        "fallback": "noto-sans" if any(f["id"] == "noto-sans" for f in families)
-                    else (families[0]["id"] if families else None),
+        "fallback": "noto-sans"
+        if any(f["id"] == "noto-sans" for f in families)
+        else (families[0]["id"] if families else None),
         "count": len(families),
     }
 
@@ -52,12 +52,16 @@ async def pdf_editor_spans(
         in_path = job_dir / "input.pdf"
         await save_pdf_upload(file, in_path)
         extractability = core.classify_pdf_extractability(in_path)
-        spans = core.extract_text_spans(
-            in_path,
-            granularity=granularity,
-            merge_adjacent=merge_adjacent,
-            max_pages=cap,
-        ) if extractability["extractable"] else []
+        spans = (
+            core.extract_text_spans(
+                in_path,
+                granularity=granularity,
+                merge_adjacent=merge_adjacent,
+                max_pages=cap,
+            )
+            if extractability["extractable"]
+            else []
+        )
         return {
             "spans": spans,
             "count": len(spans),
@@ -96,7 +100,8 @@ async def pdf_editor_save(
         out_path = job_dir / f"{Path(file.filename).stem}_edited.pdf"
         summary = core.apply_editor_operations(in_path, out_path, ops)
         core.log_history(
-            action="pdf-edit-save", filename=out_path.name,
+            action="pdf-edit-save",
+            filename=out_path.name,
             record_count=summary["applied"],
             note=f"applied={summary['applied']}, skipped={summary['skipped']}",
             ip=core.client_ip(request),
@@ -108,10 +113,9 @@ async def pdf_editor_save(
         resp.headers["X-Editor-Phase"] = "4e"
         if summary["errors"]:
             first = summary["errors"][0]
-            raw = (
-                f"#{first['index']} ({first.get('type') or '?'}): "
-                f"{first.get('error', '')}"
-            )[:200]
+            raw = (f"#{first['index']} ({first.get('type') or '?'}): {first.get('error', '')}")[
+                :200
+            ]
             resp.headers["X-First-Error"] = raw.encode("ascii", "replace").decode("ascii")
         return resp
     except HTTPException:

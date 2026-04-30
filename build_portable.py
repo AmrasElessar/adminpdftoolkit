@@ -55,7 +55,7 @@ PACKAGES = BUILD_TOOLS + _read_requirements()
 
 # Build sonu doğrulaması — bu modüller import edilemiyorsa build başarısız sayılır
 CRITICAL_IMPORTS = [
-    "fitz",          # pymupdf
+    "fitz",  # pymupdf
     "pdfplumber",
     "pdf2docx",
     "openpyxl",
@@ -110,13 +110,7 @@ def setup_python_embed(py_dir: Path) -> bool:
     else:
         pth = pth_files[0]
 
-    pth_content = (
-        "python313.zip\n"
-        ".\n"
-        "Lib\\site-packages\n"
-        "\n"
-        "import site\n"
-    )
+    pth_content = "python313.zip\n.\nLib\\site-packages\n\nimport site\n"
     pth.write_text(pth_content, encoding="utf-8")
     info(f"._pth ayarlandı: {pth.name}")
     return True
@@ -158,10 +152,13 @@ def install_pip(py_exe: Path, py_dir: Path) -> bool:
 def install_package(py_exe: Path, pkg: str) -> bool:
     info(f"Kuruluyor: {pkg}")
     cmd = [
-        str(py_exe), "-m", "pip", "install",
-        "--isolated",                # kullanıcı config / env yok say
-        "--no-user",                  # USER site'a yazma
-        "--ignore-installed",         # 'zaten yüklü' mantığını bypass et (kritik!)
+        str(py_exe),
+        "-m",
+        "pip",
+        "install",
+        "--isolated",  # kullanıcı config / env yok say
+        "--no-user",  # USER site'a yazma
+        "--ignore-installed",  # 'zaten yüklü' mantığını bypass et (kritik!)
         "--no-warn-script-location",
         "--no-cache-dir",
         "--disable-pip-version-check",
@@ -229,9 +226,19 @@ def ensure_editor_assets() -> None:
 
 def copy_project(dist: Path) -> None:
     ensure_editor_assets()
-    files = ["app.py", "app_http.py", "state.py", "settings.py",
-             "pdf_converter.py", "pdf_safety.py", "requirements.txt",
-             "LICENSE", "NOTICE.txt", "THIRD_PARTY_LICENSES.md", "README.md"]
+    files = [
+        "app.py",
+        "app_http.py",
+        "state.py",
+        "settings.py",
+        "pdf_converter.py",
+        "pdf_safety.py",
+        "requirements.txt",
+        "LICENSE",
+        "NOTICE.txt",
+        "THIRD_PARTY_LICENSES.md",
+        "README.md",
+    ]
     for f in files:
         src = ROOT / f
         if src.exists():
@@ -255,16 +262,17 @@ def copy_project(dist: Path) -> None:
         if target.exists():
             shutil.rmtree(target)
         shutil.copytree(
-            clamav_src, target,
+            clamav_src,
+            target,
             ignore=shutil.ignore_patterns("database", "_download.zip"),
         )
-        info(f"  ✓ clamav/ (binaries; signature DB lazy-fetched on first boot)")
+        info("  ✓ clamav/ (binaries; signature DB lazy-fetched on first boot)")
     else:
-        info(f"  · clamav/ skipped (run scripts/setup_clamav.py to bundle)")
+        info("  · clamav/ skipped (run scripts/setup_clamav.py to bundle)")
 
 
 def write_starter_bat(dist: Path) -> None:
-    bat = r'''@echo off
+    bat = r"""@echo off
 chcp 65001 >nul
 cd /d "%~dp0"
 title Admin PDF Toolkit - Sunucu
@@ -288,7 +296,7 @@ start "" /min cmd /c "timeout /t 3 /nobreak >nul && start http://127.0.0.1:8000"
 echo.
 echo Sunucu durdu. Kapatmak icin bir tusa basin...
 pause >nul
-'''
+"""
     (dist / "Admin PDF Toolkit Baslat.bat").write_text(bat, encoding="utf-8")
 
 
@@ -392,9 +400,18 @@ def main() -> int:
         if pkg == "pip":
             # pip kendisi zaten kurulu — sadece güncelle (izole)
             subprocess.run(
-                [str(py_exe), "-m", "pip", "install", "--upgrade",
-                 "--isolated", "--no-user", "--ignore-installed",
-                 "--no-warn-script-location", "pip"],
+                [
+                    str(py_exe),
+                    "-m",
+                    "pip",
+                    "install",
+                    "--upgrade",
+                    "--isolated",
+                    "--no-user",
+                    "--ignore-installed",
+                    "--no-warn-script-location",
+                    "pip",
+                ],
                 env=_isolated_env(),
             )
             continue
@@ -414,8 +431,10 @@ def main() -> int:
     step("Bütünlük kontrolü (kritik modüller)")
     ok, missing = verify_imports(py_exe, CRITICAL_IMPORTS)
     if not ok:
-        return fail(f"Kritik modüller import edilemiyor: {missing}\n"
-                    "Build BAŞARISIZ. Yukarıdaki pip çıktısını inceleyin.")
+        return fail(
+            f"Kritik modüller import edilemiyor: {missing}\n"
+            "Build BAŞARISIZ. Yukarıdaki pip çıktısını inceleyin."
+        )
     info(f"Tüm {len(CRITICAL_IMPORTS)} kritik modül OK.")
 
     # 5. EasyOCR modelleri

@@ -1,5 +1,6 @@
 """parse_call_log helper'ı için temel test (PDF olmadan, sadece _parse_qa)."""
-from parsers.call_log_360 import _parse_qa, _normalize_text, _is_record_start
+
+from parsers.call_log_360 import _is_record_start, _normalize_text, _parse_qa
 
 
 def test_parse_qa_simple():

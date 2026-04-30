@@ -15,8 +15,10 @@ from pathlib import Path
 from typing import Any
 
 from .editor import (
-    EDITOR_FONT_FAMILIES,
     _FONTS_DIR,
+    EDITOR_FONT_FAMILIES,
+)
+from .editor import (
     resolve_editor_font as _resolve_editor_font_bundled,
 )
 
@@ -85,7 +87,7 @@ def _read_ttf_metadata(path: Path) -> dict[str, Any] | None:
 
     if b"name" not in tables:
         return None
-    name_off, name_len = tables[b"name"]
+    name_off, _name_len = tables[b"name"]
     if name_off + 6 > len(data):
         return None
     try:
@@ -142,7 +144,7 @@ def _read_ttf_metadata(path: Path) -> dict[str, Any] | None:
 
     fs_type = 0
     if b"OS/2" in tables:
-        os2_off, os2_len = tables[b"OS/2"]
+        os2_off, _os2_len = tables[b"OS/2"]
         if os2_off + 10 <= len(data):
             try:
                 fs_type = _struct.unpack(">H", data[os2_off + 8 : os2_off + 10])[0]
@@ -198,18 +200,24 @@ def discover_system_fonts(*, refresh: bool = False) -> list[dict[str, Any]]:
                 if not key:
                     continue
                 style = (
-                    "bolditalic" if meta["bold"] and meta["italic"]
-                    else "bold" if meta["bold"]
-                    else "italic" if meta["italic"]
+                    "bolditalic"
+                    if meta["bold"] and meta["italic"]
+                    else "bold"
+                    if meta["bold"]
+                    else "italic"
+                    if meta["italic"]
                     else "regular"
                 )
-                entry = families.setdefault(key, {
-                    "id": f"system:{key}",
-                    "label": fam,
-                    "category": "system",
-                    "variants": [],
-                    "files": {},
-                })
+                entry = families.setdefault(
+                    key,
+                    {
+                        "id": f"system:{key}",
+                        "label": fam,
+                        "category": "system",
+                        "variants": [],
+                        "files": {},
+                    },
+                )
                 # First file wins for any given variant
                 if style not in entry["files"]:
                     entry["files"][style] = str(path)
@@ -232,7 +240,10 @@ def resolve_system_font(family_id: str, *, bold: bool = False, italic: bool = Fa
         return None
     key = family_id.split(":", 1)[1]
     for entry in discover_system_fonts():
-        if entry["id"] == family_id or re.sub(r"[^a-z0-9]+", "-", entry["label"].lower()).strip("-") == key:
+        if (
+            entry["id"] == family_id
+            or re.sub(r"[^a-z0-9]+", "-", entry["label"].lower()).strip("-") == key
+        ):
             files = entry.get("files", {})
             for variant in (
                 "bolditalic" if bold and italic else None,
@@ -253,7 +264,10 @@ def resolve_system_font(family_id: str, *, bold: bool = False, italic: bool = Fa
 
 
 def resolve_editor_font_with_system(
-    family_id: str, *, bold: bool = False, italic: bool = False,
+    family_id: str,
+    *,
+    bold: bool = False,
+    italic: bool = False,
 ) -> Path | None:
     """Like ``resolve_editor_font`` but also handles ``system:*`` ids."""
     if family_id.startswith("system:"):
@@ -273,12 +287,14 @@ def editor_font_catalog_with_system() -> list[dict[str, Any]]:
                 present.append(variant_key)
         if not present:
             continue
-        bundled.append({
-            "id": fam["id"],
-            "label": fam["label"],
-            "category": "bundled",
-            "variants": present,
-        })
+        bundled.append(
+            {
+                "id": fam["id"],
+                "label": fam["label"],
+                "category": "bundled",
+                "variants": present,
+            }
+        )
     sys_fonts = [
         {"id": f["id"], "label": f["label"], "category": f["category"], "variants": f["variants"]}
         for f in discover_system_fonts()

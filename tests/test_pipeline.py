@@ -1,4 +1,5 @@
 """Dedupe + filter pipeline testleri."""
+
 from core import normalize_phone as _normalize_phone
 from pipelines.batch_convert import apply_pipeline as _apply_pipeline
 
@@ -29,7 +30,7 @@ def test_pipeline_dedupe_only():
     ]
     sources = ["a", "a", "b", "b"]
     state = {"deduplicated": True, "filters": {}}
-    out_recs, out_srcs = _apply_pipeline(records, sources, state)
+    out_recs, _out_srcs = _apply_pipeline(records, sources, state)
     assert len(out_recs) == 2
     # İlk geçen kalır
     assert out_recs[0]["Müşteri"] == "K1"

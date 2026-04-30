@@ -6,6 +6,7 @@ it inspects the PDF, classifies it (``call_log`` / ``scanned`` /
 The only assertions before this file were that ``/preview`` is mobile-
 private; nothing exercised the actual classifier branches.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -60,12 +61,13 @@ def test_preview_classifies_generic_text_pdf(client: TestClient, text_pdf: Path)
     assert "safety" in body and "overall" in body["safety"]
 
 
-def test_preview_classifies_scanned_pdf(monkeypatch: pytest.MonkeyPatch,
-                                          client: TestClient,
-                                          text_pdf: Path) -> None:
+def test_preview_classifies_scanned_pdf(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, text_pdf: Path
+) -> None:
     """Force ``is_scanned_pdf`` to return True and confirm the JPG-recommend
     branch fires (we don't ship a real scanned-PDF fixture in the suite)."""
     from routers import convert as convert_router
+
     monkeypatch.setattr(convert_router, "is_scanned_pdf", lambda doc: True)
 
     r = client.post(
@@ -79,18 +81,30 @@ def test_preview_classifies_scanned_pdf(monkeypatch: pytest.MonkeyPatch,
     assert body["scanned"] is True
 
 
-def test_preview_classifies_call_log_pdf(monkeypatch: pytest.MonkeyPatch,
-                                           client: TestClient,
-                                           text_pdf: Path) -> None:
+def test_preview_classifies_call_log_pdf(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, text_pdf: Path
+) -> None:
     """Stub ``is_call_log_pdf`` + ``parse_call_log`` so the call-log branch
     is exercised without a real call-log PDF fixture."""
     from routers import convert as convert_router
 
     fake_records = [
-        {"#": 1, "Müşteri": "Ali Yılmaz", "Telefon": "5551112233",
-         "Durum": "ended", "Tarih": "2024-05-01", "Süre": "00:42"},
-        {"#": 2, "Müşteri": "Veli Demir", "Telefon": "5552223344",
-         "Durum": "missed", "Tarih": "2024-05-02", "Süre": "00:00"},
+        {
+            "#": 1,
+            "Müşteri": "Ali Yılmaz",
+            "Telefon": "5551112233",
+            "Durum": "ended",
+            "Tarih": "2024-05-01",
+            "Süre": "00:42",
+        },
+        {
+            "#": 2,
+            "Müşteri": "Veli Demir",
+            "Telefon": "5552223344",
+            "Durum": "missed",
+            "Tarih": "2024-05-02",
+            "Süre": "00:00",
+        },
     ]
     monkeypatch.setattr(convert_router, "is_scanned_pdf", lambda doc: False)
     monkeypatch.setattr(convert_router, "is_call_log_pdf", lambda doc: True)

@@ -6,6 +6,7 @@ a ``_SYNC_RENDERERS`` dispatch table. These tests pin both the table's
 shape and the per-format end-to-end behaviour so a regression in any one
 branch fails loudly.
 """
+
 from __future__ import annotations
 
 import io
@@ -35,8 +36,7 @@ def small_pdf(tmp_path: Path) -> Path:
     doc = fitz.open()
     page = doc.new_page()
     page.insert_text((72, 80), "Başlık", fontsize=18, fontname="helv")
-    page.insert_text((72, 130), "Birinci paragraf metnidir.",
-                     fontsize=11, fontname="helv")
+    page.insert_text((72, 130), "Birinci paragraf metnidir.", fontsize=11, fontname="helv")
     doc.save(str(out))
     doc.close()
     return out
@@ -77,6 +77,7 @@ def test_sync_convert_excel_returns_xlsx(client: TestClient, small_pdf: Path) ->
     assert "spreadsheetml" in ct
     # Load it as openpyxl to confirm we got a real workbook
     from openpyxl import load_workbook
+
     wb = load_workbook(io.BytesIO(r.content))
     assert wb.active is not None
 
@@ -130,9 +131,9 @@ def test_sync_convert_rejects_non_pdf_filename(client: TestClient) -> None:
     assert r.status_code == 400
 
 
-def test_sync_convert_word_rejects_scanned_pdf(monkeypatch: pytest.MonkeyPatch,
-                                                 client: TestClient,
-                                                 small_pdf: Path) -> None:
+def test_sync_convert_word_rejects_scanned_pdf(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, small_pdf: Path
+) -> None:
     """Word/Excel against a scanned PDF would yield empty output — the
     endpoint must short-circuit with a clear 400 instead."""
     monkeypatch.setattr(convert_router, "is_scanned_pdf", lambda doc: True)
@@ -146,9 +147,9 @@ def test_sync_convert_word_rejects_scanned_pdf(monkeypatch: pytest.MonkeyPatch,
     assert "OCR" in r.json()["detail"]
 
 
-def test_sync_convert_jpg_does_not_block_on_scanned(monkeypatch: pytest.MonkeyPatch,
-                                                      client: TestClient,
-                                                      small_pdf: Path) -> None:
+def test_sync_convert_jpg_does_not_block_on_scanned(
+    monkeypatch: pytest.MonkeyPatch, client: TestClient, small_pdf: Path
+) -> None:
     """JPG render is image-only; a scanned PDF is fine through that path."""
     monkeypatch.setattr(convert_router, "is_scanned_pdf", lambda doc: True)
 

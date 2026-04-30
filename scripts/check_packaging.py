@@ -14,6 +14,7 @@ Exit codes:
   0 — every required source file/dir is referenced everywhere it must be
   1 — at least one drift detected; details printed to stderr
 """
+
 from __future__ import annotations
 
 import sys
@@ -63,8 +64,7 @@ def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8", errors="replace")
 
 
-def _check_target(target_path: Path, required: tuple[str, ...],
-                    label: str) -> list[str]:
+def _check_target(target_path: Path, required: tuple[str, ...], label: str) -> list[str]:
     """Return a list of strings missing from ``target_path``."""
     if not target_path.exists():
         return [f"target file {target_path} does not exist"]
@@ -84,8 +84,7 @@ def main() -> int:
         missing = _check_target(target, tuple(required), target_name)
         if missing:
             failed = True
-            print(f"[FAIL] {target_name} is missing references to:",
-                  file=sys.stderr)
+            print(f"[FAIL] {target_name} is missing references to:", file=sys.stderr)
             for m in missing:
                 print(f"   - {m}", file=sys.stderr)
         else:

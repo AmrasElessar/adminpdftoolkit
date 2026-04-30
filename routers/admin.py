@@ -4,6 +4,7 @@ The mobile-auth middleware itself remains attached to the FastAPI app
 instance (see ``app.py``); this router only carries the local-only admin
 endpoints that issue / revoke / report the token.
 """
+
 from __future__ import annotations
 
 import os
@@ -15,7 +16,6 @@ from fastapi import APIRouter, HTTPException, Request
 import core
 import state as state_mod
 from core import logger
-
 
 router = APIRouter(prefix="/admin")
 
@@ -77,6 +77,7 @@ async def clamav_status(request: Request) -> dict:
     if not core.is_local_request(request):
         raise HTTPException(403, "Bu işlem yalnızca sunucu makinesinden yapılabilir.")
     from core.clamav_update import status
+
     return status()
 
 
@@ -87,12 +88,14 @@ async def clamav_update(request: Request) -> dict:
     duration of a 30+ second sig pull."""
     if not core.is_local_request(request):
         raise HTTPException(403, "Bu işlem yalnızca sunucu makinesinden yapılabilir.")
-    from core.clamav_update import update_signatures, status
+    from core.clamav_update import status, update_signatures
 
     pre = status()
     if not pre["bundled"]:
-        return {"started": False, "reason": "ClamAV bundled değil — önce "
-                "scripts/setup_clamav.py'i çalıştırın."}
+        return {
+            "started": False,
+            "reason": "ClamAV bundled değil — önce scripts/setup_clamav.py'i çalıştırın.",
+        }
 
     def _run() -> None:
         result = update_signatures()

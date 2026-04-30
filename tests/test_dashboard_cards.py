@@ -13,6 +13,7 @@ by ``/`` and assert against the static markup + the literal
 ``CAT_ACCEPTS`` map text. That's enough to catch every regression we've
 seen so far without paying the Playwright / jsdom tax.
 """
+
 from __future__ import annotations
 
 import re
@@ -40,13 +41,9 @@ def _extract_cat_accepts(html: str) -> dict[str, list[str]]:
     assert m, "CAT_ACCEPTS block missing from index.html"
     body = m.group(1)
     out: dict[str, list[str]] = {}
-    for entry in re.finditer(
-        r"(\w+)\s*:\s*\[([^\]]*)\]", body
-    ):
+    for entry in re.finditer(r"(\w+)\s*:\s*\[([^\]]*)\]", body):
         key = entry.group(1)
-        values = [v.strip().strip('"').strip("'")
-                   for v in entry.group(2).split(",")
-                   if v.strip()]
+        values = [v.strip().strip('"').strip("'") for v in entry.group(2).split(",") if v.strip()]
         out[key] = values
     return out
 
@@ -60,12 +57,12 @@ def _card_categories(html: str) -> set[str]:
 # Card inventory
 # ---------------------------------------------------------------------------
 EXPECTED_CARDS: set[str] = {
-    "convert",   # PDF → Excel/Word/JPG (sync + async)
-    "tools",     # Düzenle (sayfa) — merge/split/compress/etc.
-    "editor",    # Editör (içerik) — annotation/overlay/replace
-    "analyze",   # Boş sayfa, imza, kategori, deep-analyze
-    "extract",   # PDF → MD/CSV/img/outline/metadata
-    "find",      # Bul / vurgula
+    "convert",  # PDF → Excel/Word/JPG (sync + async)
+    "tools",  # Düzenle (sayfa) — merge/split/compress/etc.
+    "editor",  # Editör (içerik) — annotation/overlay/replace
+    "analyze",  # Boş sayfa, imza, kategori, deep-analyze
+    "extract",  # PDF → MD/CSV/img/outline/metadata
+    "find",  # Bul / vurgula
     "generate",  # → PDF (image/docx/xlsx/html/url)
 }
 
@@ -100,9 +97,7 @@ def test_pdf_only_cards_route_off_pdf(html: str) -> None:
     accepts = _extract_cat_accepts(html)
     pdf_only = {"convert", "tools", "editor", "analyze", "extract", "find"}
     for cat in pdf_only:
-        assert accepts[cat] == ["pdf"], (
-            f"Card '{cat}' should accept only PDF; got {accepts[cat]}"
-        )
+        assert accepts[cat] == ["pdf"], f"Card '{cat}' should accept only PDF; got {accepts[cat]}"
 
 
 def test_generate_card_rejects_pdf(html: str) -> None:
@@ -123,9 +118,7 @@ def test_no_card_matches_both_pdf_and_non_pdf(html: str) -> None:
     for cat, types in accepts.items():
         ts = set(types)
         if "pdf" in ts:
-            assert ts == {"pdf"}, (
-                f"Card '{cat}' mixes pdf with {ts - {'pdf'}}"
-            )
+            assert ts == {"pdf"}, f"Card '{cat}' mixes pdf with {ts - {'pdf'}}"
 
 
 # ---------------------------------------------------------------------------

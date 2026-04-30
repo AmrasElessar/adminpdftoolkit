@@ -38,9 +38,7 @@ from settings import settings
 from state import batch_store
 
 
-def write_merged_excel(
-    records: list[dict], source_files: list[str], out_path: Path
-) -> None:
+def write_merged_excel(records: list[dict], source_files: list[str], out_path: Path) -> None:
     """Write the merged-records workbook used by /batch-download and the
     per-team distribution ZIP. Headers + column widths track the call-log
     schema closely; ``TARGET_SCHEMA`` is read live off ``core`` so the
@@ -51,7 +49,7 @@ def write_merged_excel(
     ws.title = "Birleşik Kayıtlar"
 
     target_schema = list(getattr(core, "TARGET_SCHEMA", []))
-    headers = ["Sıra", "Kaynak PDF", "Kayıt No"] + target_schema + ["AI Özeti (Ham)"]
+    headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema, "AI Özeti (Ham)"]
 
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill("solid", fgColor="2F5496")
@@ -61,7 +59,7 @@ def write_merged_excel(
         c.fill = header_fill
         c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=False)
 
-    for row_idx, (rec, src) in enumerate(zip(records, source_files), 2):
+    for row_idx, (rec, src) in enumerate(zip(records, source_files, strict=False), 2):
         orig_sira = rec.get("Sıra", row_idx - 1)
         for col_idx, h in enumerate(headers, 1):
             if h == "Sıra":
@@ -76,10 +74,21 @@ def write_merged_excel(
             c.alignment = Alignment(vertical="top", wrap_text=False)
 
     widths = {
-        "Sıra": 7, "Kaynak PDF": 28, "Kayıt No": 10, "Müşteri": 28, "Telefon": 18,
-        "Durum": 12, "Tarih": 18, "Süre": 10,
-        "Ağrı / romatizma": 22, "Termal / kaplıca": 22, "Yaş": 14,
-        "Medeni durum": 16, "Meslek": 22, "İkamet ili": 16, "AI Özeti (Ham)": 50,
+        "Sıra": 7,
+        "Kaynak PDF": 28,
+        "Kayıt No": 10,
+        "Müşteri": 28,
+        "Telefon": 18,
+        "Durum": 12,
+        "Tarih": 18,
+        "Süre": 10,
+        "Ağrı / romatizma": 22,
+        "Termal / kaplıca": 22,
+        "Yaş": 14,
+        "Medeni durum": 16,
+        "Meslek": 22,
+        "İkamet ili": 16,
+        "AI Özeti (Ham)": 50,
     }
     for col_idx, h in enumerate(headers, 1):
         ws.column_dimensions[get_column_letter(col_idx)].width = widths.get(h, 18)
@@ -102,7 +111,7 @@ def apply_pipeline(
     if state.get("deduplicated"):
         seen: set[str] = set()
         nrec, nsrc = [], []
-        for rec, src in zip(records, sources):
+        for rec, src in zip(records, sources, strict=False):
             p = core.normalize_phone(rec.get("Telefon"))
             if p and p in seen:
                 continue
@@ -115,7 +124,7 @@ def apply_pipeline(
     filters = state.get("filters") or {}
     if filters:
         nrec, nsrc = [], []
-        for rec, src in zip(records, sources):
+        for rec, src in zip(records, sources, strict=False):
             ok = True
             for col, allowed in filters.items():
                 if not allowed:
@@ -123,10 +132,12 @@ def apply_pipeline(
                 val = str(rec.get(col, "")).strip()
                 if val == "":
                     if "(boş)" not in allowed:
-                        ok = False; break
+                        ok = False
+                        break
                 else:
                     if val not in allowed:
-                        ok = False; break
+                        ok = False
+                        break
             if ok:
                 nrec.append(rec)
                 nsrc.append(src)
@@ -164,9 +175,7 @@ def save_view(token: str, state: dict) -> dict:
     dict for the caller to forward to the frontend."""
     job_dir = core.make_job_dir("jobs", token)
     data = load_job(token)
-    records, sources = apply_pipeline(
-        data["original_records"], data["original_sources"], state
-    )
+    records, sources = apply_pipeline(data["original_records"], data["original_sources"], state)
 
     for old in job_dir.glob("birlesik_*.xlsx"):
         old.unlink(missing_ok=True)
@@ -257,23 +266,16 @@ def batch_convert_worker(
             for fn, _ in files_data
         ]
         batch_store.update(token, phase="processing", files_progress=files_progress)
-        fp_idx_by_name: dict[str, int] = {
-            str(fp["name"]): i for i, fp in enumerate(files_progress)
-        }
+        fp_idx_by_name: dict[str, int] = {str(fp["name"]): i for i, fp in enumerate(files_progress)}
 
         parse_args: list[tuple] = []
         for filename, pdf_path in files_data:
             if filename in skip_list:
                 continue
-            parse_args.append(
-                (filename, str(pdf_path), mappings_obj.get(filename), target_schema)
-            )
+            parse_args.append((filename, str(pdf_path), mappings_obj.get(filename), target_schema))
 
         configured = settings.parallel_batch_workers
-        if configured <= 0:
-            workers = min(max(1, os.cpu_count() or 1), 4)
-        else:
-            workers = max(1, configured)
+        workers = min(max(1, os.cpu_count() or 1), 4) if configured <= 0 else max(1, configured)
 
         use_pool = workers > 1 and len(parse_args) > 3
         results_in_order: list[dict[str, Any] | None] = [None] * len(parse_args)
@@ -288,8 +290,7 @@ def batch_convert_worker(
                         executor.submit(core.parse_pdf_for_batch, a): idx
                         for idx, a in enumerate(parse_args)
                     }
-                    completed = 0
-                    for fut in as_completed(futures):
+                    for completed, fut in enumerate(as_completed(futures), start=1):
                         idx = futures[fut]
                         try:
                             results_in_order[idx] = fut.result()
@@ -299,13 +300,13 @@ def batch_convert_worker(
                                 "records": [],
                                 "warning": f"{parse_args[idx][0]} atlandı: {sanitize_error(e)}",
                             }
-                        completed += 1
                         result = results_in_order[idx]
                         assert result is not None  # just assigned above
                         rec_count = len(result.get("records", []))
                         warning = result.get("warning")
                         _set_file_progress(
-                            token, fp_idx_by_name,
+                            token,
+                            fp_idx_by_name,
                             result["filename"],
                             status="error" if warning and not rec_count else "done",
                             record_count=rec_count,
@@ -338,7 +339,8 @@ def batch_convert_worker(
                 rec_count = len(result.get("records", []))
                 warning = result.get("warning")
                 _set_file_progress(
-                    token, fp_idx_by_name,
+                    token,
+                    fp_idx_by_name,
                     result["filename"],
                     status="error" if warning and not rec_count else "done",
                     record_count=rec_count,
@@ -384,7 +386,8 @@ def batch_convert_worker(
                     "original_sources": list(source_index),
                     "state": {"deduplicated": False, "filters": {}},
                 },
-                fp, ensure_ascii=False,
+                fp,
+                ensure_ascii=False,
             )
 
         for p in job_dir.glob("in_*.pdf"):

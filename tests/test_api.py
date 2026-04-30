@@ -15,6 +15,7 @@ public endpoint:
 These tests run in <1 second and protect us when the upcoming router refactor
 moves code around.
 """
+
 from __future__ import annotations
 
 import io
@@ -39,6 +40,7 @@ def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     ``core.is_local_request`` themselves (the middleware reads it via
     lazy attribute lookup)."""
     import core
+
     monkeypatch.setattr(core, "is_local_request", lambda req: True)
     return TestClient(app.app)
 
@@ -86,9 +88,9 @@ def test_openapi_schema_has_endpoints(client: TestClient) -> None:
         "../etc/passwd",
         "abc/def",
         "abc.def",
-        "123",            # too short
-        "X" * 33,         # too long
-        "g" * 32,         # non-hex
+        "123",  # too short
+        "X" * 33,  # too long
+        "g" * 32,  # non-hex
     ],
 )
 def test_progress_rejects_malformed_token(client: TestClient, bad_token: str) -> None:
@@ -197,7 +199,9 @@ def test_sanitize_error_empty_falls_back() -> None:
 def test_persisted_state_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # state_path() in core.py reads core.STATE_DIR (which is the same object
     # as state.STATE_DIR). Patch both bindings.
-    import core, state
+    import core
+    import state
+
     monkeypatch.setattr(core, "STATE_DIR", tmp_path)
     monkeypatch.setattr(state, "STATE_DIR", tmp_path)
     token = "f" * 32
@@ -218,19 +222,30 @@ def test_persisted_state_roundtrip(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert core.load_persisted_state("convert", token) is None
 
 
-def test_progress_falls_back_to_persisted_state(client: TestClient, tmp_path: Path,
-                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+def test_progress_falls_back_to_persisted_state(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """If the in-memory entry is gone (e.g. server restarted) but a state.json
     is on disk, the progress endpoint should return that snapshot rather than
     a bare 404."""
-    import core, state
+    import core
+    import state
+
     monkeypatch.setattr(core, "STATE_DIR", tmp_path)
     monkeypatch.setattr(state, "STATE_DIR", tmp_path)
     token = "b" * 32
-    core.persist_job_state("convert", token, {
-        "phase": "done", "done": True, "output_name": "out.xlsx",
-        "current": 5, "total": 5, "started_at": 0,
-    })
+    core.persist_job_state(
+        "convert",
+        token,
+        {
+            "phase": "done",
+            "done": True,
+            "output_name": "out.xlsx",
+            "current": 5,
+            "total": 5,
+            "started_at": 0,
+        },
+    )
     r = client.get(f"/convert-progress/{token}")
     assert r.status_code == 200
     body = r.json()
@@ -268,18 +283,29 @@ def test_sse_invalid_token_returns_400(client: TestClient) -> None:
     assert r.status_code in (400, 404)
 
 
-def test_sse_streams_done_job_then_closes(client: TestClient, tmp_path: Path,
-                                            monkeypatch: pytest.MonkeyPatch) -> None:
+def test_sse_streams_done_job_then_closes(
+    client: TestClient, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A finished job's snapshot is emitted as a single SSE frame, then the
     stream closes (no infinite hold)."""
-    import core, state
+    import core
+    import state
+
     monkeypatch.setattr(core, "STATE_DIR", tmp_path)
     monkeypatch.setattr(state, "STATE_DIR", tmp_path)
     token = "c" * 32
-    core.persist_job_state("convert", token, {
-        "phase": "done", "done": True, "current": 3, "total": 3,
-        "output_name": "x.xlsx", "started_at": 0,
-    })
+    core.persist_job_state(
+        "convert",
+        token,
+        {
+            "phase": "done",
+            "done": True,
+            "current": 3,
+            "total": 3,
+            "output_name": "x.xlsx",
+            "started_at": 0,
+        },
+    )
     with client.stream("GET", f"/events/convert/{token}") as r:
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("text/event-stream")
@@ -295,9 +321,10 @@ def test_job_snapshot_unknown_kind_returns_none() -> None:
     assert core.job_snapshot("nosuch", "a" * 32) is None
 
 
-def test_job_snapshot_falls_back_to_disk(tmp_path: Path,
-                                           monkeypatch: pytest.MonkeyPatch) -> None:
-    import core, state
+def test_job_snapshot_falls_back_to_disk(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import core
+    import state
+
     monkeypatch.setattr(core, "STATE_DIR", tmp_path)
     monkeypatch.setattr(state, "STATE_DIR", tmp_path)
     token = "d" * 32
@@ -314,9 +341,8 @@ def test_parse_pdf_for_batch_returns_warning_for_missing_file() -> None:
     """The worker must never raise — it converts failures to a warning so a
     single bad PDF doesn't kill the whole batch job."""
     import core
-    out = core.parse_pdf_for_batch(
-        ("does-not-exist.pdf", "C:/no/such/file.pdf", None, ["Müşteri"])
-    )
+
+    out = core.parse_pdf_for_batch(("does-not-exist.pdf", "C:/no/such/file.pdf", None, ["Müşteri"]))
     assert out["filename"] == "does-not-exist.pdf"
     assert out["records"] == []
     assert out["warning"] is not None
@@ -327,12 +353,11 @@ def test_parse_pdf_for_batch_no_mapping_warns() -> None:
     """If the file isn't a call-log AND no column mapping is supplied, the
     worker emits the 'eşleme yapılmamış' warning rather than crashing."""
     import core
+
     # Use the test_pipeline fixture path — but we just need any non-call-log
     # PDF here. Synthesize: pass a non-existent path so the open() fails →
     # falls through to the generic exception branch, still returns a warning.
-    out = core.parse_pdf_for_batch(
-        ("foo.pdf", "C:/nope.pdf", None, [])
-    )
+    out = core.parse_pdf_for_batch(("foo.pdf", "C:/nope.pdf", None, []))
     assert out["records"] == []
     assert out["warning"] is not None
 
@@ -345,6 +370,7 @@ def reset_mobile_token():
     """Make sure each mobile-auth test starts from a clean state and doesn't
     leak the token to the next test."""
     import state
+
     with state.mobile_token_lock:
         state.mobile_token = None
     yield
@@ -363,6 +389,7 @@ def local_client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
     override the local-detection helper for the duration of the test.
     """
     import core
+
     monkeypatch.setattr(core, "is_local_request", lambda req: True)
     monkeypatch.setattr("core.is_local_request", lambda req: True)
     return TestClient(app.app)
@@ -407,11 +434,13 @@ def test_enable_mobile_rotates_token(local_client: TestClient, reset_mobile_toke
     assert t1 != t2
 
 
-def test_enable_mobile_rejects_non_local(client: TestClient, reset_mobile_token,
-                                           monkeypatch: pytest.MonkeyPatch) -> None:
+def test_enable_mobile_rejects_non_local(
+    client: TestClient, reset_mobile_token, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Default TestClient is treated as remote (host='testclient'). Without
     the local override, /admin/enable-mobile must refuse with 403."""
     import core
+
     monkeypatch.setattr(core, "is_local_request", lambda req: False)
     monkeypatch.setattr("core.is_local_request", lambda req: False)
     r = client.post("/admin/enable-mobile")
@@ -420,8 +449,9 @@ def test_enable_mobile_rejects_non_local(client: TestClient, reset_mobile_token,
 
 def test_is_local_request_unit() -> None:
     """is_local_request must accept loopback hosts and reject the rest."""
-    from core import is_local_request
     from types import SimpleNamespace
+
+    from core import is_local_request
 
     def fake_req(host: str | None):
         return SimpleNamespace(client=SimpleNamespace(host=host) if host else None)
@@ -454,11 +484,13 @@ def test_mobile_public_path_classification() -> None:
     assert app._is_mobile_public("/admin/disable-mobile") is False
 
 
-def test_middleware_remote_no_token_blocks_protected(reset_mobile_token,
-                                                       monkeypatch: pytest.MonkeyPatch) -> None:
+def test_middleware_remote_no_token_blocks_protected(
+    reset_mobile_token, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Force the middleware to treat the client as remote, leave the token
     unset, and confirm a protected endpoint returns 403."""
     import core
+
     monkeypatch.setattr(core, "is_local_request", lambda req: False)
     monkeypatch.setattr("core.is_local_request", lambda req: False)
     c = TestClient(app.app)
@@ -468,11 +500,14 @@ def test_middleware_remote_no_token_blocks_protected(reset_mobile_token,
     assert "kapalı" in body["detail"].lower() or "anahtar" in body["detail"].lower()
 
 
-def test_middleware_remote_with_valid_token_passes(reset_mobile_token,
-                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+def test_middleware_remote_with_valid_token_passes(
+    reset_mobile_token, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """With a token issued AND presented in the X-Mobile-Key header, a
     'remote' client can reach a protected endpoint."""
-    import core, state
+    import core
+    import state
+
     # Issue a token by direct state manipulation (bypass the local-only check)
     test_token = "T" * 50
     with state.mobile_token_lock:
@@ -485,10 +520,13 @@ def test_middleware_remote_with_valid_token_passes(reset_mobile_token,
     assert r.status_code == 200
 
 
-def test_middleware_remote_with_wrong_token_blocks(reset_mobile_token,
-                                                     monkeypatch: pytest.MonkeyPatch) -> None:
+def test_middleware_remote_with_wrong_token_blocks(
+    reset_mobile_token, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Wrong key → 403 even when mobile access is enabled."""
-    import core, state
+    import core
+    import state
+
     with state.mobile_token_lock:
         state.mobile_token = "right-token"
     monkeypatch.setattr(core, "is_local_request", lambda req: False)
@@ -502,19 +540,26 @@ def test_cleanup_loop_callable_with_no_args() -> None:
     """Regression guard: ``threading.Thread(target=cleanup_loop)`` (no args)
     must keep working — the lifespan starts the sweeper that way and
     silently breaks the daemon thread if the signature changes."""
-    import core, inspect
+    import inspect
+
+    import core
+
     sig = inspect.signature(core.cleanup_loop)
     for name, param in sig.parameters.items():
-        assert param.default is not inspect.Parameter.empty, \
-            f"cleanup_loop parameter {name!r} must have a default — " \
+        assert param.default is not inspect.Parameter.empty, (
+            f"cleanup_loop parameter {name!r} must have a default — "
             f"otherwise threading.Thread(target=cleanup_loop) crashes at boot"
+        )
 
 
-def test_middleware_remote_token_via_query_param(reset_mobile_token,
-                                                   monkeypatch: pytest.MonkeyPatch) -> None:
+def test_middleware_remote_token_via_query_param(
+    reset_mobile_token, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """?key= URL param works as an alternative to the header (used by the
     initial mobile bookmark hit)."""
-    import core, state
+    import core
+    import state
+
     test_token = "Q" * 50
     with state.mobile_token_lock:
         state.mobile_token = test_token
@@ -528,8 +573,10 @@ def test_middleware_remote_token_via_query_param(reset_mobile_token,
 def test_middleware_token_constant_time_compare(reset_mobile_token) -> None:
     """Sanity: the comparison uses hmac.compare_digest (timing-safe)."""
     import hmac as _hmac
+
     # If someone refactors the middleware to use plain `==`, they'll have
     # to remove this guard from the source too — making the regression
     # visible in code review.
-    src = open("app.py", encoding="utf-8").read()
+    with open("app.py", encoding="utf-8") as fh:
+        src = fh.read()
     assert "hmac.compare_digest" in src or "_hmac.compare_digest" in src
