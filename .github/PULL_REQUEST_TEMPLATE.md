@@ -24,7 +24,7 @@ Katkı için teşekkürler! Lütfen aşağıdaki bölümleri doldur.
 - [ ] All new and existing tests pass locally (`pytest`)
 - [ ] I have updated `CHANGELOG.md` under `[Unreleased]`
 - [ ] I have updated user-facing strings in **both** Turkish and English (`window.I18N`)
-- [ ] Documentation is updated (`README.md` and `README.en.md` if applicable)
+- [ ] Documentation is updated (both Turkish and English sections of `README.md` if applicable)
 
 ## Linked issues / Bağlı issue'lar
 

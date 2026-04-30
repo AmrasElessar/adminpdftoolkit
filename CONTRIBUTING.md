@@ -74,7 +74,7 @@ pytest --cov=. --cov-report=term-missing
 1. Make sure CI is green (linting, types, tests).
 2. Add or update tests for any behaviour change.
 3. Update `CHANGELOG.md` under the `[Unreleased]` section.
-4. Update both `README.md` and `README.en.md` when documentation changes.
+4. Update both the Turkish and English sections of `README.md` when documentation changes.
 5. Add or update UI strings in **both** `tr` and `en` dictionaries (`templates/index.html` → `window.I18N`).
 6. Fill in the PR template; describe the *why*, not just the *what*.
 7. One reviewer approval is required before merging.
@@ -165,7 +165,7 @@ pytest --cov=. --cov-report=term-missing
 1. CI'ın yeşil olduğundan emin ol (lint, tip, test).
 2. Davranış değişikliği için test ekle/güncelle.
 3. `CHANGELOG.md` içinde `[Unreleased]` başlığı altına ekle.
-4. Doküman değişikliğinde hem `README.md` hem `README.en.md` güncellensin.
+4. Doküman değişikliğinde `README.md` içindeki Türkçe ve İngilizce bölümlerin ikisi de güncellensin.
 5. UI metinlerini hem `tr` hem `en` sözlüğüne ekle (`templates/index.html` → `window.I18N`).
 6. PR şablonunu doldur; *ne yaptığını* değil, *neden yaptığını* yaz.
 7. Merge için bir reviewer onayı gerekli.
