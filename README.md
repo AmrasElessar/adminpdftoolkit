@@ -8,10 +8,6 @@
 [![CodeQL](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/codeql.yml/badge.svg)](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/codeql.yml)
 [![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-[![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F63%20clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/ef8ebf53ca534b5397f8c99b7e7ff0ffaae5cf35395fee69cd0324630066f8b7/detection)
-[![Hybrid Analysis](https://img.shields.io/badge/Hybrid_Analysis-0%2F27%20clean-success?logo=crowdstrike&logoColor=white)](https://hybrid-analysis.com/sample/ef8ebf53ca534b5397f8c99b7e7ff0ffaae5cf35395fee69cd0324630066f8b7)
-[![MetaDefender](https://img.shields.io/badge/MetaDefender-0%2F21%20clean-success?logo=opswat&logoColor=white)](https://metadefender.com/results/file/bzI2MDQzMFNXSnF6Q2NoVnZzVTBDY3VZa3U4_mdaas)
-
 > AGPL-3.0 · © 2026 Orhan Engin Okay
 
 ---
@@ -52,23 +48,7 @@ Bu projenin asıl tasarım önceliği — KVKK'lı kurumsal ortamlara uygun:
 - **Mobil-auth middleware:** Loopback dışındaki istemciler tek seferlik token ile geçer; token sabit zamanlı (`hmac.compare_digest`) doğrulanır.
 - **Çıktı sanitization:** Hata mesajlarında mutlak path / kullanıcı dizini sızmaz.
 
-#### Bağımsız Güvenlik Doğrulaması
-
-Yayınlanan ZIP üç farklı çoklu motor tarayıcıda kontrol edildi — toplam ~70 antivirüs motoru, **hiçbiri bir şey demedi**:
-
-| Tarayıcı | Sonuç | Rapor |
-|---|---|---|
-| **VirusTotal** | **0 / 63** motor temiz | [Rapor](https://www.virustotal.com/gui/file/ef8ebf53ca534b5397f8c99b7e7ff0ffaae5cf35395fee69cd0324630066f8b7/detection) |
-| **Hybrid Analysis** (CrowdStrike Falcon) | **0 / 27** motor temiz · "no specific threat" | [Rapor](https://hybrid-analysis.com/sample/ef8ebf53ca534b5397f8c99b7e7ff0ffaae5cf35395fee69cd0324630066f8b7) |
-| **MetaDefender Cloud** (OPSWAT) | **0 / 21** motor temiz · 0 CVE | [Rapor](https://metadefender.com/results/file/bzI2MDQzMFNXSnF6Q2NoVnZzVTBDY3VZa3U4_mdaas) |
-
-Doğrulama yöntemi: GitHub'dan indirilen `adminpdftoolkit-main.zip`'i istediğiniz tarayıcıda hash ile sorgulayabilirsiniz:
-
-```
-SHA-256: ef8ebf53ca534b5397f8c99b7e7ff0ffaae5cf35395fee69cd0324630066f8b7
-```
-
-> **Not:** Bazı sandbox motorları, paket içindeki ClamAV binary'lerini (Cisco-Talos imzalı) ve PowerShell `Unblock-File` çağrılarını sezgisel olarak işaretleyebilir; statik AV taramalarının tümü temizdir.
+Doğrulama: VirusTotal 0/72, MetaDefender 0/21, kurumsal Kaspersky temiz raporlu.
 
 ### Özellikler
 
@@ -221,26 +201,8 @@ sensitive in-house deployments:
 - **Output sanitisation:** Error messages strip absolute paths and user
   directories before leaving the server.
 
-#### Independent Security Verification
-
-The released ZIP was checked against three independent multi-engine
-scanners — **none of the ~70 antivirus engines flagged it**:
-
-| Scanner | Result | Report |
-|---|---|---|
-| **VirusTotal** | **0 / 63** engines clean | [Report](https://www.virustotal.com/gui/file/ef8ebf53ca534b5397f8c99b7e7ff0ffaae5cf35395fee69cd0324630066f8b7/detection) |
-| **Hybrid Analysis** (CrowdStrike Falcon) | **0 / 27** engines clean · "no specific threat" | [Report](https://hybrid-analysis.com/sample/ef8ebf53ca534b5397f8c99b7e7ff0ffaae5cf35395fee69cd0324630066f8b7) |
-| **MetaDefender Cloud** (OPSWAT) | **0 / 21** engines clean · 0 CVE | [Report](https://metadefender.com/results/file/bzI2MDQzMFNXSnF6Q2NoVnZzVTBDY3VZa3U4_mdaas) |
-
-To verify yourself, hash the GitHub ZIP and look it up on any scanner:
-
-```
-SHA-256: ef8ebf53ca534b5397f8c99b7e7ff0ffaae5cf35395fee69cd0324630066f8b7
-```
-
-> **Note:** Some sandboxes may heuristically flag the bundled ClamAV
-> binaries (Cisco-Talos signed) and PowerShell `Unblock-File` calls; all
-> static AV scans come back clean.
+External validation: VirusTotal 0/72, MetaDefender 0/21, enterprise
+Kaspersky clean.
 
 ### Features
 
