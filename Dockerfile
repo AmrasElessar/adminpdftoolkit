@@ -90,4 +90,4 @@ LABEL org.opencontainers.image.title="Admin PDF Toolkit" \
       org.opencontainers.image.description="Offline PDF toolkit by Engin — convert / edit / annotate / replace, 35+ tools, web UI" \
       org.opencontainers.image.licenses="AGPL-3.0-or-later" \
       org.opencontainers.image.source="https://github.com/orhanenginokay/pdfconverter" \
-      org.opencontainers.image.version="1.10.0"
+      org.opencontainers.image.version="1.11.0"
