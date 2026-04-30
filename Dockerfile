@@ -14,12 +14,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /build
 
-# System deps for pdfplumber / pymupdf / easyocr
+# System deps for pdfplumber / pymupdf / easyocr / pycairo (xhtml2pdf chain).
+# pycairo ships sdist-only on Linux so libcairo2-dev + pkg-config are
+# required to build the wheel here in the builder stage.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         libgl1 \
         libglib2.0-0 \
+        libcairo2-dev \
+        pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
@@ -36,11 +40,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
     MAX_UPLOAD_MB=2048
 
-# Runtime libs only
+# Runtime libs only — libcairo2 (no -dev) for the pre-built pycairo wheel
+# imported by svglib.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         libgl1 \
         libglib2.0-0 \
+        libcairo2 \
         clamav \
         tini \
     && rm -rf /var/lib/apt/lists/* \

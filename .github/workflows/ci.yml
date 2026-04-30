@@ -74,6 +74,14 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+      - name: Install system deps (Linux)
+        # pycairo is pulled in transitively (xhtml2pdf → svglib → rlpycairo)
+        # and ships sdist-only on Linux — needs libcairo2-dev + pkg-config
+        # at build time. Wheels exist for Windows/macOS so this is Linux-only.
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libcairo2-dev pkg-config
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
