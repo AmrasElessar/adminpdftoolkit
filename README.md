@@ -9,6 +9,8 @@
 [![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
 [![Hybrid Analysis](https://img.shields.io/badge/Hybrid_Analysis-clean-success?logo=crowdstrike&logoColor=white)](https://hybrid-analysis.com/sample/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
+[![MetaDefender](https://img.shields.io/badge/MetaDefender-clean-success?logo=opswat&logoColor=white)](https://metadefender.com/results/file/bzI2MDQzMER2M1FwRjl5NjJfVEU5enBMbjN4_mdaas)
+[![Kaspersky](https://img.shields.io/badge/Kaspersky-clean-success?logoColor=white)](#türkçe)
 
 > AGPL-3.0 · © 2026 Orhan Engin Okay
 
@@ -52,10 +54,12 @@ Bu projenin asıl tasarım önceliği — KVKK'lı kurumsal ortamlara uygun:
 
 #### Bağımsız Güvenlik Doğrulaması
 
-Yayınlanan paketler bağımsız çoklu motor tarayıcılarda kontrol ediliyor. En son `main` taraması — **66+ antivirüs motoru, hiçbiri detection vermedi:**
+Yayınlanan paketler bağımsız çoklu motor tarayıcılarda kontrol ediliyor. En son `main` taraması — **66+ antivirüs motoru + kurumsal Kaspersky, hiçbiri detection vermedi:**
 
 [![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
 [![Hybrid Analysis](https://img.shields.io/badge/Hybrid_Analysis-clean-success?logo=crowdstrike&logoColor=white)](https://hybrid-analysis.com/sample/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
+[![MetaDefender](https://img.shields.io/badge/MetaDefender-clean-success?logo=opswat&logoColor=white)](https://metadefender.com/results/file/bzI2MDQzMER2M1FwRjl5NjJfVEU5enBMbjN4_mdaas)
+[![Kaspersky](https://img.shields.io/badge/Kaspersky-clean-success?logoColor=white)](#bağımsız-güvenlik-doğrulaması)
 &nbsp; ClamAV · Microsoft · Kaspersky · Bitdefender · ESET · Sophos · Symantec · McAfee · Trellix · Avira · Emsisoft · Sangfor · CrowdStrike Falcon · Fortinet · GData · TrendMicro · WithSecure · ZoneAlarm + diğerleri
 
 Her **GitHub Release** sayfasında o sürüme ait SHA-256 + tarama bağlantıları listelenir
@@ -218,10 +222,12 @@ sensitive in-house deployments:
 #### Independent Security Verification
 
 Released packages are checked against independent multi-engine scanners.
-Latest `main` scan — **66+ antivirus engines, none flagged it**:
+Latest `main` scan — **66+ antivirus engines + Kaspersky enterprise, none flagged it**:
 
 [![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
 [![Hybrid Analysis](https://img.shields.io/badge/Hybrid_Analysis-clean-success?logo=crowdstrike&logoColor=white)](https://hybrid-analysis.com/sample/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
+[![MetaDefender](https://img.shields.io/badge/MetaDefender-clean-success?logo=opswat&logoColor=white)](https://metadefender.com/results/file/bzI2MDQzMER2M1FwRjl5NjJfVEU5enBMbjN4_mdaas)
+[![Kaspersky](https://img.shields.io/badge/Kaspersky-clean-success?logoColor=white)](#independent-security-verification)
 &nbsp; ClamAV · Microsoft · Kaspersky · Bitdefender · ESET · Sophos · Symantec · McAfee · Trellix · Avira · Emsisoft · Sangfor · CrowdStrike Falcon · Fortinet · GData · TrendMicro · WithSecure · ZoneAlarm + others
 
 Every **GitHub Release** page lists that release's SHA-256 + verification
