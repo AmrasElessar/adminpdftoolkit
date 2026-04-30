@@ -34,9 +34,7 @@ def scan_files_with_progress(
     Per-file scan progress is recorded under ``files_safety`` (a list of
     dicts) so the frontend can show which file is currently being scanned.
     """
-    files_safety: list[dict[str, Any]] = [
-        {"name": name, "status": "pending"} for name, _ in files
-    ]
+    files_safety: list[dict[str, Any]] = [{"name": name, "status": "pending"} for name, _ in files]
     store.update(
         token,
         phase="scanning",

@@ -74,9 +74,7 @@ def convert_worker(
 
             ok, err = scan_single_file(convert_store, token, pdf_path, orig_filename)
             if not ok:
-                convert_store.update(
-                    token, error=err or "Güvensiz PDF reddedildi.", done=True
-                )
+                convert_store.update(token, error=err or "Güvensiz PDF reddedildi.", done=True)
                 return
 
         stem = Path(orig_filename).stem
@@ -216,15 +214,19 @@ def batch_files_worker(
 
             ok, err = scan_files_with_progress(batch_store, token, files_data)
             if not ok:
-                batch_store.update(
-                    token, error=err or "Güvensiz PDF reddedildi.", done=True
-                )
+                batch_store.update(token, error=err or "Güvensiz PDF reddedildi.", done=True)
                 return
 
         # Initialize per-file progress so frontend can render rows immediately
         files_progress = [
-            {"name": fn, "status": "pending", "kind": None, "kind_label": None,
-             "record_count": 0, "error": None}
+            {
+                "name": fn,
+                "status": "pending",
+                "kind": None,
+                "kind_label": None,
+                "record_count": 0,
+                "error": None,
+            }
             for fn, _ in files_data
         ]
         zip_path = job_dir / "_output.zip"
@@ -339,7 +341,8 @@ def batch_files_worker(
                     merged_out.unlink(missing_ok=True)
                     logger.info(
                         "batch-files: merged %d call-log records from %d PDFs",
-                        len(merged_call_log), len(merged_call_log_sources),
+                        len(merged_call_log),
+                        len(merged_call_log_sources),
                     )
                 except Exception as merge_exc:
                     logger.warning("batch-files merged sheet failed: %s", merge_exc)

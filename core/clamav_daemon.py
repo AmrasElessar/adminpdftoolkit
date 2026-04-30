@@ -141,7 +141,13 @@ def instream_scan(pdf_path: Path, timeout: float = 30.0) -> dict[str, Any] | Non
     try:
         data = pdf_path.read_bytes()
     except OSError as e:
-        return {"clean": True, "threat": None, "exit_code": -2, "engine": "clamd", "raw": f"read error: {e}"}
+        return {
+            "clean": True,
+            "threat": None,
+            "exit_code": -2,
+            "engine": "clamd",
+            "raw": f"read error: {e}",
+        }
 
     chunk_size = 64 * 1024
     try:
@@ -161,7 +167,13 @@ def instream_scan(pdf_path: Path, timeout: float = 30.0) -> dict[str, Any] | Non
                 resp_chunks.append(p)
             resp = b"".join(resp_chunks).decode("utf-8", errors="replace").strip()
     except TimeoutError:
-        return {"clean": False, "threat": None, "exit_code": -1, "engine": "clamd", "raw": "timeout"}
+        return {
+            "clean": False,
+            "threat": None,
+            "exit_code": -1,
+            "engine": "clamd",
+            "raw": "timeout",
+        }
     except OSError:
         return None  # connection lost — caller will fall back
 
@@ -175,13 +187,19 @@ def instream_scan(pdf_path: Path, timeout: float = 30.0) -> dict[str, Any] | Non
         if body.endswith(" FOUND"):
             threat = body[:-6].strip()
         return {
-            "clean": False, "threat": threat, "exit_code": 1,
-            "engine": "clamd", "raw": resp[:1000],
+            "clean": False,
+            "threat": threat,
+            "exit_code": 1,
+            "engine": "clamd",
+            "raw": resp[:1000],
         }
     if " OK" in resp:
         return {
-            "clean": True, "threat": None, "exit_code": 0,
-            "engine": "clamd", "raw": resp[:1000],
+            "clean": True,
+            "threat": None,
+            "exit_code": 0,
+            "engine": "clamd",
+            "raw": resp[:1000],
         }
     # Anything else → daemon error (signature mismatch, scan limit, etc).
     # Treat as INDETERMINATE — return None so caller falls back to standalone.

@@ -267,9 +267,7 @@ def batch_convert_worker(
             if scan_targets:
                 ok, err = scan_files_with_progress(batch_store, token, scan_targets)
                 if not ok:
-                    batch_store.update(
-                        token, error=err or "Güvensiz PDF reddedildi.", done=True
-                    )
+                    batch_store.update(token, error=err or "Güvensiz PDF reddedildi.", done=True)
                     return
 
         files_progress = [

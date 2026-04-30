@@ -500,8 +500,12 @@ def test_batch_files_worker_records_error_and_marks_done(tmp_path: Path, fresh_t
     )
 
     batch_files_worker(
-        fresh_token, [("broken.pdf", bad)], "word", job_dir,
-        custom_names=None, skip_safety=True,
+        fresh_token,
+        [("broken.pdf", bad)],
+        "word",
+        job_dir,
+        custom_names=None,
+        skip_safety=True,
     )
 
     snap = batch_store.snapshot(fresh_token)

@@ -223,8 +223,14 @@ async def batch_files(
     threading.Thread(
         target=batch_files_worker,
         args=(
-            token, files_data, target, job_dir, custom_names,
-            jpg_quality, skip_safety, jpg_dpi,
+            token,
+            files_data,
+            target,
+            job_dir,
+            custom_names,
+            jpg_quality,
+            skip_safety,
+            jpg_dpi,
         ),
         daemon=True,
     ).start()

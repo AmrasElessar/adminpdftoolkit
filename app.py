@@ -150,6 +150,7 @@ def _start_clamd_after_signatures() -> None:
         import time as _t
 
         from core.clamav_daemon import ensure_clamd_running
+
         _t.sleep(3.0)
         ensure_clamd_running(boot_timeout=25.0)
     except Exception as e:
@@ -171,6 +172,7 @@ async def _lifespan(_app: FastAPI):
     logger.info("Admin PDF Toolkit shutting down")
     try:
         from core.clamav_daemon import stop_clamd
+
         stop_clamd()
     except Exception as e:
         logger.debug("clamd stop on shutdown: %s", e)

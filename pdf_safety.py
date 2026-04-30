@@ -220,14 +220,14 @@ def clamav_scan(pdf_path: Path, timeout: int = 60) -> dict[str, Any] | None:
     if not exe:
         return None
     try:
-        result = subprocess.run(
+        proc_result = subprocess.run(
             [exe, "--no-summary", "--infected", "--stdout", str(pdf_path)],
             capture_output=True,
             text=True,
             timeout=timeout,
         )
-        out = (result.stdout or "") + (result.stderr or "")
-        threat = None
+        out = (proc_result.stdout or "") + (proc_result.stderr or "")
+        threat: str | None = None
         for line in out.splitlines():
             line = line.strip()
             if line.endswith(" FOUND"):
@@ -239,16 +239,28 @@ def clamav_scan(pdf_path: Path, timeout: int = 60) -> dict[str, Any] | None:
                     threat = name
                 break
         return {
-            "clean": result.returncode == 0,
+            "clean": proc_result.returncode == 0,
             "threat": threat,
-            "exit_code": result.returncode,
+            "exit_code": proc_result.returncode,
             "engine": "clamscan",
             "raw": out[:1000],
         }
     except subprocess.TimeoutExpired:
-        return {"clean": False, "threat": None, "exit_code": -1, "engine": "clamscan", "raw": "timeout"}
+        return {
+            "clean": False,
+            "threat": None,
+            "exit_code": -1,
+            "engine": "clamscan",
+            "raw": "timeout",
+        }
     except Exception as e:
-        return {"clean": True, "threat": None, "exit_code": -2, "engine": "clamscan", "raw": f"error: {e}"}
+        return {
+            "clean": True,
+            "threat": None,
+            "exit_code": -2,
+            "engine": "clamscan",
+            "raw": f"error: {e}",
+        }
 
 
 # ----------------------------------------------------------------------------
