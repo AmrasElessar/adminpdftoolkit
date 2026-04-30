@@ -9,7 +9,6 @@ emits per-file ``phase="scanning"`` progress and respects an in-store
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 

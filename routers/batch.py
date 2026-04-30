@@ -33,7 +33,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from starlette.background import BackgroundTask
 
 import core
-from app_http import gate_pdf_safety
 from pdf_converter import (
     is_call_log_pdf,
     is_scanned_pdf,

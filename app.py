@@ -144,12 +144,12 @@ def _start_clamd_after_signatures() -> None:
     to a hot daemon over loopback TCP).
     """
     try:
-        from core.clamav_daemon import ensure_clamd_running
-
         # Give freshclam a head start on cold boot. ensure_clamd_running()
         # gracefully returns False if the DB isn't there yet, and the next
         # actual scan will retry.
         import time as _t
+
+        from core.clamav_daemon import ensure_clamd_running
         _t.sleep(3.0)
         ensure_clamd_running(boot_timeout=25.0)
     except Exception as e:

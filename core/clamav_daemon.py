@@ -160,9 +160,9 @@ def instream_scan(pdf_path: Path, timeout: float = 30.0) -> dict[str, Any] | Non
                     break
                 resp_chunks.append(p)
             resp = b"".join(resp_chunks).decode("utf-8", errors="replace").strip()
-    except socket.timeout:
+    except TimeoutError:
         return {"clean": False, "threat": None, "exit_code": -1, "engine": "clamd", "raw": "timeout"}
-    except OSError as e:
+    except OSError:
         return None  # connection lost — caller will fall back
 
     # Parse: "stream: OK" | "stream: <name> FOUND" | "stream: <error> ERROR"
