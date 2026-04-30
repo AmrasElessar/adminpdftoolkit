@@ -8,6 +8,7 @@
 [![CodeQL](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/codeql.yml/badge.svg)](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/codeql.yml)
 [![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
+[![Hybrid Analysis](https://img.shields.io/badge/Hybrid_Analysis-clean-success?logo=crowdstrike&logoColor=white)](https://hybrid-analysis.com/sample/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
 
 > AGPL-3.0 · © 2026 Orhan Engin Okay
 
@@ -54,6 +55,7 @@ Bu projenin asıl tasarım önceliği — KVKK'lı kurumsal ortamlara uygun:
 Yayınlanan paketler bağımsız çoklu motor tarayıcılarda kontrol ediliyor. En son `main` taraması — **66+ antivirüs motoru, hiçbiri detection vermedi:**
 
 [![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
+[![Hybrid Analysis](https://img.shields.io/badge/Hybrid_Analysis-clean-success?logo=crowdstrike&logoColor=white)](https://hybrid-analysis.com/sample/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
 &nbsp; ClamAV · Microsoft · Kaspersky · Bitdefender · ESET · Sophos · Symantec · McAfee · Trellix · Avira · Emsisoft · Sangfor · CrowdStrike Falcon · Fortinet · GData · TrendMicro · WithSecure · ZoneAlarm + diğerleri
 
 Her **GitHub Release** sayfasında o sürüme ait SHA-256 + tarama bağlantıları listelenir
@@ -219,6 +221,7 @@ Released packages are checked against independent multi-engine scanners.
 Latest `main` scan — **66+ antivirus engines, none flagged it**:
 
 [![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
+[![Hybrid Analysis](https://img.shields.io/badge/Hybrid_Analysis-clean-success?logo=crowdstrike&logoColor=white)](https://hybrid-analysis.com/sample/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
 &nbsp; ClamAV · Microsoft · Kaspersky · Bitdefender · ESET · Sophos · Symantec · McAfee · Trellix · Avira · Emsisoft · Sangfor · CrowdStrike Falcon · Fortinet · GData · TrendMicro · WithSecure · ZoneAlarm + others
 
 Every **GitHub Release** page lists that release's SHA-256 + verification
