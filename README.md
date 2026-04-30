@@ -136,6 +136,13 @@ Servis Yoneticisi.bat       REM Yönetici olarak: kur · başlat · durdur · du
 
 **GNU AGPL-3.0** — kaynak açık, ücretsiz, değiştirilebilir. Türetilmiş yazılım da AGPL-3.0 altında paylaşılmak zorundadır; ağ üzerinden hizmet sunulduğunda kaynak erişimi sağlanmalıdır. Tam metin: [LICENSE](LICENSE) · Üçüncü taraf: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
+### Code Signing
+
+Yayınlanan binary'ler [SignPath Foundation](https://signpath.org/) tarafından
+ücretsiz olarak imzalanmaktadır (sertifika SignPath Foundation, imzalama
+hizmeti [SignPath.io](https://about.signpath.io/)). Politika ayrıntıları:
+[CODE_SIGNING.md](CODE_SIGNING.md).
+
 ### Sorumluluk reddi
 
 Yazılım **"OLDUĞU GİBİ"** sunulur. Veri işleme/aktarma/kayıp riskleri tamamen kullanıcının sorumluluğundadır; önemli verilerden önceden yedek alınmalıdır.
@@ -303,6 +310,13 @@ Servis Yoneticisi.bat       REM as Administrator: install · start · stop · st
 also ship under AGPL-3.0; serving over a network requires offering the
 source. Full text: [LICENSE](LICENSE) · Third-party:
 [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+### Code Signing
+
+Released binaries are signed for free by the
+[SignPath Foundation](https://signpath.org/) (certificate by SignPath
+Foundation, signing service by [SignPath.io](https://about.signpath.io/)).
+Policy details: [CODE_SIGNING.md](CODE_SIGNING.md).
 
 ### Disclaimer
 
