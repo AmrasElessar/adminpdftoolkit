@@ -7,6 +7,7 @@
 [![CI](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/codeql.yml/badge.svg)](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/codeql.yml)
 [![Code style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
 
 > AGPL-3.0 · © 2026 Orhan Engin Okay
 
@@ -48,7 +49,18 @@ Bu projenin asıl tasarım önceliği — KVKK'lı kurumsal ortamlara uygun:
 - **Mobil-auth middleware:** Loopback dışındaki istemciler tek seferlik token ile geçer; token sabit zamanlı (`hmac.compare_digest`) doğrulanır.
 - **Çıktı sanitization:** Hata mesajlarında mutlak path / kullanıcı dizini sızmaz.
 
-Doğrulama: VirusTotal 0/72, MetaDefender 0/21, kurumsal Kaspersky temiz raporlu.
+#### Bağımsız Güvenlik Doğrulaması
+
+Yayınlanan paketler bağımsız çoklu motor tarayıcılarda kontrol ediliyor. En son `main` taraması — **66+ antivirüs motoru, hiçbiri detection vermedi:**
+
+[![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
+&nbsp; ClamAV · Microsoft · Kaspersky · Bitdefender · ESET · Sophos · Symantec · McAfee · Trellix · Avira · Emsisoft · Sangfor · CrowdStrike Falcon · Fortinet · GData · TrendMicro · WithSecure · ZoneAlarm + diğerleri
+
+Her **GitHub Release** sayfasında o sürüme ait SHA-256 + tarama bağlantıları listelenir
+([Releases](https://github.com/AmrasElessar/adminpdftoolkit/releases)). Kendi indirdiğin ZIP'in hash'ini herhangi bir tarayıcıda
+sorgulayabilirsin (PowerShell: `Get-FileHash adminpdftoolkit-main.zip -Algorithm SHA256`).
+
+> **Not:** Bazı sandbox'lar paket içindeki ClamAV binary'lerini (Cisco-Talos imzalı) ve PowerShell `Unblock-File` çağrılarını sezgisel olarak işaretleyebilir; statik AV taramalarının **tamamı temizdir**.
 
 ### Özellikler
 
@@ -201,8 +213,21 @@ sensitive in-house deployments:
 - **Output sanitisation:** Error messages strip absolute paths and user
   directories before leaving the server.
 
-External validation: VirusTotal 0/72, MetaDefender 0/21, enterprise
-Kaspersky clean.
+#### Independent Security Verification
+
+Released packages are checked against independent multi-engine scanners.
+Latest `main` scan — **66+ antivirus engines, none flagged it**:
+
+[![VirusTotal](https://img.shields.io/badge/VirusTotal-clean-success?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/40e7d5ff7210b1de389496274d915a82708ad2123ede82bed20a9a93804ea538)
+&nbsp; ClamAV · Microsoft · Kaspersky · Bitdefender · ESET · Sophos · Symantec · McAfee · Trellix · Avira · Emsisoft · Sangfor · CrowdStrike Falcon · Fortinet · GData · TrendMicro · WithSecure · ZoneAlarm + others
+
+Every **GitHub Release** page lists that release's SHA-256 + verification
+links ([Releases](https://github.com/AmrasElessar/adminpdftoolkit/releases)). You can hash your downloaded ZIP and look it up
+on any scanner yourself (PowerShell: `Get-FileHash adminpdftoolkit-main.zip -Algorithm SHA256`).
+
+> **Note:** Some sandboxes may heuristically flag the bundled ClamAV
+> binaries (Cisco-Talos signed) and PowerShell `Unblock-File` calls; all
+> static AV scans come back **clean**.
 
 ### Features
 
