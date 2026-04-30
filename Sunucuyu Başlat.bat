@@ -3,6 +3,17 @@ chcp 65001 >nul
 cd /d "%~dp0"
 title Admin PDF Toolkit - Gelistirme Sunucusu (by Engin)
 
+rem --- Windows MotW (Mark of the Web) temizleyici ---
+rem GitHub ZIP'inden cikarildiginda her dosyada "internet'ten indirildi"
+rem isareti olur ve SmartScreen "yayimci dogrulanmadi" uyarisi verir.
+rem Ilk acilista hepsini bir kerede temizleyelim ki kullanici tekrar
+rem tekrar "Yine de calistir" demek zorunda kalmasin. Idempotent.
+if not exist ".unblocked" (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+        "Get-ChildItem -Path '%~dp0' -Recurse -File -Force -ErrorAction SilentlyContinue | Unblock-File -ErrorAction SilentlyContinue" >nul 2>&1
+    echo done > .unblocked
+)
+
 rem =======================================================================
 rem  Admin PDF Toolkit by Engin -- Gelistirme sunucusu baslatici
 rem
