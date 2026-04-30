@@ -2032,133 +2032,843 @@
     /* Body padding'in topbar'ı ezmemesi için top'u sıfırla */
     body { padding-top: 0; }
 
-    /* Convert-shell — eski main'i sarar, varsayılan gizli */
-    .convert-shell {
+    /* ===== Convert Workspace — modern, modal-free, single-page ===== */
+    .cvw-workspace {
       width: 100%;
       max-width: 1400px;
       margin: 0 auto;
-      padding: 8px 16px 0;
+      padding: 8px 16px 24px;
     }
-    .convert-shell[hidden] { display: none; }
-    /* Dashboard akışıyla açıldığında input kısımları gizli — sadece progress
-       + result paneli görünür. Hero zaten dosyayı kabul etti, format
-       Convert modal'ında seçildi. */
-    .convert-shell.from-modal #drop,
-    .convert-shell.from-modal #fileInfo,
-    .convert-shell.from-modal #form > fieldset,
-    .convert-shell.from-modal #go {
-      display: none !important;
-    }
-    .convert-shell.from-modal #form {
-      padding: 12px;
-      box-shadow: none;
-    }
+    .cvw-workspace[hidden] { display: none; }
+
     /* Hero drop pulse animasyonu (alertNoPdf çağrısı tetikler) */
-    .dash-drop-pulse {
-      animation: dash-pulse 0.5s ease-in-out 3;
-    }
+    .dash-drop-pulse { animation: dash-pulse 0.5s ease-in-out 3; }
     @keyframes dash-pulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.025); box-shadow: 0 0 0 4px rgba(255,255,255,0.4); }
     }
 
-    /* Convert modal — başta küçük, Dönüştür tıklanınca büyür.
-       Geniş ekranlarda iki kolon (özet sol, kayıt listesi sağ) için 1280px+ açılıyor. */
-    .modal.convert-modal {
-      max-width: 480px;
-      transition: max-width 0.3s ease-out;
+    /* --- Stepbar (sticky breadcrumb) --- */
+    .cvw-topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 3px rgba(15,23,42,.04);
+      position: sticky;
+      top: 8px;
+      z-index: 4;
     }
-    .modal.convert-modal.running {
-      max-width: 1280px;
-      width: calc(100vw - 24px);
-      max-height: calc(100vh - 32px);
-      max-height: calc(100dvh - 32px);
-      overflow-y: auto;
+    .cvw-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #2F5496;
+      border-radius: 8px;
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      transition: .12s;
     }
-    @media (min-width: 1500px) {
-      .modal.convert-modal.running { max-width: 1440px; }
+    .cvw-back:hover { background: #eef2ff; border-color: #2F5496; }
+    .cvw-stepbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      flex-wrap: wrap;
     }
-    #convertModalFiles {
-      font-size: 12px; color: #475569; background: #f8fafc;
-      border: 1px solid #e2e8f0; border-radius: 6px;
-      padding: 8px 10px; margin-bottom: 10px; word-break: break-all;
+    .cvw-step {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      border: 1px solid transparent;
     }
-    #convertModalFiles:empty { display: none; }
+    .cvw-step .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      font-size: 11px;
+      color: inherit;
+    }
+    .cvw-step.active { background: #2F5496; color: #fff; border-color: #2F5496; }
+    .cvw-step.active .num { background: #fff; color: #2F5496; border-color: transparent; }
+    .cvw-step.done { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+    .cvw-step.done .num { background: #047857; color: #fff; border-color: transparent; }
+    .cvw-step.done .num::before { content: "✓"; }
+    .cvw-step.done .num span { display: none; }
+    .cvw-step-arrow { color: #cbd5e1; font-size: 13px; user-select: none; }
 
-    /* convertOutputArea modal içine taşındığında stillerini sıfırla.
-       Geniş ekranda iki kolon: sol (özet/aksiyon) | sağ (tüm kayıtlar). */
-    .modal #convertOutputArea {
+    /* --- Pane container --- */
+    .cvw-pane[hidden] { display: none !important; }
+    .cvw-pane { animation: cvwFadeIn .18s ease-out; }
+    @keyframes cvwFadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* --- Step 1: file column + format column --- */
+    .cvw-step1-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+    @media (min-width: 960px) {
+      .cvw-step1-grid {
+        grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+        align-items: start;
+      }
+    }
+    .cvw-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(15,23,42,.03);
+    }
+    .cvw-card-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 12px;
+      letter-spacing: .01em;
+    }
+    .cvw-card-head .pill {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    /* Format selector cards — 3 büyük seçim kartı + içeride spesifik ayar */
+    .cvw-format-grid {
       display: grid;
       grid-template-columns: 1fr;
       gap: 10px;
-      margin-top: 10px;
-      width: 100%;
-      max-width: 100%;
+    }
+    @media (min-width: 720px) {
+      .cvw-format-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .cvw-format {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      background: #fff;
+      cursor: pointer;
+      transition: .12s;
+    }
+    .cvw-format:hover { border-color: #cbd5e1; transform: translateY(-1px); }
+    .cvw-format input[type=radio] {
+      position: absolute; opacity: 0; pointer-events: none;
+    }
+    .cvw-format.sel {
+      border-color: #2F5496;
+      background: #eef2ff;
+      box-shadow: 0 4px 14px -6px rgba(47,84,150,.4);
+    }
+    .cvw-format-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cvw-format-emoji { font-size: 22px; line-height: 1; }
+    .cvw-format-title { font-weight: 700; font-size: 15px; color: #0f172a; flex: 1; }
+    .cvw-format-rec {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+      white-space: nowrap;
+    }
+    .cvw-format-desc { font-size: 12px; color: #6b7280; line-height: 1.45; }
+    .cvw-format-meta {
+      font-size: 11px;
+      color: #2F5496;
+      font-weight: 600;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+
+    /* Format-spesifik ayar bloğu (yalnız seçili kartta görünür) */
+    .cvw-format-settings {
+      margin-top: 6px;
+      padding-top: 10px;
+      border-top: 1px dashed #cbd5e1;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cvw-format.sel .cvw-format-settings { display: flex; }
+    .cvw-setting-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #334155;
+    }
+    .cvw-setting-row label.lbl { font-weight: 600; min-width: 64px; }
+    .cvw-quality-slider {
+      flex: 1;
+      accent-color: #2F5496;
       min-width: 0;
     }
-    .modal #convertOutputArea > .col-output {
-      display: contents; /* iç bölümler grid item olur, tek-kolonda doğal stack */
+    .cvw-quality-val {
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      color: #2F5496;
+      min-width: 38px;
+      text-align: right;
     }
-    @media (min-width: 1100px) {
-      .modal #convertOutputArea {
-        grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
-        align-items: start;
-        column-gap: 14px;
-      }
-      /* SOL kolon (üstten alta): aksiyonlar → dist ayarları → preview → batch */
-      .modal #convertOutputArea #resultCard       { grid-column: 1; grid-row: 1; }
-      .modal #convertOutputArea #distInlineHost   { grid-column: 1; grid-row: 2; }
-      .modal #convertOutputArea #preview          { grid-column: 1; grid-row: 3; }
-      .modal #convertOutputArea #batch            { grid-column: 1; grid-row: 4; }
-      /* SAĞ kolon: ilerleme barı en üstte, sonra tüm kayıtlar / dağıtım sonucu */
-      .modal #convertOutputArea > .convert-progress-wrap { grid-column: 2; grid-row: 1; }
-      .modal #convertOutputArea #fullPreview      { grid-column: 2; grid-row: 2; align-self: start; }
-      .modal #convertOutputArea #distResult       { grid-column: 2; grid-row: 3; }
-      /* Sağ kolondaki tablolar modal içinde scroll'lansın, dışa taşmasın. */
-      .modal #convertOutputArea #fullPreview .fp-wrap,
-      .modal #convertOutputArea #distResult .fp-wrap {
-        max-height: calc(100vh - 320px);
-        max-height: calc(100dvh - 320px);
-        overflow: auto;
-      }
-      /* Modal içindeki Excel İndir / Ekiplere Dağıt küçük olsun */
-      .modal #convertOutputArea .result-actions button {
-        padding: 8px 12px;
-        font-size: 13px;
-        font-weight: 600;
-        border-radius: 8px;
-      }
-      .modal #convertOutputArea .result-card {
-        padding: 12px;
-      }
-      .modal #convertOutputArea .result-head { font-size: 14px; margin-bottom: 4px; }
-      .modal #convertOutputArea .result-sub  { font-size: 12px; margin-bottom: 6px; }
+    .cvw-dpi-select {
+      flex: 1;
+      padding: 5px 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      background: #fff;
+      color: #334155;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      min-width: 0;
+    }
+    .cvw-dpi-select:focus {
+      border-color: #2F5496;
+      outline: 2px solid rgba(47,84,150,0.18);
+      outline-offset: -1px;
+    }
+    .cvw-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      user-select: none;
+      font-size: 12px;
+      color: #334155;
+    }
+    .cvw-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .cvw-toggle-track {
+      width: 34px; height: 20px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      position: relative;
+      transition: .15s;
+    }
+    .cvw-toggle-track::after {
+      content: "";
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,.2);
+      transition: .15s;
+    }
+    .cvw-toggle input:checked + .cvw-toggle-track { background: #2F5496; }
+    .cvw-toggle input:checked + .cvw-toggle-track::after { left: 16px; }
+    .cvw-toggle-hint { font-size: 11px; color: #64748b; }
+
+    /* Scanned auto-label inside format card (replaces old .scanned-warn) */
+    .cvw-format-banner {
+      margin-top: 6px;
+      padding: 8px 10px;
+      background: #fef3c7;
+      border: 1px solid #fcd34d;
+      border-radius: 8px;
+      font-size: 11.5px;
+      color: #78350f;
+      line-height: 1.4;
+    }
+    .cvw-format-banner.danger {
+      background: #fef2f2;
+      border-color: #fecaca;
+      color: #991b1b;
     }
 
-    /* Convert modal alt aksiyonları (Yeni Dönüşüm + Kapat) — sticky-bottom.
-       Modal içeriği uzun olsa bile kapatma her zaman görünür kalsın. */
-    .modal.convert-modal.running #convertOutputActions {
+    /* Step 1 sticky CTA bar */
+    .cvw-cta-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
       position: sticky;
-      bottom: 0;
-      background: linear-gradient(180deg, rgba(255,255,255,0) 0%, #fff 18%, #fff 100%);
-      padding: 10px 0 0;
-      margin-top: 8px;
-      z-index: 5;
-      box-shadow: 0 -8px 12px -8px rgba(0,0,0,0.08);
+      bottom: 8px;
+      z-index: 3;
+      box-shadow: 0 -2px 8px -4px rgba(15,23,42,.08);
+    }
+    .cvw-cta-bar .spacer { flex: 1; }
+
+    /* --- Buttons (utility classes) --- */
+    .cvw-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 9px 16px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #fff;
+      color: #334155;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: .12s;
+      text-decoration: none;
+      line-height: 1.2;
+    }
+    .cvw-btn:hover { background: #f1f5f9; border-color: #94a3b8; }
+    .cvw-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .cvw-btn--primary {
+      background: #2F5496;
+      color: #fff;
+      border-color: #2F5496;
+    }
+    .cvw-btn--primary:hover { background: #244073; border-color: #244073; }
+    .cvw-btn--primary:disabled { background: #94a3b8; border-color: #94a3b8; }
+    .cvw-btn--ghost {
+      background: transparent;
+      border-color: transparent;
+      color: #64748b;
+    }
+    .cvw-btn--ghost:hover { background: #f1f5f9; color: #2F5496; }
+    .cvw-btn--danger {
+      background: #b91c1c;
+      color: #fff;
+      border-color: #b91c1c;
+    }
+    .cvw-btn--danger:hover { background: #991b1b; border-color: #991b1b; }
+    .cvw-btn--sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+    .cvw-btn--lg {
+      padding: 12px 22px;
+      font-size: 15px;
     }
 
-    /* Inline dist panel — dist modal'ın içeriği buraya taşındığında
-       normal blok gibi görünür, modal-back stillerini override eder. */
-    .dist-inline-panel {
-      background: #f8fafc;
+    /* --- Step 2: scan panel (visible only during phase=scanning) --- */
+    .cvw-scan-panel {
+      background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 50%, #ecfeff 100%);
+      border: 2px solid #93c5fd;
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 16px;
+      animation: cvwFadeIn .25s ease-out;
+      box-shadow: 0 8px 24px -10px rgba(47,84,150,.25);
+      text-align: center;
+    }
+    .cvw-scan-panel[hidden] { display: none !important; }
+    .cvw-scan-hero {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      margin-bottom: 8px;
+    }
+    .cvw-scan-icon {
+      font-size: 56px;
+      line-height: 1;
+      flex-shrink: 0;
+      filter: drop-shadow(0 2px 6px rgba(47,84,150,.35));
+      animation: cvwShieldPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes cvwShieldPulse {
+      0%, 100% { transform: scale(1); }
+      50%      { transform: scale(1.08); }
+    }
+    .cvw-scan-pct {
+      font-size: 38px;
+      font-weight: 800;
+      color: #1e3a8a;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.02em;
+    }
+    .cvw-scan-title {
+      font-size: 18px;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .cvw-scan-title strong { font-weight: 700; }
+    .cvw-scan-title .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      margin-left: 10px;
+      padding: 3px 10px;
+      background: #dbeafe;
+      color: #1e40af;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 999px;
+      vertical-align: middle;
+      letter-spacing: 0.04em;
+      text-decoration: none;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .cvw-scan-title .brand::before {
+      content: "🐚";  /* ClamAV — clam shell */
+      font-size: 13px;
+      line-height: 1;
+    }
+    .cvw-scan-title .brand:hover {
+      background-color: #bfdbfe;
+      color: #1e3a8a;
+      transform: translateY(-1px);
+    }
+    .cvw-scan-title .brand sup {
+      font-size: 8px;
+      vertical-align: super;
+      margin-left: 1px;
+    }
+    .cvw-scan-sub {
+      font-size: 13px;
+      color: #475569;
+      margin-bottom: 4px;
+    }
+    .cvw-scan-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: #334155;
+      font-weight: 600;
+      flex-wrap: wrap;  /* dar ekranlarda alt satıra geçsin */
+      min-width: 0;
+    }
+    .cvw-scan-meta > span {
+      min-width: 0;
+      max-width: 100%;
+    }
+    .cvw-scan-meta .muted {
+      color: #64748b;
+      font-weight: 500;
+      display: inline-block;
+      max-width: min(60vw, 380px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: bottom;
+    }
+    @media (max-width: 599px) {
+      .cvw-scan-meta { justify-content: center; text-align: center; }
+      .cvw-scan-meta .muted { max-width: 90vw; }
+    }
+    .cvw-scan-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    /* Tarama sırasında bar şeritli animasyonla "çalışıyor" hissi verir.
+       Yüzde 0%'da bile kullanıcı barın hareketli olduğunu görür. */
+    .cvw-progress-bar-fill.scanning {
+      background-image: linear-gradient(
+        45deg,
+        rgba(255,255,255,0.25) 25%, transparent 25%,
+        transparent 50%, rgba(255,255,255,0.25) 50%,
+        rgba(255,255,255,0.25) 75%, transparent 75%
+      );
+      background-size: 22px 22px;
+      animation: cvwStripes 0.7s linear infinite;
+      min-width: 12%;  /* %0'da bile küçük bir mavi parça görünsün */
+    }
+    @keyframes cvwStripes {
+      from { background-position: 0 0; }
+      to   { background-position: 22px 0; }
+    }
+    .cvw-scan-elapsed {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-variant-numeric: tabular-nums;
+      color: #1e40af;
+      font-weight: 700;
+    }
+    /* Responsive grid: auto-fill ne kadar 220px+ kart sığarsa o kadar kolon.
+       1 dosya = 1 kolon, 6 dosya = 2-3, 30+ dosya = 4-5 kolon. */
+    .cvw-scan-files {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 6px;
+      margin-top: 14px;
+      max-height: 360px;
+      overflow-y: auto;
+      padding-right: 4px; /* scrollbar gap */
+    }
+    /* Çok yoğun (10+ dosya) durumda biraz daha sıkı paket */
+    .cvw-scan-files[data-dense="true"] {
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 4px;
+      max-height: 420px;
+    }
+    .cvw-scan-files[data-dense="true"] .cvw-scan-file {
+      padding: 6px 8px 8px;
+      font-size: 11.5px;
+    }
+    .cvw-scan-files[data-dense="true"] .cvw-scan-file .pbar { height: 3px; }
+    .cvw-scan-file {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 6px;
+      align-items: center;
+      padding: 8px 10px 10px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 12px;
+      color: #334155;
+      position: relative;
+      overflow: hidden;
+      transition: background .25s, border-color .25s;
+      min-width: 0;
+    }
+    .cvw-scan-file .ico { flex-shrink: 0; font-size: 14px; }
+    .cvw-scan-file .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+    .cvw-scan-file .badge {
+      font-size: 10.5px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    /* Mini progress bar — her dosyanın durumuna göre dolar */
+    .cvw-scan-file .pbar {
+      grid-column: 1 / -1;
+      height: 4px;
+      background: #f1f5f9;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 2px;
+    }
+    .cvw-scan-file .pbar > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: #94a3b8;
+      transition: width 0.5s ease, background 0.3s ease;
+      border-radius: 999px;
+    }
+    .cvw-scan-file.pending  .badge { background: #f1f5f9; color: #64748b; }
+    .cvw-scan-file.pending  .pbar > span { width: 0%; }
+
+    .cvw-scan-file.scanning {
+      background: #eff6ff;
+      border-color: #bfdbfe;
+    }
+    .cvw-scan-file.scanning .badge {
+      background: #dbeafe; color: #1e40af;
+    }
+    .cvw-scan-file.scanning .badge::before {
+      content: "⏳ ";
+      animation: cvwSpin 1.2s linear infinite;
+      display: inline-block;
+    }
+    .cvw-scan-file.scanning .pbar > span {
+      width: 60%;
+      background: linear-gradient(90deg, #2F5496, #4f7bc4);
+      animation: cvwScanFilePulse 1.4s ease-in-out infinite;
+      background-image: linear-gradient(90deg, #3b82f6, #60a5fa, #3b82f6);
+      background-size: 200% 100%;
+    }
+    @keyframes cvwScanFilePulse {
+      0%   { background-position: 0% 0%; }
+      100% { background-position: 200% 0%; }
+    }
+    @keyframes cvwSpin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    .cvw-scan-file.clean {
+      background: #ecfdf5;
+      border-color: #a7f3d0;
+      animation: cvwCleanPop .35s ease-out;
+    }
+    .cvw-scan-file.clean .badge { background: #d1fae5; color: #047857; }
+    .cvw-scan-file.clean .pbar > span {
+      width: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+    }
+    @keyframes cvwCleanPop {
+      0%   { transform: scale(0.98); }
+      60%  { transform: scale(1.01); }
+      100% { transform: scale(1); }
+    }
+
+    .cvw-scan-file.danger {
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+    .cvw-scan-file.danger .badge { background: #fecaca; color: #b91c1c; }
+    .cvw-scan-file.danger .pbar > span {
+      width: 100%;
+      background: linear-gradient(90deg, #dc2626, #ef4444);
+    }
+    .cvw-scan-file.skipped { opacity: 0.65; }
+    .cvw-scan-file.skipped .badge { background: #fef3c7; color: #b45309; }
+    .cvw-scan-file.skipped .pbar > span {
+      width: 100%;
+      background: #fbbf24;
+    }
+    .cvw-scan-hint {
+      font-size: 11px;
+      color: #475569;
+      margin-top: 10px;
+      line-height: 1.4;
+    }
+
+    /* --- Step 2: per-file progress (universal — works for excel/word/jpg) --- */
+    .cvw-progress-summary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin-bottom: 12px;
+    }
+    .cvw-progress-summary .pct {
+      font-size: 26px;
+      font-weight: 800;
+      color: #2F5496;
+      font-variant-numeric: tabular-nums;
+      min-width: 70px;
+    }
+    .cvw-progress-summary .info { flex: 1; min-width: 0; }
+    .cvw-progress-summary .info .h {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 2px;
+    }
+    .cvw-progress-summary .info .s {
+      font-size: 12px;
+      color: #64748b;
+    }
+    .cvw-progress-bar-track {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 8px;
+    }
+    .cvw-progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2F5496, #4f7bc4);
+      width: 0%;
+      transition: width .35s ease;
+    }
+    .cvw-progress-bar-fill.indeterminate {
+      width: 30%;
+      animation: cvwSlide 1.6s ease-in-out infinite;
+    }
+    @keyframes cvwSlide {
+      0%   { transform: translateX(-110%); }
+      100% { transform: translateX(420%); }
+    }
+    .cvw-files {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .cvw-file-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 12px;
+      background: #fff;
       border: 1px solid #e2e8f0;
       border-radius: 10px;
-      padding: 12px;
-      margin: 0;
+      position: relative;
+      overflow: hidden;
     }
-    .dist-inline-panel[hidden] { display: none; }
-    .dist-inline-panel > .modal {
-      /* dist modal'ın iç div'i buraya taşındığında: dialog stillerini sıfırla */
+    .cvw-file-row.done    { background: #ecfdf5; border-color: #a7f3d0; }
+    .cvw-file-row.error   { background: #fef2f2; border-color: #fecaca; }
+    .cvw-file-row.skipped { opacity: 0.55; }
+    .cvw-file-row .name {
+      font-size: 13px;
+      color: #1f2937;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .cvw-file-row .name .ico { margin-right: 6px; }
+    .cvw-file-row .meta {
+      font-size: 11.5px;
+      color: #64748b;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    .cvw-file-row.done .meta { color: #047857; }
+    .cvw-file-row.error .meta { color: #b91c1c; }
+    .cvw-file-row .bar {
+      grid-column: 1 / -1;
+      height: 4px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .cvw-file-row .bar-fill {
+      height: 100%;
+      background: #2F5496;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .cvw-file-row.done .bar-fill { width: 100%; background: #047857; }
+    .cvw-file-row.error .bar-fill { width: 100%; background: #b91c1c; }
+    .cvw-file-row.processing .bar-fill {
+      width: 60%;
+      animation: cvBarPulse 1.4s ease-in-out infinite alternate;
+    }
+    @keyframes cvBarPulse {
+      from { width: 30%; opacity: 0.85; }
+      to   { width: 95%; opacity: 1; }
+    }
+    .cvw-file-row.pending .bar-fill { width: 0%; }
+    .cvw-step2-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
+    /* --- Step 3: result panel + tabs --- */
+    .cvw-result-summary {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 18px;
+      background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
+      border: 1px solid #a7f3d0;
+      border-radius: 14px;
+      margin-bottom: 14px;
+    }
+    @media (min-width: 720px) {
+      .cvw-result-summary {
+        grid-template-columns: 1fr auto;
+        align-items: center;
+      }
+    }
+    .cvw-result-summary .head {
+      font-size: 18px;
+      font-weight: 800;
+      color: #047857;
+      margin-bottom: 4px;
+    }
+    .cvw-result-summary .sub {
+      font-size: 13px;
+      color: #065f46;
+      line-height: 1.5;
+    }
+    .cvw-result-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .cvw-result-summary.error {
+      background: linear-gradient(135deg, #fef2f2 0%, #fff1f1 100%);
+      border-color: #fecaca;
+    }
+    .cvw-result-summary.error .head { color: #b91c1c; }
+    .cvw-result-summary.error .sub { color: #991b1b; }
+
+    /* Tabs */
+    .cvw-tabs {
+      display: flex;
+      gap: 4px;
+      border-bottom: 2px solid #e2e8f0;
+      margin-bottom: 14px;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .cvw-tab {
+      padding: 10px 16px;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: .12s;
+    }
+    .cvw-tab:hover { color: #2F5496; }
+    .cvw-tab.active {
+      color: #2F5496;
+      border-bottom-color: #2F5496;
+    }
+    .cvw-tab .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      color: #475569;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .cvw-tab.active .badge { background: #2F5496; color: #fff; }
+    .cvw-tab.warn .badge { background: #fbbf24; color: #78350f; }
+    .cvw-tabpanel[hidden] { display: none !important; }
+    .cvw-tabpanel {
+      animation: cvwFadeIn .15s ease-out;
+    }
+
+    /* Repurposed: dist content as inline tabpanel (no modal) */
+    .cvw-dist-host { display: block; }
+    .cvw-dist-host > .modal {
       max-width: none;
       max-height: none;
       box-shadow: none;
@@ -2167,161 +2877,16 @@
       background: transparent;
       display: block;
     }
-    .dist-inline-panel > .modal h3 {
-      font-size: 14px;
-      margin: 0 0 8px;
-      color: #2F5496;
-    }
-    .dist-inline-panel > .modal .sub {
+    .cvw-dist-host > .modal h3 { display: none; }
+    .cvw-dist-host > .modal > .sub {
       font-size: 12px;
+      color: #64748b;
       margin-bottom: 10px;
     }
-    .dist-inline-panel > .modal .modal-actions {
-      margin-top: 10px;
+    .cvw-dist-host > .modal .modal-actions {
+      margin-top: 12px;
       justify-content: flex-end;
     }
-
-    /* ===== 3-ekranlı convert sihirbazı ===== */
-    .cv-screen[hidden] { display: none !important; }
-    .cv-stepbar {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      padding: 10px 12px;
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      margin-bottom: 12px;
-      font-size: 12px;
-      flex-wrap: wrap;
-    }
-    .cv-stepbar[hidden] { display: none !important; }
-    .cv-step {
-      padding: 4px 10px;
-      border-radius: 999px;
-      background: #fff;
-      border: 1px solid #cbd5e1;
-      color: #64748b;
-      white-space: nowrap;
-    }
-    .cv-step.active { background: #2F5496; color: #fff; border-color: #2F5496; font-weight: 600; }
-    .cv-step.done   { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
-    .cv-step.done::before { content: "✓ "; }
-
-    .cv-screen-head {
-      font-size: 14px;
-      font-weight: 700;
-      color: #1f2937;
-      margin: 6px 0 12px;
-    }
-    .cv-screen-actions {
-      display: flex;
-      gap: 10px;
-      justify-content: flex-end;
-      margin-top: 14px;
-      padding-top: 12px;
-      border-top: 1px solid #e2e8f0;
-    }
-    .cv-screen-actions button {
-      padding: 8px 16px;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
-      background: #fff;
-      color: #334155;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .cv-screen-actions button.primary {
-      background: #2F5496;
-      color: #fff;
-      border-color: #2F5496;
-    }
-    .cv-screen-actions button.primary:hover { background: #244073; }
-    .cv-screen-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* Ekran A — her dosya için ilerleme satırı */
-    .cv-file-rows { display: flex; flex-direction: column; gap: 8px; }
-    .cv-file-row {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 10px;
-      align-items: center;
-      padding: 10px 12px;
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-    }
-    .cv-file-row.done    { background: #ecfdf5; border-color: #a7f3d0; }
-    .cv-file-row.error   { background: #fef2f2; border-color: #fecaca; }
-    .cv-file-row.skipped { opacity: 0.55; }
-    .cv-file-row .name {
-      font-size: 13px;
-      color: #1f2937;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      min-width: 0;
-    }
-    .cv-file-row .name .ico { margin-right: 6px; }
-    .cv-file-row .meta {
-      font-size: 11.5px;
-      color: #64748b;
-      white-space: nowrap;
-    }
-    .cv-file-row .bar {
-      grid-column: 1 / -1;
-      height: 6px;
-      background: #e2e8f0;
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .cv-file-row .bar-fill {
-      height: 100%;
-      background: #2F5496;
-      width: 0%;
-      transition: width 0.4s ease;
-    }
-    .cv-file-row.done .bar-fill { width: 100%; background: #047857; }
-    .cv-file-row.error .bar-fill { width: 100%; background: #b91c1c; }
-    .cv-file-row.processing .bar-fill {
-      width: 60%;
-      animation: cvBarPulse 1.4s ease-in-out infinite alternate;
-    }
-    @keyframes cvBarPulse {
-      from { width: 30%; opacity: 0.85; }
-      to   { width: 95%; opacity: 1; }
-    }
-    .cv-file-row.pending .bar-fill { width: 0%; }
-
-    /* Ekran B — her dosya için final özet kartı */
-    .cv-file-stats { display: grid; grid-template-columns: 1fr; gap: 8px; }
-    @media (min-width: 720px) {
-      .cv-file-stats { grid-template-columns: 1fr 1fr; }
-    }
-    .cv-file-stat {
-      padding: 10px 12px;
-      background: #fff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-    }
-    .cv-file-stat.error { background: #fef2f2; border-color: #fecaca; }
-    .cv-file-stat .head {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 13px; font-weight: 600; color: #1f2937;
-      overflow: hidden;
-    }
-    .cv-file-stat .head .name {
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-      min-width: 0; flex: 1;
-    }
-    .cv-file-stat .stats {
-      margin-top: 6px;
-      font-size: 12px;
-      color: #475569;
-      display: flex; gap: 12px; flex-wrap: wrap;
-    }
-    .cv-file-stat .stats strong { color: #1f2937; }
 
     /* Topbar IP göstergesi — LAN düğmesinin solunda, tıklayınca panoya kopyalanır */
     .topbar-ip {
@@ -2344,53 +2909,16 @@
     @media (max-width: 720px) {
       .topbar-ip { display: none; }
     }
-    .modal #convertOutputArea > .convert-progress-wrap {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-    /* Geniş tablolar / önizleme yatayda scroll ile sığsın */
-    .modal #convertOutputArea .table-wrap,
-    .modal #convertOutputArea .fp-wrap {
+    /* Convert workspace içindeki geniş tablolar yatay scroll'lansın */
+    .cvw-workspace .table-wrap,
+    .cvw-workspace .fp-wrap {
       overflow-x: auto;
       max-width: 100%;
     }
-    .modal #convertOutputArea table {
-      font-size: 11.5px;
-    }
-    .modal #convertOutputArea .batch-list {
-      max-height: 320px;
-      overflow-y: auto;
-    }
-    @media (max-width: 599px) {
-      .modal.convert-modal.running { max-width: calc(100vw - 16px); }
-    }
-    .convert-shell-bar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 8px 12px;
-      background: #f1f5f9;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      margin-bottom: 12px;
-    }
-    .convert-back {
-      padding: 5px 10px;
-      border: 1px solid #cbd5e1;
-      background: #fff;
-      color: #2F5496;
-      border-radius: 6px;
-      cursor: pointer;
-      font: inherit;
-      font-size: 12px;
-      font-weight: 600;
-    }
-    .convert-back:hover { background: #eef2ff; }
-    .convert-shell-title {
-      font-size: 13px;
-      color: #475569;
-      font-weight: 500;
+    .cvw-workspace .fp-wrap {
+      max-height: calc(100vh - 280px);
+      max-height: calc(100dvh - 280px);
+      overflow: auto;
     }
 
     /* LAN access — topbar button + sliding bar below */
@@ -2919,87 +3447,356 @@
 
   <!-- IP/adres bilgisi topbar'daki #topbarIp'e taşındı; eski .connect-info bloğu kaldırıldı. -->
 
-  <div class="convert-shell" id="convertShell" hidden>
-    <div class="convert-shell-bar">
-      <button type="button" class="convert-back" id="convertBackBtn"
-              title="Dashboard'a dön (form gizlenir, sonuçlar korunur)">
-        ← Dashboard
-      </button>
-      <span class="convert-shell-title" id="convertShellTitle">Dönüştürme akışı</span>
-    </div>
-  <main class="layout">
-    <form class="card" id="form">
-      <label class="drop" id="drop">
-        <div style="font-size: 34px;">📄</div>
-        <div><strong>PDF seçmek için dokun</strong> veya sürükle bırak</div>
-        <div class="hint">Birden fazla PDF seçerseniz otomatik birleştirme — en fazla {{ max_mb }} MB/dosya</div>
-        <input type="file" name="file" id="file" accept="application/pdf" multiple required>
-      </label>
-
-      <div class="file-info" id="fileInfo">
-        <span id="fileName"></span>
-        <button type="button" id="clearFile">× kaldır</button>
+  <!-- ============ CONVERT WORKSPACE (modern, modal-free) ============ -->
+  <div class="cvw-workspace" id="convertShell" hidden>
+    <!-- Sticky topbar: Dashboard + 3-step breadcrumb -->
+    <div class="cvw-topbar">
+      <button type="button" class="cvw-back" id="convertBackBtn"
+              title="Dashboard'a dön (sonuçlar korunur)">← Dashboard</button>
+      <div class="cvw-stepbar" id="cvwStepbar" role="list">
+        <span class="cvw-step active" data-step="1" role="listitem">
+          <span class="num"><span>1</span></span> Hazırlık
+        </span>
+        <span class="cvw-step-arrow" aria-hidden="true">›</span>
+        <span class="cvw-step" data-step="2" role="listitem">
+          <span class="num"><span>2</span></span> Dönüştürme
+        </span>
+        <span class="cvw-step-arrow" aria-hidden="true">›</span>
+        <span class="cvw-step" data-step="3" role="listitem">
+          <span class="num"><span>3</span></span> Sonuç
+        </span>
       </div>
+    </div>
 
-      <div class="loading" id="loading">⏳ Analiz ediliyor...</div>
+    <!-- ============ STEP 1 — Hazırlık ============ -->
+    <div class="cvw-pane" id="cvwPane1">
+      <form id="form" autocomplete="off">
+        <div class="cvw-step1-grid">
 
-      <fieldset>
-        <legend>Hedef Format</legend>
-        <div class="options">
-          <label class="opt sel">
-            <input type="radio" name="target" value="excel" checked>
-            <span class="col">
-              <span class="t">Excel (.xlsx)</span>
-              <span class="d">Tablo olarak — çağrı kayıtlarını otomatik ayrıştırır</span>
-            </span>
-          </label>
-          <label class="opt">
-            <input type="radio" name="target" value="word">
-            <span class="col">
-              <span class="t">Word (.docx)</span>
-              <span class="d">Düzenlenebilir metin</span>
-            </span>
-          </label>
-          <label class="opt">
-            <input type="radio" name="target" value="jpg">
-            <span class="col">
-              <span class="t">JPG (ZIP)</span>
-              <span class="d">Her sayfa ayrı resim, ZIP içinde</span>
-            </span>
-          </label>
+          <!-- LEFT: Dosya kartı + ön analiz -->
+          <section class="cvw-card">
+            <div class="cvw-card-head">
+              📄 Dosya
+              <span class="pill" id="cvwFileCountPill" hidden>0 PDF</span>
+            </div>
+
+            <label class="drop" id="drop">
+              <div style="font-size: 34px;">📄</div>
+              <div><strong>PDF seçmek için dokun</strong> veya sürükle bırak</div>
+              <div class="hint">Birden fazla PDF: otomatik birleştirme · max {{ max_mb }} MB/dosya</div>
+              <input type="file" name="file" id="file" accept="application/pdf" multiple required>
+            </label>
+
+            <div class="file-info" id="fileInfo">
+              <span id="fileName"></span>
+              <button type="button" id="clearFile">× kaldır</button>
+            </div>
+
+            <div class="loading" id="loading">⏳ Analiz ediliyor...</div>
+
+            <!-- Tek-PDF analizi: kind + safety + sayfa sayısı + snippet/table -->
+            <section class="preview" id="preview">
+              <div class="preview-head">
+                <span class="badge" id="kindBadge">Analiz</span>
+                <span class="safety-badge" id="safetyBadge" style="display:none"></span>
+              </div>
+              <div class="safety-box" id="safetyBox" style="display:none"></div>
+              <div class="stats" id="stats"></div>
+              <div class="table-wrap" id="tableWrap" style="display:none;">
+                <table class="prev" id="prevTable"></table>
+              </div>
+              <div class="snippet" id="snippet" style="display:none;"></div>
+            </section>
+
+            <!-- Çoklu PDF batch özet -->
+            <section class="batch" id="batch">
+              <div class="batch-summary" id="batchSummary"></div>
+              <div class="alert warn" id="batchWarn"></div>
+              <div class="batch-list" id="batchList"></div>
+            </section>
+          </section>
+
+          <!-- RIGHT: Format seçici kart grid -->
+          <section class="cvw-card">
+            <div class="cvw-card-head">
+              🎯 Hedef Format
+              <span class="pill">3 seçenek</span>
+            </div>
+
+            <fieldset style="border:0; padding:0; margin:0">
+              <legend class="sr-only">Hedef format</legend>
+              <div class="cvw-format-grid">
+
+                <!-- Excel -->
+                <label class="cvw-format sel" data-fmt="excel">
+                  <input type="radio" name="target" value="excel" checked>
+                  <div class="cvw-format-head">
+                    <span class="cvw-format-emoji">📊</span>
+                    <span class="cvw-format-title">Excel</span>
+                    <span class="cvw-format-rec" data-rec hidden>★ Önerilen</span>
+                  </div>
+                  <div class="cvw-format-desc">.xlsx — çağrı kayıtlarını otomatik ayrıştırır</div>
+                  <div class="cvw-format-meta">📑 Birleştir · Filtre · Mükerrer · Ekiplere dağıt</div>
+                  <div class="cvw-format-banner" id="excelScanBanner" hidden>
+                    📸 Bu PDF taranmış — OCR otomatik çalışacak (~30 sn/sayfa)
+                  </div>
+                  <div class="cvw-format-settings">
+                    <label class="cvw-toggle">
+                      <input type="checkbox" id="excelOcrToggle">
+                      <span class="cvw-toggle-track"></span>
+                      <span>OCR ile dene</span>
+                      <span class="cvw-toggle-hint">(taranmış / bozuk metin için)</span>
+                    </label>
+                  </div>
+                </label>
+
+                <!-- Word -->
+                <label class="cvw-format" data-fmt="word">
+                  <input type="radio" name="target" value="word">
+                  <div class="cvw-format-head">
+                    <span class="cvw-format-emoji">📝</span>
+                    <span class="cvw-format-title">Word</span>
+                    <span class="cvw-format-rec" data-rec hidden>★ Önerilen</span>
+                  </div>
+                  <div class="cvw-format-desc">.docx — düzenlenebilir metin, biçim + tablolar</div>
+                  <div class="cvw-format-meta">✏ Microsoft Word ile aç</div>
+                  <div class="cvw-format-banner" id="wordScanBanner" hidden>
+                    📸 Bu PDF taranmış — OCR otomatik çalışacak (~30 sn/sayfa)
+                  </div>
+                  <div class="cvw-format-settings">
+                    <label class="cvw-toggle">
+                      <input type="checkbox" id="wordOcrToggle">
+                      <span class="cvw-toggle-track"></span>
+                      <span>OCR ile dene</span>
+                      <span class="cvw-toggle-hint">(taranmış / bozuk metin için)</span>
+                    </label>
+                  </div>
+                </label>
+
+                <!-- JPG -->
+                <label class="cvw-format" data-fmt="jpg">
+                  <input type="radio" name="target" value="jpg">
+                  <div class="cvw-format-head">
+                    <span class="cvw-format-emoji">🖼</span>
+                    <span class="cvw-format-title">JPG (ZIP)</span>
+                    <span class="cvw-format-rec" data-rec hidden>★ Önerilen</span>
+                  </div>
+                  <div class="cvw-format-desc">Her sayfa ayrı görsel — ZIP arşivi</div>
+                  <div class="cvw-format-meta">🖼 Sosyal medya · Yazıcı çıktısı</div>
+                  <div class="cvw-format-settings">
+                    <div class="cvw-setting-row">
+                      <label class="lbl" for="jpgDpi">Çözünürlük</label>
+                      <select id="jpgDpi" class="cvw-dpi-select" aria-label="JPG çözünürlüğü">
+                        <option value="72">72 DPI · web/ekran (en küçük)</option>
+                        <option value="150">150 DPI · standart yazıcı</option>
+                        <option value="200" selected>200 DPI · varsayılan</option>
+                        <option value="300">300 DPI · profesyonel baskı</option>
+                        <option value="600">600 DPI · arşiv kalitesi (en büyük)</option>
+                      </select>
+                    </div>
+                    <div class="cvw-setting-row">
+                      <label class="lbl" for="jpgQuality">Kalite</label>
+                      <input type="range" id="jpgQuality" class="cvw-quality-slider"
+                             min="50" max="100" step="5" value="90"
+                             aria-label="JPG kalitesi">
+                      <span class="cvw-quality-val" id="jpgQualityVal">90</span>
+                    </div>
+                    <div class="cvw-toggle-hint" style="font-size:10.5px; margin-top:-2px">
+                      Yüksek DPI = net görüntü, büyük dosya · 300+ baskı için ideal
+                    </div>
+                  </div>
+                </label>
+
+              </div>
+            </fieldset>
+          </section>
         </div>
-      </fieldset>
 
-      <button type="submit" class="primary" id="go">Dönüştür</button>
-    </form>
-
-    <div id="convertOutputArea">
-    <!-- Sihirbaz adım çubuğu — A→B→C ekranları arasında neredeyiz? -->
-    <div class="cv-stepbar" id="cvStepbar" hidden>
-      <span class="cv-step" data-step="A">1 · Dönüştürme</span>
-      <span class="cv-step" data-step="B">2 · Detay</span>
-      <span class="cv-step" data-step="C">3 · Birleşik sonuç</span>
+        <!-- Sticky CTA bar -->
+        <div class="cvw-cta-bar">
+          <span class="spacer"></span>
+          <button type="submit" class="cvw-btn cvw-btn--primary cvw-btn--lg" id="go">
+            🔄 Dönüştür
+          </button>
+        </div>
+      </form>
     </div>
 
-    <!-- ===== Ekran A: Her dosya için ilerleme satırı ===== -->
-    <div id="cvScreenA" class="cv-screen" hidden>
-      <div class="cv-screen-head">PDF dosyaları çevriliyor…</div>
-      <div id="cvFileRows" class="cv-file-rows"></div>
-    </div>
+    <!-- ============ STEP 2 — Dönüştürme ============ -->
+    <div class="cvw-pane" id="cvwPane2" hidden>
+      <!-- Scan paneli — yalnız phase=scanning iken görünür -->
+      <div class="cvw-scan-panel" id="cvwScanPanel" hidden>
+        <div class="cvw-scan-hero">
+          <span class="cvw-scan-icon" aria-hidden="true">🛡</span>
+          <div class="cvw-scan-pct" id="cvwScanPct">0%</div>
+        </div>
+        <div class="cvw-scan-title">
+          <strong>Virüs taraması başlatıldı</strong>
+          <a class="brand" href="https://www.clamav.net/" target="_blank" rel="noopener noreferrer"
+             title="ClamAV® — açık kaynak antivirüs motoru (Cisco Systems Inc.). Resmi sitesini aç.">
+            Powered by ClamAV<sup>®</sup>
+          </a>
+        </div>
+        <div class="cvw-scan-sub" id="cvwScanSub">PDF'ler antivirüs + yapısal analizden geçiyor…</div>
 
-    <!-- ===== Ekran B: Her dosyanın özet detayı + Birleştir ===== -->
-    <div id="cvScreenB" class="cv-screen" hidden>
-      <div class="cv-screen-head" id="cvScreenBHead">Çevirme tamamlandı — birleştirmeye geçin</div>
-      <div id="cvFileStats" class="cv-file-stats"></div>
-      <div class="cv-screen-actions">
-        <button type="button" id="cvBackBtn">← Yeni dönüşüm</button>
-        <button type="button" class="primary" id="cvMergeBtn">📑 Birleştir ve Devam →</button>
+        <div class="cvw-progress-bar-track" style="height:10px; margin: 14px 0 6px">
+          <div class="cvw-progress-bar-fill" id="cvwScanBar" style="width:0%"></div>
+        </div>
+        <div class="cvw-scan-meta">
+          <span>
+            <span id="cvwScanCount">0/0 dosya tarandı</span>
+            <span class="cvw-scan-elapsed" id="cvwScanElapsed" style="margin-left:10px"></span>
+          </span>
+          <span id="cvwScanCurrent" class="muted"></span>
+        </div>
+
+        <div class="cvw-scan-files" id="cvwScanFiles"></div>
+
+        <div class="cvw-scan-actions">
+          <button type="button" class="cvw-btn cvw-btn--ghost cvw-btn--sm" id="cvwScanSkipBtn">
+            ⏩ Atla &amp; Dönüşüme Geç
+          </button>
+        </div>
+
+        <div class="cvw-scan-hint">
+          🔒 Güvenli mod — şüpheli PDF'ler engelleniyor.
+          <span id="cvwScanSkipHint" hidden style="color:#b45309; font-weight:600">
+            Atla seçeneği güvensiz PDF'leri kabul eder; risk size aittir.
+          </span>
+        </div>
+      </div>
+
+      <!-- Conversion progress — scanning bittiğinde görünür -->
+      <div class="cvw-progress-summary">
+        <div class="pct" id="cvwPct">0%</div>
+        <div class="info">
+          <div class="h" id="cvwPhase">Başlatılıyor…</div>
+          <div class="s" id="cvwPhaseSub"></div>
+          <div class="cvw-progress-bar-track">
+            <div class="cvw-progress-bar-fill indeterminate" id="cvwPctBar"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Per-file rows — her formatta tek tip görünüm -->
+      <div class="cvw-files" id="cvFileRows"></div>
+
+      <!-- Status mesajı (eski JS hala kullanıyor) -->
+      <div class="status" id="status" role="status" aria-live="polite" aria-atomic="true"></div>
+
+      <!-- Step 2 aksiyon barı: cvBackBtn her zaman görünür, cvMergeBtn yalnız Excel tamamlandığında -->
+      <div class="cvw-step2-actions">
+        <button type="button" class="cvw-btn" id="cvBackBtn">← Geri</button>
+        <span style="flex:1"></span>
+        <button type="button" class="cvw-btn cvw-btn--primary" id="cvMergeBtn" hidden>📑 Birleştir ve Devam →</button>
       </div>
     </div>
 
-    <!-- ===== Ekran C: Birleşik sonuç (mevcut yapı) ===== -->
-    <div id="cvScreenC" class="cv-screen">
-    <div class="convert-progress-wrap">
+    <!-- ============ STEP 3 — Sonuç ============ -->
+    <div class="cvw-pane" id="cvwPane3" hidden>
+      <div class="cvw-result-summary" id="resultCard">
+        <div>
+          <div class="head" id="resultHead">✓ Tamamlandı</div>
+          <div class="sub" id="resultSub"></div>
+        </div>
+        <div class="cvw-result-actions">
+          <button type="button" class="cvw-btn cvw-btn--primary cvw-btn--lg" id="resultDownload">📥 İndir</button>
+          <button type="button" class="cvw-btn cvw-btn--lg" id="resultDistribute">👥 Ekiplere Dağıt</button>
+          <button type="button" class="cvw-btn cvw-btn--ghost" id="convertNewBtn">+ Yeni Dönüşüm</button>
+        </div>
+      </div>
+
+      <!-- Tabs (Excel için 4 sekme dolu, Word/JPG için sadece "Özet" görünür) -->
+      <div class="cvw-tabs" id="cvwTabs" role="tablist">
+        <button type="button" class="cvw-tab active" data-tab="preview" role="tab">
+          📋 Tüm Kayıtlar <span class="badge" id="tabPreviewCount">0</span>
+        </button>
+        <button type="button" class="cvw-tab" data-tab="filter" role="tab">
+          🔍 Filtre <span class="badge" id="tabFilterCount">0</span>
+        </button>
+        <button type="button" class="cvw-tab warn" data-tab="dedupe" role="tab" hidden>
+          ⚠ Mükerrer <span class="badge" id="tabDedupeCount">0</span>
+        </button>
+        <button type="button" class="cvw-tab" data-tab="dist" role="tab" hidden>
+          👥 Dağıtım
+        </button>
+      </div>
+
+      <!-- Önizleme tab — Tüm kayıtlar -->
+      <div class="cvw-tabpanel" data-tab="preview" role="tabpanel">
+        <section class="full-preview" id="fullPreview">
+          <div class="fp-head">
+            <span>Tüm Kayıtlar</span>
+            <span class="count" id="fpCount"></span>
+          </div>
+          <div class="fp-wrap">
+            <table class="fp" id="fpTable"></table>
+          </div>
+        </section>
+      </div>
+
+      <!-- Filtre tab -->
+      <div class="cvw-tabpanel" data-tab="filter" role="tabpanel" hidden>
+        <div style="display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap">
+          <button type="button" class="cvw-btn cvw-btn--primary" id="filterBtn">🔍 Filtre Ekle</button>
+          <button type="button" class="cvw-btn" id="filterClearAll">Tümünü Temizle</button>
+        </div>
+        <div class="filter-bar" id="filterBar">
+          <span style="font-weight:600">Aktif filtre:</span>
+          <span id="filterChips"></span>
+        </div>
+        <div style="font-size:12px; color:#64748b; margin-top:8px">
+          Filtre eklemek için bir kolonun başlığına tıklayın (Önizleme sekmesinden).
+        </div>
+      </div>
+
+      <!-- Mükerrer tab -->
+      <div class="cvw-tabpanel" data-tab="dedupe" role="tabpanel" hidden>
+        <div class="dup-warn-bar" id="dupWarnBar">
+          <span id="dupWarnText"></span>
+          <span class="legend">
+            <span><span class="swatch" style="background:#fef9c3"></span>orijinal</span>
+            <span><span class="swatch" style="background:#fed7aa"></span>kopya</span>
+          </span>
+          <button type="button" class="cvw-btn cvw-btn--primary cvw-btn--sm" id="dedupeBtn">Teke Düşür</button>
+        </div>
+        <div style="font-size:12px; color:#64748b; margin-top:10px">
+          Tablodaki sarı satırlar orijinal, turuncu satırlar mükerrer kopyalardır.
+          "Teke Düşür" mükerrer telefonların kopyalarını siler — geri almak için tekrar basın.
+        </div>
+      </div>
+
+      <!-- Dağıtım tab -->
+      <div class="cvw-tabpanel" data-tab="dist" role="tabpanel" hidden>
+        <!-- Dist modal içeriği "Ekiplere Dağıt" tıklanınca buraya taşınır -->
+        <div class="cvw-dist-host" id="distInlineHost"></div>
+
+        <!-- Dağıtım sonucu (modal Dağıt ve İndir'e basınca açılır) -->
+        <section class="full-preview" id="distResult">
+          <div class="fp-head">
+            <span>Dağıtım Sonucu</span>
+            <button type="button" class="cvw-btn cvw-btn--primary cvw-btn--sm" id="distZipBtn">📦 Tümünü ZIP İndir</button>
+          </div>
+          <div id="distTabs" class="team-tabs"></div>
+          <div class="fp-wrap">
+            <table class="fp" id="distTable"></table>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- Eski JS hala bu ID'lere erişebiliyor — gizli no-op yer tutucular.
+         (scannedWarn / OCR butonu / eski A-B-C wizard / batch-pg legacy bar) -->
+    <div hidden aria-hidden="true">
+      <div id="scannedWarn"></div>
+      <button id="ocrTryBtn"></button>
+      <span id="ocrStatus"></span>
+      <div id="ocrBarWrap"><div id="ocrBar"></div></div>
+      <div id="ocrProgressText"></div>
+      <div id="cvStepbar"></div>
+      <div id="cvScreenA"></div>
+      <div id="cvScreenB"><div id="cvScreenBHead"></div><div id="cvFileStats"></div></div>
+      <div id="cvScreenC"></div>
       <div class="progress" id="progress"><div class="bar"></div></div>
       <div class="batch-pg" id="batchPg">
         <div class="batch-pg-bar-wrap"><div class="batch-pg-bar" id="batchPgBar"></div></div>
@@ -3008,92 +3805,8 @@
           <span class="file" id="batchPgFile"></span>
         </div>
       </div>
-      <div class="status" id="status" role="status" aria-live="polite" aria-atomic="true"></div>
     </div>
-
-    <div class="col-output" id="colOutput">
-      <section class="batch" id="batch">
-        <div class="batch-summary" id="batchSummary"></div>
-        <div class="alert warn" id="batchWarn"></div>
-        <div class="batch-list" id="batchList"></div>
-      </section>
-
-      <section class="preview" id="preview">
-        <div class="preview-head">
-          <span class="badge" id="kindBadge">Analiz</span>
-          <span class="safety-badge" id="safetyBadge" style="display:none"></span>
-        </div>
-        <div class="safety-box" id="safetyBox" style="display:none"></div>
-        <div class="stats" id="stats"></div>
-        <div class="scanned-warn" id="scannedWarn" style="display:none">
-          <strong>📸 Görselden (taranmış) PDF algılandı</strong>
-          Bu PDF metin katmanı içermiyor. Seçili formata göre (Word/Excel için OCR, JPG için direkt) dönüştür:
-          <div style="margin-top:8px">
-            <button type="button" id="ocrTryBtn" class="small primary" style="font-size:12px; padding:6px 14px; border-radius:6px; border:none; background:#b91c1c; color:#fff; cursor:pointer; font-weight:600;">🔍 Seçili Formata Dönüştür</button>
-            <span id="ocrStatus" role="status" aria-live="polite" style="margin-left:10px; font-size:12px; color:#7f1d1d;"></span>
-          </div>
-          <div class="ocr-bar-wrap" id="ocrBarWrap" style="display:none"><div class="ocr-bar" id="ocrBar"></div></div>
-          <div class="ocr-progress-text" id="ocrProgressText" style="display:none"></div>
-        </div>
-        <div class="table-wrap" id="tableWrap" style="display:none;">
-          <table class="prev" id="prevTable"></table>
-        </div>
-        <div class="snippet" id="snippet" style="display:none;"></div>
-      </section>
-
-      <section class="result-card" id="resultCard">
-        <div class="result-head" id="resultHead">✓ Birleştirme tamamlandı</div>
-        <div class="result-sub" id="resultSub"></div>
-        <div class="result-actions">
-          <button type="button" class="primary" id="resultDownload">📥 Excel İndir</button>
-          <button type="button" class="alt" id="resultDistribute">👥 Ekiplere Dağıt</button>
-        </div>
-      </section>
-
-      <!-- Ekiplere Dağıt'a basınca dist modal'ın içeriği RUNTIME'da buraya
-           taşınıyor — kullanıcı ayrı bir pencere yerine inline panel görüyor.
-           closeDistModal'da geri alınıyor. -->
-      <section class="dist-inline-panel" id="distInlineHost" hidden></section>
-
-      <section class="full-preview" id="fullPreview">
-        <div class="fp-head">
-          <span>Tüm Kayıtlar</span>
-          <span class="count" id="fpCount"></span>
-          <button type="button" id="filterBtn" style="margin-left:auto; font-size:12px; padding:6px 14px; border-radius:6px; border:1px solid #2F5496; background:#fff; color:#2F5496; cursor:pointer; font-weight:600;">🔍 Filtrele</button>
-        </div>
-        <div class="filter-bar" id="filterBar">
-          <span style="font-weight:600">Aktif filtre:</span>
-          <span id="filterChips"></span>
-          <button type="button" class="clear-all" id="filterClearAll">Tümünü Temizle</button>
-        </div>
-        <div class="dup-warn-bar" id="dupWarnBar">
-          <span id="dupWarnText"></span>
-          <span class="legend">
-            <span><span class="swatch" style="background:#fef9c3"></span>orijinal</span>
-            <span><span class="swatch" style="background:#fed7aa"></span>kopya</span>
-          </span>
-          <button type="button" id="dedupeBtn">Teke Düşür</button>
-        </div>
-        <div class="fp-wrap">
-          <table class="fp" id="fpTable"></table>
-        </div>
-      </section>
-
-      <section class="full-preview" id="distResult">
-        <div class="fp-head">
-          <span>Dağıtım Sonucu</span>
-          <button type="button" class="small primary" id="distZipBtn" style="font-size:12px; padding:5px 12px; border-radius:6px; border:none; background:#2F5496; color:#fff; cursor:pointer;">📦 Tümünü ZIP İndir</button>
-        </div>
-        <div id="distTabs" class="team-tabs"></div>
-        <div class="fp-wrap">
-          <table class="fp" id="distTable"></table>
-        </div>
-      </section>
-    </div>
-    </div><!-- /#cvScreenC -->
-    </div><!-- /#convertOutputArea -->
-  </main>
-  </div><!-- /.convert-shell -->
+  </div><!-- /.cvw-workspace -->
 
   <footer>Local server · yüklenen dosyalar dönüşüm biter bitmez silinir</footer>
 
@@ -3871,58 +4584,7 @@
     </div>
   </div>
 
-  <div class="modal-back" id="convertModalBack">
-    <div class="modal convert-modal" id="convertModal">
-      <h3>🔄 Dönüştür</h3>
-      <div class="sub" id="convertModalSub">Yüklediğiniz PDF için hedef format seçin.</div>
-      <div id="convertModalFiles"></div>
-
-      <div id="convertInputSection">
-        <fieldset style="border:0; padding:0; margin:0">
-          <legend class="sr-only">Hedef format</legend>
-          <div class="options" id="convertOptions">
-            <label class="opt sel">
-              <input type="radio" name="convertTarget" value="excel" checked>
-              <span class="col">
-                <span class="t">Excel (.xlsx)</span>
-                <span class="d">Tablo olarak — çağrı kayıtlarını otomatik ayrıştırır</span>
-              </span>
-            </label>
-            <label class="opt">
-              <input type="radio" name="convertTarget" value="word">
-              <span class="col">
-                <span class="t">Word (.docx)</span>
-                <span class="d">Düzenlenebilir metin</span>
-              </span>
-            </label>
-            <label class="opt">
-              <input type="radio" name="convertTarget" value="jpg">
-              <span class="col">
-                <span class="t">JPG (ZIP)</span>
-                <span class="d">Her sayfa ayrı resim, ZIP içinde</span>
-              </span>
-            </label>
-          </div>
-        </fieldset>
-        <div style="font-size:11px; color:#64748b; margin: 4px 0 12px">
-          Word veya JPG seçerseniz çıktı adını sonraki adımda sorar.
-        </div>
-        <div class="modal-actions">
-          <button type="button" id="convertModalCancel">Vazgeç</button>
-          <button type="button" class="primary" id="convertModalGo">🔄 Dönüştür</button>
-        </div>
-      </div>
-
-      <!-- convertOutputArea (progress + result) bu host'a taşınır
-           Dönüştür tıklanınca; modal'ın boyutu .running class ile büyür. -->
-      <div id="convertOutputHost"></div>
-
-      <div class="modal-actions" id="convertOutputActions" style="display:none">
-        <button type="button" id="convertNewBtn">+ Yeni Dönüşüm</button>
-        <button type="button" class="primary" id="convertCloseAfter">Kapat</button>
-      </div>
-    </div>
-  </div>
+  <!-- Eski format-seçici modal kaldırıldı — yerine Convert Workspace Step 1 kullanılıyor. -->
 
   <!-- Mobile auth gate — full-screen if remote client lacks token -->
   <div id="mobileAuthGate" style="display:none; position:fixed; inset:0; z-index:9999; background:#fff; padding:40px 20px; text-align:center; font-family:-apple-system, 'Segoe UI', Roboto, Arial, sans-serif">
@@ -4318,6 +4980,223 @@
     batchPgBar.style.width = Math.max(0, Math.min(100, pct)) + "%";
     batchPgPct.textContent = "%" + Math.round(pct);
     batchPgFile.textContent = file || "";
+    // Yeni Convert Workspace progress summary'ini de güncelle
+    const cvwPctEl = document.getElementById("cvwPct");
+    const cvwBarEl = document.getElementById("cvwPctBar");
+    const cvwPhaseEl = document.getElementById("cvwPhase");
+    const cvwSubEl = document.getElementById("cvwPhaseSub");
+    const clamped = Math.max(0, Math.min(100, pct));
+    if (cvwPctEl) cvwPctEl.textContent = Math.round(clamped) + "%";
+    if (cvwBarEl) {
+      // Indeterminate (pct=0) iken inline width verme — CSS animasyonu çalışsın.
+      if (clamped <= 0) {
+        cvwBarEl.classList.add("indeterminate");
+        cvwBarEl.style.width = "";
+      } else {
+        cvwBarEl.classList.remove("indeterminate");
+        cvwBarEl.style.width = clamped + "%";
+      }
+    }
+    if (cvwPhaseEl) {
+      const txt = (file || "").trim();
+      if (txt) {
+        const dash = txt.indexOf("—");
+        if (dash > 0) {
+          cvwPhaseEl.textContent = txt.slice(0, dash).trim();
+          if (cvwSubEl) cvwSubEl.textContent = txt.slice(dash + 1).trim();
+        } else {
+          cvwPhaseEl.textContent = txt;
+          if (cvwSubEl) cvwSubEl.textContent = "";
+        }
+      } else if (clamped >= 100) {
+        cvwPhaseEl.textContent = "Tamamlandı";
+        if (cvwSubEl) cvwSubEl.textContent = "";
+      }
+    }
+  }
+  // İlk kullanım için: progress summary'i baştan ayarla
+  function setCvwProgress(pct, phase, sub, indeterminate) {
+    const cvwPctEl = document.getElementById("cvwPct");
+    const cvwBarEl = document.getElementById("cvwPctBar");
+    const cvwPhaseEl = document.getElementById("cvwPhase");
+    const cvwSubEl = document.getElementById("cvwPhaseSub");
+    if (cvwPctEl) cvwPctEl.textContent = Math.round(pct) + "%";
+    if (cvwBarEl) {
+      cvwBarEl.style.background = "";  // önceki hata kırmızısını sıfırla
+      if (indeterminate) {
+        cvwBarEl.classList.add("indeterminate");
+        cvwBarEl.style.width = "";  // CSS animasyonu için inline width temizle
+      } else {
+        cvwBarEl.classList.remove("indeterminate");
+        cvwBarEl.style.width = Math.max(0, Math.min(100, pct)) + "%";
+      }
+    }
+    if (cvwPhaseEl) cvwPhaseEl.textContent = phase || "";
+    if (cvwSubEl) cvwSubEl.textContent = sub || "";
+  }
+  function cvwShowMergeActions(show) {
+    const btn = document.getElementById("cvMergeBtn");
+    if (btn) btn.hidden = !show;
+  }
+  // Scanning UI helpers — phase=scanning iken ayrı bir panel gösterilir.
+  // Ana progress paneli ve dosya satırları o sırada gizlenir, scan bitince geri gelir.
+  let _cvwActiveJobToken = null;
+  let _cvwActiveJobKind = null;
+  let _cvwSkipSafetyClicked = false;
+  let _cvwScanTimerHandle = null;
+  let _cvwScanStartedAt = 0;
+  function cvwTickElapsed() {
+    const elapsedEl = document.getElementById("cvwScanElapsed");
+    if (!elapsedEl || !_cvwScanStartedAt) return;
+    const sec = Math.floor((Date.now() - _cvwScanStartedAt) / 1000);
+    elapsedEl.textContent = "⏱ " + sec + "s";
+  }
+  function cvwSetScanMode(active, kind, token) {
+    const scanPanel = document.getElementById("cvwScanPanel");
+    const progSummary = document.querySelector("#cvwPane2 .cvw-progress-summary");
+    const filesHost = document.getElementById("cvFileRows");
+    if (scanPanel) scanPanel.hidden = !active;
+    if (progSummary) progSummary.style.display = active ? "none" : "";
+    if (filesHost) filesHost.style.display = active ? "none" : "";
+    if (active) {
+      if (kind) _cvwActiveJobKind = kind;
+      if (token) _cvwActiveJobToken = token;
+      _cvwSkipSafetyClicked = false;
+      const skipBtn = document.getElementById("cvwScanSkipBtn");
+      if (skipBtn) {
+        skipBtn.disabled = !_cvwActiveJobToken;
+        skipBtn.textContent = "⏩ Atla & Dönüşüme Geç";
+      }
+      const hint = document.getElementById("cvwScanSkipHint");
+      if (hint) hint.hidden = true;
+      // Süre sayacı başlat (idempotent)
+      if (!_cvwScanTimerHandle) {
+        _cvwScanStartedAt = Date.now();
+        _cvwScanTimerHandle = setInterval(cvwTickElapsed, 1000);
+      }
+    } else {
+      _cvwActiveJobToken = null;
+      _cvwActiveJobKind = null;
+      // Süre sayacını durdur
+      if (_cvwScanTimerHandle) {
+        clearInterval(_cvwScanTimerHandle);
+        _cvwScanTimerHandle = null;
+      }
+      _cvwScanStartedAt = 0;
+      const elapsedEl = document.getElementById("cvwScanCount");
+      if (elapsedEl) delete elapsedEl.dataset.base;
+    }
+  }
+  function cvwUpdateScanFiles(filesSafety, current, total) {
+    const host = document.getElementById("cvwScanFiles");
+    const pctEl = document.getElementById("cvwScanPct");
+    const barEl = document.getElementById("cvwScanBar");
+    const countEl = document.getElementById("cvwScanCount");
+    const currentEl = document.getElementById("cvwScanCurrent");
+    const subEl = document.getElementById("cvwScanSub");
+
+    if (!Array.isArray(filesSafety)) filesSafety = [];
+
+    // Yüzde + sayaç hesabı (current = bitirilenler, total = tüm dosyalar)
+    const tot = Number(total) > 0 ? Number(total) : (filesSafety.length || 1);
+    const cur = Number(current) >= 0 ? Number(current) : 0;
+    let pct = tot > 0 ? Math.round((cur / tot) * 100) : 0;
+    if (pct === 0 && filesSafety.some((f) => f.status === "scanning")) pct = 5;
+    if (pctEl) pctEl.textContent = pct + "%";
+    const scanning = filesSafety.find((f) => f.status === "scanning");
+    if (barEl) {
+      barEl.style.width = pct + "%";
+      // Tarama aktif iken şeritli animasyon — 0%/5%'te bile bar hareketli görünür
+      barEl.classList.toggle("scanning", !!scanning);
+    }
+    if (countEl) countEl.textContent = cur + "/" + tot + " dosya tarandı";
+    if (currentEl) {
+      currentEl.textContent = scanning ? "🔍 " + (scanning.name || "") : "";
+    }
+
+    // Faza göre alt yazı
+    if (subEl) {
+      if (filesSafety.length === 0 || filesSafety.every((f) => f.status === "pending")) {
+        subEl.textContent = "ClamAV motoru hazırlanıyor (signature yükleniyor)…";
+      } else if (scanning) {
+        subEl.textContent = "PDF'ler antivirüs + yapısal analizden geçiyor…";
+      } else if (filesSafety.every((f) => ["clean", "skipped", "danger"].includes(f.status))) {
+        subEl.textContent = "✓ Tarama tamamlandı — dönüşüme geçiliyor";
+      }
+    }
+
+    // Per-file detay listesi — 10+ dosyada yoğun grid moduna geç
+    if (host) {
+      if (filesSafety.length === 0) {
+        host.innerHTML = "";
+        host.removeAttribute("data-dense");
+      } else {
+        host.setAttribute("data-dense", filesSafety.length >= 10 ? "true" : "false");
+        const html = filesSafety.map((fs) => {
+          const status = fs.status || "pending";
+          const labels = {
+            pending:  { txt: "Bekliyor", ico: "·" },
+            scanning: { txt: "Taranıyor", ico: "🔍" },
+            clean:    { txt: "Temiz", ico: "✓" },
+            danger:   { txt: "Tehdit!", ico: "⚠" },
+            skipped:  { txt: "Atlandı", ico: "⏩" },
+          };
+          const l = labels[status] || labels.pending;
+          const safeName = String(fs.name || "(adsız)").replace(/[<>"&]/g, (c) => ({
+            "<": "&lt;", ">": "&gt;", "\"": "&quot;", "&": "&amp;",
+          }[c]));
+          return '<div class="cvw-scan-file ' + status + '">'
+               + '<span class="ico">' + l.ico + '</span>'
+               + '<span class="name">' + safeName + '</span>'
+               + '<span class="badge">' + l.txt + '</span>'
+               + '<div class="pbar"><span></span></div>'
+               + '</div>';
+        }).join("");
+        host.innerHTML = html;
+      }
+    }
+  }
+  // Skip butonu — kullanıcı taramayı iptal etmek istiyor
+  document.getElementById("cvwScanSkipBtn")?.addEventListener("click", async () => {
+    if (!_cvwActiveJobToken || !_cvwActiveJobKind) return;
+    const ok = confirm(
+      "Güvenlik taramasını atlayıp dönüşüme devam etmek istediğinize emin misiniz?\n\n"
+      + "⚠ Tarama atlanırsa virüslü veya zararlı PDF'ler de işlenebilir."
+    );
+    if (!ok) return;
+    _cvwSkipSafetyClicked = true;
+    const skipBtn = document.getElementById("cvwScanSkipBtn");
+    if (skipBtn) {
+      skipBtn.disabled = true;
+      skipBtn.textContent = "⏳ Atlanıyor…";
+    }
+    const hint = document.getElementById("cvwScanSkipHint");
+    if (hint) hint.hidden = false;
+    try {
+      await fetch("/job-skip-safety/" + _cvwActiveJobKind + "/" + _cvwActiveJobToken, {
+        method: "POST",
+      });
+    } catch (e) {
+      console.warn("[scan-skip] fetch failed", e);
+    }
+  });
+  function cvwAddFileRow(name) {
+    const host = document.getElementById("cvFileRows");
+    if (!host) return null;
+    const row = document.createElement("div");
+    row.className = "cvw-file-row pending";
+    row.dataset.name = name;
+    row.innerHTML =
+      '<div class="name"><span class="ico">📄</span><span class="lbl"></span></div>' +
+      '<div class="meta">Bekliyor…</div>' +
+      '<div class="bar"><div class="bar-fill"></div></div>';
+    row.querySelector(".lbl").textContent = name;
+    host.appendChild(row);
+    return row;
+  }
+  function cvwResetFileRows() {
+    const host = document.getElementById("cvFileRows");
+    if (host) host.innerHTML = "";
   }
 
   const distModalBack = document.getElementById("distModalBack");
@@ -4443,8 +5322,10 @@
   }
 
   function selectFormat(val) {
-    document.querySelectorAll(".opt").forEach(o => {
-      const r = o.querySelector("input");
+    // Yeni Convert Workspace format kartları (.cvw-format)
+    document.querySelectorAll(".cvw-format").forEach(o => {
+      const r = o.querySelector('input[type="radio"][name="target"]');
+      if (!r) return;
       if (r.value === val) { r.checked = true; o.classList.add("sel"); }
       else { r.checked = false; o.classList.remove("sel"); }
     });
@@ -4457,20 +5338,16 @@
     // Güvenlik rozeti + kutu
     renderSafety(data.safety);
 
-    // Taranmış PDF ise kırmızı uyarı + OCR butonu
+    // Taranmış PDF: format kartlarındaki banner'ı aç + OCR toggle'larını otomatik işaretle
     const isScanned = (data.kind === "scanned");
-    scannedWarn.style.display = isScanned ? "block" : "none";
-    ocrStatus.textContent = "";
-    // Normal "Dönüştür" butonu: scanned ise kilitle
-    if (isScanned) {
-      go.disabled = true;
-      go.textContent = "Taranmış PDF — yukarıdaki kırmızı butonu kullanın ↑";
-      go.style.background = "#94a3b8";
-    } else {
-      go.disabled = false;
-      go.textContent = "Dönüştür";
-      go.style.background = "";
+    if (typeof window.__cvwSetScannedBanners === "function") {
+      window.__cvwSetScannedBanners(isScanned);
     }
+    // Eski legacy elementleri sıfırla (scanned-warn artık görünmüyor ama JS yine de temiz tutsun)
+    if (scannedWarn) scannedWarn.style.display = "none";
+    if (ocrStatus) ocrStatus.textContent = "";
+    // Dönüştür butonu her zaman aktif — scanned ise OCR otomatik route'a gidecek
+    go.disabled = false;
 
     const cards = [];
     cards.push(statCard("Sayfa", data.page_count));
@@ -4499,7 +5376,12 @@
       tableWrap.style.display = "none";
     }
 
-    if (data.recommended_format) selectFormat(data.recommended_format);
+    if (data.recommended_format) {
+      selectFormat(data.recommended_format);
+      if (typeof window.__cvwSetRecommended === "function") {
+        window.__cvwSetRecommended(data.recommended_format);
+      }
+    }
     preview.classList.add("shown");
   }
 
@@ -4647,9 +5529,12 @@
     batchPg.classList.remove("shown");
     setBatchPg(0, "");
     go.disabled = false;
-    go.textContent = "Dönüştür";
-    go.style.background = "";
-    shrinkLayout();
+    go.textContent = "🔄 Dönüştür";
+    // Yeni format banner'larını ve OCR toggle'larını sıfırla
+    if (typeof window.__cvwSetScannedBanners === "function") window.__cvwSetScannedBanners(false);
+    document.querySelectorAll(".cvw-format-rec[data-rec]").forEach((el) => { el.hidden = true; });
+    cvwShowMergeActions(false);
+    setCvwProgress(0, "Hazırlık", "", false);
     fullPreview.classList.remove("shown");
     distResult.classList.remove("shown");
     tableWrap.style.display = "none";
@@ -4954,16 +5839,30 @@
 
   form.addEventListener("submit", async ev => {
     ev.preventDefault();
+    console.log("[convert] form submit fired, files=", fileInput.files?.length || 0);
     if (!fileInput.files[0]) { setStatus("err", "Önce bir PDF seçin."); return; }
 
     const target = form.querySelector("input[name=target]:checked").value;
+    const cvwSettings = (window.__cvwGetSettings ? window.__cvwGetSettings() : {});
+    console.log("[convert] target=", target, "settings=", cvwSettings);
+    // Workspace Step 2'ye geç + dönüştürme görünür ol — savunmalı try/catch
+    try {
+      if (typeof window.__cvwSetStep === "function") window.__cvwSetStep(2);
+      if (typeof setCvwProgress === "function") setCvwProgress(0, "Hazırlanıyor", "Dosyalar yükleniyor…", true);
+      if (typeof cvwShowMergeActions === "function") cvwShowMergeActions(false);
+    } catch (uiErr) {
+      console.warn("[convert] step2 UI hatası (devam ediliyor):", uiErr);
+    }
 
     // Word veya JPG seçilmişse her dosya için ad sor
     let customNames = null;
     if (target === "word" || target === "jpg") {
       const filesArr = Array.from(fileInput.files);
       customNames = await askOutputNames(filesArr, target);
-      if (customNames === null) return;  // kullanıcı vazgeçti
+      if (customNames === null) {
+        if (typeof window.__cvwSetStep === "function") window.__cvwSetStep(1);
+        return;  // kullanıcı vazgeçti
+      }
     }
 
     go.disabled = true;
@@ -4972,34 +5871,147 @@
     const fd = new FormData();
 
     try {
-      // Excel her zaman birleştirme akışı (tek dosya da olsa) — böylece
-      // sonuç kartı, dedupe, filtre, ekip dağıtımı her zaman açılır.
-      const useMergedFlow = (target === "excel");
-
-      if (useMergedFlow || batchMode) {
-        // Batch / Merged — async + polling
+      // Çoklu PDF: her dosya kendi çıktısını üretir, ZIP olarak inilir.
+      // (Tek dosya zaten else dalında /convert-start ile ayrı işleniyor.)
+      // /batch-convert (call-log merge) artık ayrı bir advanced akış —
+      // burada tetiklenmez; herhangi bir PDF Excel'e dönüştürülebilir.
+      if (batchMode) {
         for (const f of fileInput.files) fd.append("files", f);
-        let endpoint, isExcel;
-        if (useMergedFlow) {
-          fd.append("mappings", JSON.stringify(mappings));
-          fd.append("skip", JSON.stringify([...skippedFiles]));
-          endpoint = "/batch-convert";
-          isExcel = true;
-        } else {
-          fd.append("target", target);
-          if (customNames) fd.append("names", JSON.stringify(customNames));
-          endpoint = "/batch-files";
-          isExcel = false;
+        fd.append("target", target);
+        if (customNames) fd.append("names", JSON.stringify(customNames));
+        if (target === "jpg") {
+          fd.append("jpg_quality", String(cvwSettings.jpgQuality || 90));
+          fd.append("jpg_dpi", String(cvwSettings.jpgDpi || 200));
+        }
+        const endpoint = "/batch-files";
+        const isExcel = (target === "excel");
+
+        // Tüm akışlarda Step 2'de per-file ilerleme satırlarını başlat
+        const fileNames = Array.from(fileInput.files).map((f) => f.name);
+        showCvScreenA(fileNames);
+        const phaseLabel = isExcel ? "Excel'e dönüştürülüyor" :
+                          target === "word" ? "Word'e dönüştürülüyor" :
+                          "JPG'ye dönüştürülüyor";
+        setCvwProgress(0, phaseLabel, fileNames.length + " PDF işleniyor…", true);
+        batchPg.classList.add("shown");
+        setBatchPg(0, "Dosyalar yükleniyor...");
+
+        // Tarama UI'sini hemen göster — fetch sırasında ve token gelmeden önce de
+        // kullanıcı "🛡 Virüs taraması başlatıldı" yazısını görsün.
+        const fnames = Array.from(fileInput.files).map((f) => f.name);
+        cvwUpdateScanFiles(fnames.map((n) => ({ name: n, status: "pending" })), 0, fnames.length);
+        cvwSetScanMode(true, "batch", null);
+
+        const startRes = await fetch(endpoint, { method: "POST", body: fd });
+        if (!startRes.ok) {
+          let msg = "Hata: " + startRes.status;
+          try { const j = await startRes.json(); if (j.detail) msg = j.detail; } catch {}
+          throw new Error(msg);
+        }
+        const { token } = await startRes.json();
+        // Token alındı — skip butonu artık çalışsın
+        _cvwActiveJobToken = token;
+        _cvwActiveJobKind = "batch";
+        const _skipBtnB = document.getElementById("cvwScanSkipBtn");
+        if (_skipBtnB) _skipBtnB.disabled = false;
+
+        // Push-based progress via SSE (with polling fallback in pollOrStream)
+        const final = await pollOrStream("batch", token, {
+          intervalMs: 600,
+          onUpdate: (p) => {
+            // Scanning phase: tarama UI'sini güncelle
+            if (p.phase === "scanning") {
+              cvwSetScanMode(true, "batch", token);
+              cvwUpdateScanFiles(p.files_safety, p.current, p.total);
+              return;
+            }
+            // Scanning bittiyse → normal progress paneline geç
+            cvwSetScanMode(false);
+
+            // Per-file ilerleme satırları (her formatta: word/excel/jpg)
+            if (Array.isArray(p.files_progress)) {
+              for (const fp of p.files_progress) {
+                updateCvFileRow(
+                  fp.name,
+                  fp.status,
+                  fp.record_count,
+                  fp.error,
+                  fp.kind_label,
+                );
+              }
+            }
+            // Toplam progress
+            if (p.total > 0) {
+              const pct = (p.current / p.total) * 100;
+              const phaseLbl = {
+                starting: "Başlatılıyor",
+                processing: "İşleniyor",
+                writing: "Yazılıyor",
+                done: "Tamamlandı",
+              }[p.phase] || p.phase || "";
+              const fileText = p.last_file
+                ? phaseLbl + " · " + p.last_file
+                : phaseLbl;
+              setBatchPg(pct, fileText);
+            }
+          },
+        });
+        cvwSetScanMode(false);
+
+        // Tüm akışlar için: ZIP indir + sonuç ekranına geç
+        setBatchPg(100, "Tamamlandı");
+        const dlRes = await fetch("/batch-files-download/" + token);
+        if (!dlRes.ok) throw new Error("İndirme başarısız (" + dlRes.status + ")");
+        const blob = await dlRes.blob();
+        const cd = dlRes.headers.get("Content-Disposition") || "";
+        const m = cd.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
+        const name = m ? decodeURIComponent(m[1].replace(/"/g, "")) : "cikti.zip";
+        const fc = dlRes.headers.get("X-File-Count");
+        triggerDownload(blob, name);
+        setStatus("ok", "İndirme başladı: " + name + (fc ? " · " + fmt(fc) + " dosya" : ""));
+        // Per-file kind özetleri (kaç tanesi call-log, kaç tanesi metin, vb)
+        const fp = final.files_progress || final.snapshot?.files_progress || [];
+        const okN = fp.filter((f) => f.status === "done").length;
+        const errN = fp.filter((f) => f.status === "error").length;
+        const kinds = {};
+        fp.forEach((f) => {
+          if (f.kind_label) kinds[f.kind_label] = (kinds[f.kind_label] || 0) + 1;
+        });
+        const kindSummary = Object.entries(kinds).map(([k, n]) => n + "× " + k).join(" · ");
+        const sub = okN + "/" + fp.length + " başarılı"
+                  + (errN ? " · " + errN + " hata" : "")
+                  + (kindSummary ? " · " + kindSummary : "");
+        showSimpleResult({
+          title: "✓ ZIP arşivi hazır",
+          sub: sub,
+          downloadName: name,
+          downloadBlob: blob,
+        });
+      } else {
+        // Tek dosya — async + polling, yüzdelik progress
+        batchPg.classList.add("shown");
+        setBatchPg(0, "Dosya yükleniyor...");
+
+        fd.append("file", fileInput.files[0]);
+        fd.append("target", target);
+        if (customNames && customNames[0]) fd.append("custom_name", customNames[0]);
+        if (target === "jpg") {
+          fd.append("jpg_quality", String(cvwSettings.jpgQuality || 90));
+          fd.append("jpg_dpi", String(cvwSettings.jpgDpi || 200));
         }
 
-        // 3-ekranlı sihirbaz: Excel akışında Screen A göster
-        if (isExcel) {
-          const fileNames = Array.from(fileInput.files).map((f) => f.name);
-          showCvScreenA(fileNames);
-        } else {
-          // Word/JPG ZIP akışı eski progress bar ile
-          batchPg.classList.add("shown");
-          setBatchPg(0, "Dosyalar yükleniyor...");
+        // OCR toggle: Word/Excel için kullanıcı işaretlemişse veya scanned PDF ise
+        // /ocr-start endpoint'ine yönlendir.
+        const wantOcr = (target === "word" && cvwSettings.wordOcr) ||
+                        (target === "excel" && cvwSettings.excelOcr);
+        const endpoint = wantOcr ? "/ocr-start" : "/convert-start";
+
+        // Tarama UI'sini hemen göster (OCR akışında scan yok ama UI tutarlılığı için
+        // de yalnız convert-start akışında gösteriyoruz).
+        if (!wantOcr) {
+          const fname = fileInput.files[0]?.name || "PDF";
+          cvwUpdateScanFiles([{ name: fname, status: "pending" }], 0, 1);
+          cvwSetScanMode(true, "convert", null);
         }
 
         const startRes = await fetch(endpoint, { method: "POST", body: fd });
@@ -5009,78 +6021,32 @@
           throw new Error(msg);
         }
         const { token } = await startRes.json();
+        if (!wantOcr) {
+          _cvwActiveJobToken = token;
+          _cvwActiveJobKind = "convert";
+          const _skipBtnC = document.getElementById("cvwScanSkipBtn");
+          if (_skipBtnC) _skipBtnC.disabled = false;
+        }
 
         // Push-based progress via SSE (with polling fallback in pollOrStream)
-        const final = await pollOrStream("batch", token, {
-          intervalMs: 600,
-          onUpdate: (p) => {
-            // Yeni: per-file ilerleme satırlarını güncelle (Screen A)
-            if (isExcel && Array.isArray(p.files_progress)) {
-              for (const fp of p.files_progress) {
-                updateCvFileRow(fp.name, fp.status, fp.record_count, fp.error);
-              }
-            }
-            // Eski: tek satır progress (sadece non-batch / Word/JPG akışında)
-            if (!isExcel && p.total > 0) {
-              const pct = (p.current / p.total) * 100;
-              const phaseLabel = {
-                starting: "Başlatılıyor",
-                processing: "İşleniyor",
-                writing: "Excel yazılıyor",
-                done: "Tamamlandı",
-              }[p.phase] || p.phase || "";
-              const fileText = p.last_file
-                ? phaseLabel + " · " + p.last_file
-                : phaseLabel;
-              setBatchPg(pct, fileText);
-            }
-          },
-        });
-
-        if (isExcel) {
-          currentJob = final.result;
-          // Sihirbaz: dönüşüm bitti → Screen B (per-file özet + Birleştir butonu)
-          showCvScreenB(final.files_progress || final.snapshot?.files_progress || []);
-          setStatus("ok", fmt(final.result.record_count) + " kayıt çevrildi.");
-        } else {
-          setBatchPg(100, "Tamamlandı");
-          // ZIP indir
-          const dlRes = await fetch("/batch-files-download/" + token);
-          if (!dlRes.ok) throw new Error("İndirme başarısız (" + dlRes.status + ")");
-          const blob = await dlRes.blob();
-          const cd = dlRes.headers.get("Content-Disposition") || "";
-          const m = cd.match(/filename\*?=(?:UTF-8''|\")?([^\";]+)/i);
-          const name = m ? decodeURIComponent(m[1].replace(/"/g, "")) : "cikti.zip";
-          const fc = dlRes.headers.get("X-File-Count");
-          triggerDownload(blob, name);
-          setStatus("ok", "İndirme başladı: " + name + (fc ? " · " + fmt(fc) + " dosya" : ""));
-          showResultLayout();
-        }
-      } else {
-        // Tek dosya — async + polling, yüzdelik progress
-        batchPg.classList.add("shown");
-        setBatchPg(0, "Dosya yükleniyor...");
-
-        fd.append("file", fileInput.files[0]);
-        fd.append("target", target);
-        if (customNames && customNames[0]) fd.append("custom_name", customNames[0]);
-
-        const startRes = await fetch("/convert-start", { method: "POST", body: fd });
-        if (!startRes.ok) {
-          let msg = "Hata: " + startRes.status;
-          try { const j = await startRes.json(); if (j.detail) msg = j.detail; } catch {}
-          throw new Error(msg);
-        }
-        const { token } = await startRes.json();
-
-        // Push-based progress via SSE (with polling fallback in pollOrStream)
-        await pollOrStream("convert", token, {
+        await pollOrStream(wantOcr ? "ocr" : "convert", token, {
           intervalMs: 500,
           onUpdate: (p) => {
+            // Scanning phase
+            if (p.phase === "scanning") {
+              cvwSetScanMode(true, "convert", token);
+              cvwUpdateScanFiles(p.files_safety, p.current, p.total);
+              return;
+            }
+            cvwSetScanMode(false);
+
             const phaseText = {
               starting: "Başlatılıyor",
               preparing: "Hazırlanıyor",
+              loading_model: "OCR motoru yükleniyor (ilk seferde 1-2 dk)",
+              ocr: "OCR okunuyor",
               rendering: "Sayfalar render ediliyor",
+              render: "Sayfalar render ediliyor",
               converting: "Word'e dönüştürülüyor",
               writing: "Excel yazılıyor",
               done: "Tamamlandı",
@@ -5095,9 +6061,10 @@
             }
           },
         });
+        cvwSetScanMode(false);
 
         setBatchPg(100, "Tamamlandı");
-        const dlRes = await fetch("/convert-download/" + token);
+        const dlRes = await fetch((wantOcr ? "/ocr-download/" : "/convert-download/") + token);
         if (!dlRes.ok) throw new Error("İndirme başarısız (" + dlRes.status + ")");
         const blob = await dlRes.blob();
         const cd = dlRes.headers.get("Content-Disposition") || "";
@@ -5107,10 +6074,23 @@
         triggerDownload(blob, name);
         const tail = recCount ? " · " + fmt(recCount) + " satır" : "";
         setStatus("ok", "İndirme başladı: " + name + tail);
-        showResultLayout();
+        showSimpleResult({
+          title: "✓ Tamamlandı",
+          sub: name + tail,
+          downloadName: name,
+          downloadBlob: blob,
+        });
       }
     } catch (e) {
       setStatus("err", friendlyError(e.message));
+      // Hata: progress barı hata moduna al — kullanıcı geri dönebilir
+      const cvwBarEl = document.getElementById("cvwPctBar");
+      const cvwPhaseEl = document.getElementById("cvwPhase");
+      if (cvwBarEl) {
+        cvwBarEl.classList.remove("indeterminate");
+        cvwBarEl.style.background = "#b91c1c";
+      }
+      if (cvwPhaseEl) cvwPhaseEl.textContent = "✗ Hata oluştu";
     } finally {
       go.disabled = false;
       progress.classList.remove("shown");
@@ -5129,18 +6109,53 @@
   }
 
   function showResultCard(data) {
-    resultHead.textContent = "✓ Birleştirme tamamlandı · " + fmt(data.record_count) + " kayıt";
+    resultHead.textContent = "✓ Tamamlandı · " + fmt(data.record_count) + " kayıt";
     const warnPart = (data.warnings && data.warnings.length)
-      ? " Uyarı: " + data.warnings.join("; ")
+      ? " ⚠ Uyarı: " + data.warnings.join("; ")
       : "";
     resultSub.textContent = data.source_count + " PDF işlendi." + warnPart;
     resultCard.classList.add("shown");
-    batch.classList.remove("shown");
-    preview.classList.remove("shown");
+    resultCard.classList.remove("error");
+    // Excel akışı için tüm tab'ları aç
+    document.querySelectorAll('.cvw-tab').forEach((t) => {
+      if (t.dataset.tab === "preview" || t.dataset.tab === "filter" || t.dataset.tab === "dist") {
+        t.hidden = false;
+      }
+    });
+    // İndir butonu Excel için
+    const dlBtn = document.getElementById("resultDownload");
+    if (dlBtn) { dlBtn.textContent = "📥 Excel İndir"; dlBtn.hidden = false; }
+    const distBtn = document.getElementById("resultDistribute");
+    if (distBtn) distBtn.hidden = false;
+    // Step 3'e geç
+    if (typeof window.__cvwSetStep === "function") window.__cvwSetStep(3);
+    if (typeof window.__cvwActivateTab === "function") window.__cvwActivateTab("preview");
     showResultLayout();
     // Tüm kayıtları arka planda çek ve tabloya bas
     loadFullPreview(data.token);
   }
+  // Word/JPG (single & batch) sonucunda kullanılır — sadece özet + indirme
+  function showSimpleResult({ title, sub, downloadName, downloadBlob, isError }) {
+    if (resultHead) resultHead.textContent = title || (isError ? "✗ Hata" : "✓ Tamamlandı");
+    if (resultSub) resultSub.textContent = sub || "";
+    if (resultCard) {
+      resultCard.classList.add("shown");
+      resultCard.classList.toggle("error", !!isError);
+    }
+    // Tabs gizli — Word/JPG için sekmeler anlamsız
+    document.querySelectorAll('.cvw-tab').forEach((t) => { t.hidden = true; });
+    // Distribute butonu Word/JPG için anlamsız
+    const distBtn = document.getElementById("resultDistribute");
+    if (distBtn) distBtn.hidden = true;
+    const dlBtn = document.getElementById("resultDownload");
+    if (dlBtn) {
+      dlBtn.hidden = !downloadBlob;
+      dlBtn.textContent = downloadName ? ("📥 " + downloadName) : "📥 İndir";
+      dlBtn.onclick = () => { if (downloadBlob && downloadName) triggerDownload(downloadBlob, downloadName); };
+    }
+    if (typeof window.__cvwSetStep === "function") window.__cvwSetStep(3);
+  }
+  window.__cvwShowSimpleResult = showSimpleResult;
 
   // ===== 3-ekranlı convert sihirbazı: yardımcı fonksiyonlar =====
   // A: per-file ilerleme rowları
@@ -5156,31 +6171,15 @@
   const cvBackBtn  = document.getElementById("cvBackBtn");
   let _cvFinalSnapshot = null;   // Birleştir butonuna basınca C'yi çağırmak için sakla
 
-  function setCvStep(step) {
-    if (!cvStepbar) return;
-    cvStepbar.hidden = false;
-    cvStepbar.querySelectorAll(".cv-step").forEach((el) => {
-      const s = el.dataset.step;
-      el.classList.remove("active", "done");
-      if (s === step) el.classList.add("active");
-      else if ((step === "B" && s === "A") || (step === "C" && (s === "A" || s === "B"))) {
-        el.classList.add("done");
-      }
-    });
-  }
-  function hideCvWizard() {
-    if (cvStepbar) cvStepbar.hidden = true;
-    if (cvScreenA) cvScreenA.hidden = true;
-    if (cvScreenB) cvScreenB.hidden = true;
-    if (cvScreenC) cvScreenC.hidden = false;
-    _cvFinalSnapshot = null;
-  }
+  // Eski A/B/C wizard kaldırıldı — yeni Convert Workspace 3-step yapısı kullanıyor.
+  // setCvStep / hideCvWizard alias olarak Step navigation'a yönlendirilir.
+  function setCvStep(_unused) { /* no-op — yeni stepbar window.__cvwSetStep ile yönetilir */ }
   function showCvScreenA(fileNames) {
-    if (!cvScreenA || !cvFileRows) return;
+    if (!cvFileRows) return;
     cvFileRows.innerHTML = "";
     for (const name of fileNames) {
       const row = document.createElement("div");
-      row.className = "cv-file-row pending";
+      row.className = "cvw-file-row pending";
       row.dataset.name = name;
       row.innerHTML =
         '<div class="name"><span class="ico">📄</span><span class="lbl"></span></div>' +
@@ -5189,21 +6188,24 @@
       row.querySelector(".lbl").textContent = name;
       cvFileRows.appendChild(row);
     }
-    setCvStep("A");
-    cvScreenA.hidden = false;
-    if (cvScreenB) cvScreenB.hidden = true;
-    if (cvScreenC) cvScreenC.hidden = true;
+    if (typeof window.__cvwSetStep === "function") window.__cvwSetStep(2);
+    setCvwProgress(0, "Excel'e dönüştürülüyor", fileNames.length + " PDF işleniyor…", true);
+    cvwShowMergeActions(false);
   }
-  function updateCvFileRow(name, status, recordCount, error) {
+  function updateCvFileRow(name, status, recordCount, error, kindLabel) {
     if (!cvFileRows || !name) return;
-    const row = cvFileRows.querySelector('.cv-file-row[data-name="' + cssEscape(name) + '"]');
+    const row = cvFileRows.querySelector('.cvw-file-row[data-name="' + cssEscape(name) + '"]');
     if (!row) return;
     row.classList.remove("pending", "processing", "done", "error", "skipped");
     row.classList.add(status || "pending");
     const meta = row.querySelector(".meta");
     if (meta) {
       if (status === "done") {
-        meta.textContent = "✓ " + fmt(recordCount || 0) + " kayıt";
+        // Done meta: kind etiketi + kayıt sayısı (varsa)
+        const parts = ["✓"];
+        if (kindLabel) parts.push(kindLabel);
+        if (recordCount && recordCount > 0) parts.push(fmt(recordCount) + " kayıt");
+        meta.textContent = parts.join(" · ");
       } else if (status === "error") {
         meta.textContent = "✗ Hata";
         meta.title = error || "";
@@ -5215,67 +6217,64 @@
         meta.textContent = "Bekliyor…";
       }
     }
+    // Toplam progress hesapla — done/error/skipped = 1.0, processing = 0.5
+    // Böylece dosya işlenirken bar tamamen 0'da takılı kalmaz.
+    const rows = cvFileRows.querySelectorAll(".cvw-file-row");
+    let weight = 0;
+    rows.forEach((r) => {
+      if (r.classList.contains("done") || r.classList.contains("error") || r.classList.contains("skipped")) {
+        weight += 1.0;
+      } else if (r.classList.contains("processing")) {
+        weight += 0.5;
+      }
+    });
+    if (rows.length > 0) {
+      const pct = (weight / rows.length) * 100;
+      const cvwBarEl = document.getElementById("cvwPctBar");
+      const cvwPctEl = document.getElementById("cvwPct");
+      if (cvwBarEl) {
+        if (pct <= 0) {
+          cvwBarEl.classList.add("indeterminate");
+          cvwBarEl.style.width = "";
+        } else {
+          cvwBarEl.classList.remove("indeterminate");
+          cvwBarEl.style.width = pct + "%";
+        }
+      }
+      if (cvwPctEl) cvwPctEl.textContent = Math.round(pct) + "%";
+    }
   }
   function cssEscape(s) {
     if (window.CSS && CSS.escape) return CSS.escape(s);
     return String(s).replace(/(["\\])/g, "\\$1");
   }
   function showCvScreenB(filesProgress) {
-    if (!cvScreenB || !cvFileStats) return;
     _cvFinalSnapshot = filesProgress || [];
-    cvFileStats.innerHTML = "";
     let okCount = 0, totalRecs = 0, errCount = 0;
     for (const fp of _cvFinalSnapshot) {
-      const card = document.createElement("div");
       const isErr = fp.status === "error";
       const isSkip = fp.status === "skipped";
-      card.className = "cv-file-stat" + (isErr ? " error" : "");
-      const icon = isErr ? "✗" : (isSkip ? "—" : "✓");
-      const name = fp.name || "(adsız)";
       const recCount = fp.record_count || 0;
       if (!isErr && !isSkip) { okCount++; totalRecs += recCount; }
       if (isErr) errCount++;
-      card.innerHTML =
-        '<div class="head"><span class="ico"></span><span class="name"></span></div>' +
-        '<div class="stats"></div>';
-      card.querySelector(".ico").textContent = icon;
-      card.querySelector(".name").textContent = name;
-      const stats = card.querySelector(".stats");
-      if (isErr) {
-        stats.innerHTML = '<span style="color:#b91c1c">' + escapeHtml(fp.error || "Hata") + '</span>';
-      } else if (isSkip) {
-        stats.innerHTML = '<span>Bu dosya kullanıcı tarafından atlandı.</span>';
-      } else {
-        stats.innerHTML = '<span><strong>' + fmt(recCount) + '</strong> kayıt</span>';
-      }
-      cvFileStats.appendChild(card);
     }
-    const head = document.getElementById("cvScreenBHead");
-    if (head) {
-      head.textContent = "Çevirme tamamlandı · " + okCount + "/" + _cvFinalSnapshot.length
-        + " başarılı · " + fmt(totalRecs) + " kayıt"
-        + (errCount ? " · " + errCount + " hata" : "");
-    }
-    setCvStep("B");
-    if (cvScreenA) cvScreenA.hidden = true;
-    cvScreenB.hidden = false;
-    if (cvScreenC) cvScreenC.hidden = true;
+    // Step 2'de progress'i 100 yapıp merge action'larını göster
+    setCvwProgress(100,
+      "Çevirme tamamlandı",
+      okCount + "/" + _cvFinalSnapshot.length + " başarılı · " +
+        fmt(totalRecs) + " kayıt" + (errCount ? " · " + errCount + " hata" : ""),
+      false);
+    cvwShowMergeActions(true);
   }
-  // Birleştir → Screen C (mevcut showResultCard tüm tablo + dist UI'yi yükler)
+  // Birleştir → Step 3 (mevcut showResultCard tüm tablo + dist UI'yi yükler)
   cvMergeBtn?.addEventListener("click", () => {
     if (!currentJob) return;
-    setCvStep("C");
-    if (cvScreenA) cvScreenA.hidden = true;
-    if (cvScreenB) cvScreenB.hidden = true;
-    if (cvScreenC) cvScreenC.hidden = false;
     showResultCard(currentJob);
   });
-  cvBackBtn?.addEventListener("click", () => {
-    // Yeni dönüşüm — modal'ı sıfırla (input section geri gelsin)
-    if (typeof newConversion === "function") newConversion();
-    hideCvWizard();
-  });
-  // Sihirbaz state'i convert modal kapatılınca sıfırlansın
+  function hideCvWizard() {
+    _cvFinalSnapshot = null;
+    cvwShowMergeActions(false);
+  }
   window.__cvHideWizard = hideCvWizard;
 
   async function loadFullPreview(token) {
@@ -5309,6 +6308,8 @@
       const dedupedActive = !!(data.state && data.state.deduplicated);
       const dupPhones = data.duplicate_phone_count || 0;
       const dupRows = data.duplicate_row_count || 0;
+      const dedupeTabBtn = document.querySelector('.cvw-tab[data-tab="dedupe"]');
+      const dedupeBadge = document.getElementById("tabDedupeCount");
       if (dupPhones > 0 && !dedupedActive) {
         dupWarnText.innerHTML =
           "⚠ <strong>" + fmt(dupPhones) + " telefon</strong> mükerrer · "
@@ -5316,13 +6317,27 @@
         dupWarnBar.classList.add("shown");
         dedupeBtn.disabled = false;
         dedupeBtn.textContent = "Teke Düşür";
+        if (dedupeTabBtn) dedupeTabBtn.hidden = false;
+        if (dedupeBadge) dedupeBadge.textContent = fmt(dupPhones);
       } else if (dedupedActive) {
         dupWarnText.innerHTML = "✓ <strong>Mükerrer telefonlar silindi</strong>";
         dupWarnBar.classList.add("shown");
         dedupeBtn.disabled = false;
         dedupeBtn.textContent = "Geri Al";
+        if (dedupeTabBtn) dedupeTabBtn.hidden = false;
+        if (dedupeBadge) dedupeBadge.textContent = "✓";
       } else {
         dupWarnBar.classList.remove("shown");
+        if (dedupeTabBtn) dedupeTabBtn.hidden = true;
+      }
+      // Önizleme tab badge'ini güncelle
+      const previewBadge = document.getElementById("tabPreviewCount");
+      if (previewBadge) previewBadge.textContent = fmt(totalShown);
+      // Filtre tab badge'ini güncelle (aktif filtre sayısı)
+      const filterBadge = document.getElementById("tabFilterCount");
+      if (filterBadge) {
+        const activeCount = Object.keys(currentFilters || {}).length;
+        filterBadge.textContent = String(activeCount);
       }
     } catch (e) {
       fpCount.textContent = "hata: " + (e.message || e);
@@ -5625,6 +6640,12 @@
     strategyOpts.querySelector('input[value="sequential"]').checked = true;
     updateStrategyUI();
     distRelocateInline();
+    // Convert Workspace: "Dağıtım" tab'ini göster ve aktif yap
+    const distTabBtn = document.querySelector('.cvw-tab[data-tab="dist"]');
+    if (distTabBtn) distTabBtn.hidden = false;
+    if (typeof window.__cvwActivateTab === "function") {
+      window.__cvwActivateTab("dist");
+    }
     requestAnimationFrame(() => {
       distInlineHost.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
@@ -7275,27 +8296,114 @@ if ("serviceWorker" in navigator) {
 (function () {
   "use strict";
 
-  // Form'un INPUT kısımları (drop, fileInfo, fieldset, Convert butonu) — dashboard
-  // akışlarında gizlenir; sadece progress + result paneli görünür kalır.
-  function showConvertShellOutputOnly() {
+  // ===== Convert Workspace (modal-free) =====
+  // Tek-sayfa 3-adımlı akış (Hazırlık → Dönüştürme → Sonuç).
+  // Workspace açılınca dashboard hero + kartlar gizlenir; "← Dashboard"
+  // tıklanınca geri gelir.
+  function setDashboardVisible(visible) {
+    const dash = document.getElementById("dashboard");
+    const cardsSection = document.querySelector(".dash-section");
+    if (dash) dash.hidden = !visible;
+    if (cardsSection) cardsSection.hidden = !visible;
+  }
+  function openConvertWorkspace() {
     const shell = document.getElementById("convertShell");
     if (!shell) return;
+    setDashboardVisible(false);
     shell.hidden = false;
-    shell.classList.add("from-modal");
+    setConvertStep(1);
+    syncFormatCardSelection();
     requestAnimationFrame(() => {
       shell.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
   function hideConvertShell() {
     const shell = document.getElementById("convertShell");
-    if (shell) {
-      shell.hidden = true;
-      shell.classList.remove("from-modal");
-    }
+    if (shell) shell.hidden = true;
+    setDashboardVisible(true);
+    // Açık dist içeriği varsa modal'a geri taşı — modal-back yok ama dist kodu hala
+    // distInlineHost ↔ distModalBack arası taşıyabilir; close uyarısı için reset.
+    if (typeof window.__distRelocateBack === "function") window.__distRelocateBack();
     const dash = document.getElementById("dashboard");
     if (dash) dash.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+  function setConvertStep(step) {
+    const stepNum = Number(step);
+    document.querySelectorAll(".cvw-step").forEach((el) => {
+      const n = Number(el.dataset.step);
+      el.classList.remove("active", "done");
+      if (n === stepNum) el.classList.add("active");
+      else if (n < stepNum) el.classList.add("done");
+    });
+    for (let i = 1; i <= 3; i++) {
+      const pane = document.getElementById("cvwPane" + i);
+      if (pane) pane.hidden = i !== stepNum;
+    }
+  }
+  // Public for other handlers
+  window.__cvwSetStep = setConvertStep;
+  window.__cvwOpen = openConvertWorkspace;
+
+  // Format kartlarının .sel sınıfı radio değişimine bağlı
+  function syncFormatCardSelection() {
+    const cards = document.querySelectorAll(".cvw-format");
+    cards.forEach((card) => {
+      const radio = card.querySelector('input[type="radio"]');
+      if (radio && radio.checked) card.classList.add("sel");
+      else card.classList.remove("sel");
+    });
+  }
+  document.querySelectorAll('.cvw-format input[type="radio"][name="target"]').forEach((r) => {
+    r.addEventListener("change", syncFormatCardSelection);
+  });
+  // Karta tıklamak da seçimi tetikler (label içindeki input zaten yapacak ama
+  // belirgin transition için class'ı erkenden güncelle)
+  document.querySelectorAll(".cvw-format").forEach((card) => {
+    card.addEventListener("click", () => {
+      requestAnimationFrame(syncFormatCardSelection);
+    });
+  });
+
+  // JPG kalite slider live update
+  const jpgQualitySlider = document.getElementById("jpgQuality");
+  const jpgQualityVal = document.getElementById("jpgQualityVal");
+  jpgQualitySlider?.addEventListener("input", () => {
+    if (jpgQualityVal) jpgQualityVal.textContent = jpgQualitySlider.value;
+  });
+
+  // Tab switcher (Step 3)
+  function activateTab(name) {
+    document.querySelectorAll(".cvw-tab").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.tab === name);
+    });
+    document.querySelectorAll(".cvw-tabpanel").forEach((p) => {
+      p.hidden = p.dataset.tab !== name;
+    });
+  }
+  document.querySelectorAll(".cvw-tab").forEach((btn) => {
+    btn.addEventListener("click", () => activateTab(btn.dataset.tab));
+  });
+  window.__cvwActivateTab = activateTab;
+
+  // "+ Yeni Dönüşüm" butonu (Step 3) — Step 1'e dön, sonuçları temizle
+  document.getElementById("convertNewBtn")?.addEventListener("click", () => {
+    if (typeof window.__distRelocateBack === "function") window.__distRelocateBack();
+    setConvertStep(1);
+    // resultCard ve tablolar bir sonraki dönüşümde JS tarafından yeniden doldurulur,
+    // ama yine de görsel temizlik için boşalt
+    const fpTable = document.getElementById("fpTable");
+    if (fpTable) fpTable.innerHTML = "";
+    const distTable = document.getElementById("distTable");
+    if (distTable) distTable.innerHTML = "";
+  });
+
+  // Ana "← Dashboard" butonu
   document.getElementById("convertBackBtn")?.addEventListener("click", hideConvertShell);
+
+  // Step 2 "← Yeni dönüşüm" butonu
+  document.getElementById("cvBackBtn")?.addEventListener("click", () => {
+    setConvertStep(1);
+  });
 
   // ========== Hero file state ==========
   // Hero ANY dosya kabul eder; her dosyanın tipi kategori filtrelemesini etkiler.
@@ -7516,105 +8624,57 @@ if ("serviceWorker" in navigator) {
     dashFile.value = "";
   });
 
-  // ===== Convert modal — küçük format seçici =====
-  const convertModal = document.getElementById("convertModalBack");
-  const convertFiles = document.getElementById("convertModalFiles");
-  const convertCancel = document.getElementById("convertModalCancel");
-  const convertGo = document.getElementById("convertModalGo");
-  const convertModalDialog = document.getElementById("convertModal");
-  const convertInputSection = document.getElementById("convertInputSection");
-  const convertOutputHost = document.getElementById("convertOutputHost");
-  const convertOutputActions = document.getElementById("convertOutputActions");
-  const convertNewBtn = document.getElementById("convertNewBtn");
-  const convertCloseAfter = document.getElementById("convertCloseAfter");
-
-  // convertOutputArea modal'a taşınmadan önceki orijinal yer
-  // (başlangıçta convertShell altında, geri taşımak için referans tut).
-  function originalOutputParent() {
-    const main = document.querySelector("main.layout");
-    return main || null;
-  }
-
-  function relocateOutputToModal() {
-    const area = document.getElementById("convertOutputArea");
-    if (!area || !convertOutputHost) return;
-    if (area.parentElement === convertOutputHost) return;
-    convertOutputHost.appendChild(area);
-  }
-  function relocateOutputBack() {
-    const area = document.getElementById("convertOutputArea");
-    const target = originalOutputParent();
-    if (!area || !target) return;
-    if (area.parentElement === target) return;
-    target.appendChild(area);
-  }
-
-  function setConvertModalRunning(running) {
-    if (!convertModalDialog) return;
-    convertModalDialog.classList.toggle("running", running);
-    if (convertInputSection) convertInputSection.style.display = running ? "none" : "";
-    if (convertOutputActions) convertOutputActions.style.display = running ? "" : "none";
-  }
-
-  function openConvertModal() {
-    if (!convertModal) return;
-    const names = heroFileNames();
-    if (convertFiles) {
-      if (names.length === 1) {
-        convertFiles.textContent = "📄 " + names[0];
-      } else {
-        convertFiles.textContent = "📄 " + names.length + " PDF: " + names.join(", ");
-      }
-    }
-    const def = convertModal.querySelector('input[name="convertTarget"][value="excel"]');
-    if (def) def.checked = true;
-    setConvertModalRunning(false);
-    convertModal.classList.add("shown");
-  }
-  function closeConvertModal() {
-    convertModal?.classList.remove("shown");
-    // convertOutputArea kalsın — sonraki açılışta önceki sonuç görünmesin diye
-    // close olunca geri taşı + running state'i sıfırla.
-    relocateOutputBack();
-    // Açıkta kalmış inline dist panel varsa içeriğini distModalBack'e geri al
-    if (typeof window.__distRelocateBack === "function") window.__distRelocateBack();
-    if (typeof window.__cvHideWizard === "function") window.__cvHideWizard();
-    setConvertModalRunning(false);
-  }
-  function newConversion() {
-    // Output panellerini temizle (mevcut handler'lar zaten sonraki iste­ğe göre yenileyecek)
-    relocateOutputBack();
-    if (typeof window.__distRelocateBack === "function") window.__distRelocateBack();
-    if (typeof window.__cvHideWizard === "function") window.__cvHideWizard();
-    setConvertModalRunning(false);
-    // Hero'da hâlâ PDF varsa file listini güncelle
-    const names = heroFileNames();
-    if (convertFiles) {
-      if (names.length === 0) convertFiles.textContent = "";
-      else if (names.length === 1) convertFiles.textContent = "📄 " + names[0];
-      else convertFiles.textContent = "📄 " + names.length + " PDF: " + names.join(", ");
+  // ===== Convert workspace — Dosya sayısı pill + scanned banner senkronu =====
+  function refreshCvwFileCount() {
+    const pill = document.getElementById("cvwFileCountPill");
+    if (!pill) return;
+    const fileInput = document.getElementById("file");
+    const n = fileInput && fileInput.files ? fileInput.files.length : 0;
+    if (n <= 0) {
+      pill.hidden = true;
+    } else {
+      pill.hidden = false;
+      pill.textContent = n === 1 ? "1 PDF" : n + " PDF";
     }
   }
-
-  convertCancel?.addEventListener("click", closeConvertModal);
-  convertCloseAfter?.addEventListener("click", closeConvertModal);
-  convertNewBtn?.addEventListener("click", newConversion);
-  convertModal?.addEventListener("click", (e) => {
-    if (e.target === convertModal) closeConvertModal();
+  document.getElementById("file")?.addEventListener("change", refreshCvwFileCount);
+  document.getElementById("clearFile")?.addEventListener("click", () => {
+    requestAnimationFrame(refreshCvwFileCount);
   });
 
-  convertGo?.addEventListener("click", () => {
-    const target = convertModal.querySelector('input[name="convertTarget"]:checked')?.value;
-    if (!target) return;
-    const formRadio = document.querySelector(`#form input[name="target"][value="${target}"]`);
-    if (formRadio) formRadio.checked = true;
-    relocateOutputToModal();
-    setConvertModalRunning(true);
-    requestAnimationFrame(() => {
-      const form = document.getElementById("form");
-      if (form) form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+  // Scanned PDF tespit edilince per-format banner'ları aç/kapat
+  // (renderPreview'in sonunda çağrılır)
+  window.__cvwSetScannedBanners = function (isScanned) {
+    const ex = document.getElementById("excelScanBanner");
+    const wd = document.getElementById("wordScanBanner");
+    if (ex) ex.hidden = !isScanned;
+    if (wd) wd.hidden = !isScanned;
+    // Scanned ise OCR toggle'larını otomatik aç (bilgilendirici)
+    if (isScanned) {
+      const eo = document.getElementById("excelOcrToggle");
+      const wo = document.getElementById("wordOcrToggle");
+      if (eo) eo.checked = true;
+      if (wo) wo.checked = true;
+    }
+  };
+
+  // Önerilen format rozeti (preview.recommended_format'a göre)
+  window.__cvwSetRecommended = function (fmt) {
+    document.querySelectorAll(".cvw-format").forEach((card) => {
+      const rec = card.querySelector("[data-rec]");
+      if (rec) rec.hidden = card.dataset.fmt !== fmt;
     });
-  });
+  };
+
+  // OCR toggle / JPG quality / JPG DPI değerlerini alma yardımcıları
+  window.__cvwGetSettings = function () {
+    return {
+      excelOcr: !!document.getElementById("excelOcrToggle")?.checked,
+      wordOcr: !!document.getElementById("wordOcrToggle")?.checked,
+      jpgQuality: Number(document.getElementById("jpgQuality")?.value || 90),
+      jpgDpi: Number(document.getElementById("jpgDpi")?.value || 200),
+    };
+  };
 
   // Hero'daki dosya tipine göre Generate alt-tool seçimi (image → from-images vs.)
   const HERO_TYPE_TO_GENERATE_TOOL = {
@@ -7647,7 +8707,7 @@ if ("serviceWorker" in navigator) {
       switch (cat) {
         case "convert":
           if (!heroHasPdf()) { alertNoPdf(); return; }
-          openConvertModal();
+          openConvertWorkspace();
           break;
         case "tools":
           if (!heroHasPdf()) { alertNoPdf(); return; }
@@ -7682,7 +8742,7 @@ if ("serviceWorker" in navigator) {
                 "\"Mevcut Metni Değiştir\" üzerinden span araması yapabilirsin.");
           break;
         default:
-          showConvertShellOutputOnly();
+          openConvertWorkspace();
       }
     });
   });

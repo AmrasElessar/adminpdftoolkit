@@ -43,7 +43,7 @@ from pdf_converter import (
     write_generic_excel,
 )
 from pdf_safety import full_scan as pdf_safety_scan
-from state import ALLOWED_FORMATS, MAX_UPLOAD_MB, convert_store
+from state import ALLOWED_FORMATS, MAX_UPLOAD_MB, batch_store, convert_store
 
 router = APIRouter()
 
@@ -149,11 +149,16 @@ async def convert_start(
     file: UploadFile = File(...),
     target: str = Form(...),
     custom_name: str = Form(""),
+    jpg_quality: int = Form(90),
+    jpg_dpi: int = Form(200),
+    skip_safety: bool = Form(False),
 ) -> dict:
     if target not in {"word", "excel", "jpg"}:
         raise HTTPException(400, f"Geçersiz hedef: {target}")
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Yalnızca PDF dosyaları kabul edilir.")
+    jpg_quality = max(50, min(100, int(jpg_quality)))
+    jpg_dpi = max(72, min(600, int(jpg_dpi)))
 
     job_dir = core.make_job_dir("convert", uuid4().hex)
     pdf_path = job_dir / "input.pdf"
@@ -166,30 +171,37 @@ async def convert_start(
                 raise HTTPException(413, f"Dosya {MAX_UPLOAD_MB} MB sınırını aşıyor.")
             fp.write(chunk)
 
-    try:
-        gate_pdf_safety(pdf_path)
-    except HTTPException:
-        shutil.rmtree(job_dir, ignore_errors=True)
-        raise
-
+    # Safety scan is now done in the worker thread (so it's visible to the
+    # user via SSE progress, and cancellable via /job-skip-safety/...).
     token = uuid4().hex
     convert_store.create(
         token,
         target=target,
-        phase="starting",
+        phase="scanning" if not skip_safety else "starting",
         current=0,
         total=0,
         done=False,
         error=None,
         started_at=time.time(),
         job_dir=str(job_dir),
+        skip_safety=skip_safety,
     )
 
     from pipelines.convert import convert_worker
 
     threading.Thread(
         target=convert_worker,
-        args=(token, pdf_path, target, custom_name, job_dir, file.filename),
+        args=(
+            token,
+            pdf_path,
+            target,
+            custom_name,
+            job_dir,
+            file.filename,
+            jpg_quality,
+            skip_safety,
+            jpg_dpi,
+        ),
         daemon=True,
     ).start()
     return {"token": token, "target": target}
@@ -213,6 +225,7 @@ async def convert_progress(token: str) -> dict:
         "error": job.get("error"),
         "output_name": job.get("output_name"),
         "record_count": job.get("record_count"),
+        "files_safety": job.get("files_safety") or [],
     }
 
 
@@ -312,9 +325,11 @@ def _render_jpg_zip(
     final_stem: str,
     job_dir: Path,
     doc: fitz.Document,
+    jpg_quality: int = 90,
+    jpg_dpi: int = 200,
 ) -> tuple[StreamingResponse, dict[str, Any]]:
     jpg_dir = job_dir / final_stem
-    files = convert_to_jpg(pdf_path, jpg_dir)
+    files = convert_to_jpg(pdf_path, jpg_dir, dpi=jpg_dpi, jpg_quality=jpg_quality)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         for f in files:
@@ -344,11 +359,15 @@ async def convert(
     file: UploadFile = File(...),
     target: str = Form(...),
     custom_name: str = Form(""),
+    jpg_quality: int = Form(90),
+    jpg_dpi: int = Form(200),
 ):
     if target not in ALLOWED_FORMATS:
         raise HTTPException(400, f"Geçersiz format: {target}")
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Yalnızca PDF dosyaları kabul edilir.")
+    jpg_quality = max(50, min(100, int(jpg_quality)))
+    jpg_dpi = max(72, min(600, int(jpg_dpi)))
 
     job_dir = core.make_job_dir()
     pdf_path = job_dir / "input.pdf"
@@ -377,7 +396,12 @@ async def convert(
                     400,
                     "Bu PDF taranmış (metin katmanı yok). 'OCR ile Dene' butonunu kullanın.",
                 )
-            response, _meta = render(pdf_path, out, final_stem, job_dir, doc)
+            if target == "jpg":
+                response, _meta = render(
+                    pdf_path, out, final_stem, job_dir, doc, jpg_quality, jpg_dpi
+                )
+            else:
+                response, _meta = render(pdf_path, out, final_stem, job_dir, doc)
         finally:
             doc.close()
         return response
@@ -428,3 +452,22 @@ async def job_events(kind: str, token: str):
             "Connection": "keep-alive",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# /job-skip-safety/{kind}/{token} — user clicked "Atla" on the scanning UI.
+# Sets skip_safety flag in the appropriate store; the worker checks the flag
+# between files and after a scan exception, treating remaining files as
+# accepted.
+# ---------------------------------------------------------------------------
+@router.post("/job-skip-safety/{kind}/{token}")
+async def job_skip_safety(kind: str, token: str) -> dict:
+    if kind not in {"convert", "batch"}:
+        raise HTTPException(404, "Geçersiz iş türü.")
+    core.check_token(token)
+    store = convert_store if kind == "convert" else batch_store
+    job = store.snapshot(token)
+    if not job:
+        raise HTTPException(404, "İş bulunamadı.")
+    store.update(token, skip_safety=True)
+    return {"ok": True, "skip_safety": True}

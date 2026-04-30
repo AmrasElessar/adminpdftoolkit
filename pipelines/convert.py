@@ -59,16 +59,31 @@ def convert_worker(
     custom_name: str,
     job_dir: Path,
     orig_filename: str,
+    jpg_quality: int = 90,
+    skip_safety: bool = False,
+    jpg_dpi: int = 200,
 ) -> None:
     """Single-PDF convert worker. ``target`` ∈ ``{word, excel, jpg}``."""
     try:
         import fitz as _fitz
 
+        # Phase 1: ClamAV + structural safety scan (cancellable via skip_safety
+        # flag set on the store). Skipped if the request explicitly opted out.
+        if not skip_safety:
+            from pipelines.safety import scan_single_file
+
+            ok, err = scan_single_file(convert_store, token, pdf_path, orig_filename)
+            if not ok:
+                convert_store.update(
+                    token, error=err or "Güvensiz PDF reddedildi.", done=True
+                )
+                return
+
         stem = Path(orig_filename).stem
         safe_custom = core.safe_filename(custom_name.strip()) if custom_name else ""
         final_stem = safe_custom or core.safe_filename(stem)
 
-        convert_store.update(token, phase="preparing")
+        convert_store.update(token, phase="preparing", current=0, last_file=None)
 
         doc = _fitz.open(str(pdf_path))
         total_pages = len(doc)
@@ -82,7 +97,7 @@ def convert_worker(
 
         if target == "jpg":
             convert_store.update(token, phase="rendering")
-            zoom = 200 / 72
+            zoom = jpg_dpi / 72
             mat = _fitz.Matrix(zoom, zoom)
             jpg_dir = job_dir / final_stem
             jpg_dir.mkdir(parents=True, exist_ok=True)
@@ -91,7 +106,7 @@ def convert_worker(
                 for i, page in enumerate(doc):
                     pix = page.get_pixmap(matrix=mat, alpha=False)
                     out = jpg_dir / f"sayfa_{i + 1:03d}.jpg"
-                    pix.save(str(out), jpg_quality=90)
+                    pix.save(str(out), jpg_quality=jpg_quality)
                     pix = None  # release Pixmap eagerly so 100+ page batches don't bloat
                     files.append(out)
                     convert_store.update(token, current=i + 1)
@@ -180,12 +195,54 @@ def batch_files_worker(
     target: str,
     job_dir: Path,
     custom_names: list[str] | None = None,
+    jpg_quality: int = 90,
+    skip_safety: bool = False,
+    jpg_dpi: int = 200,
 ) -> None:
-    """Word/JPG batch worker — produces a single ZIP of converted outputs."""
+    """Word / JPG / Excel per-file batch worker — each PDF produces its own
+    output and they're all bundled into a single ZIP.
+
+    Target ∈ ``{word, jpg, excel}``. For Excel, each PDF is auto-detected:
+    call-log layout → call-log style sheet; otherwise → generic Excel
+    (page-by-page text dump). No skipping, no column mapping required —
+    every PDF gets a usable Excel.
+    """
     try:
+        # Phase 1: per-file safety scan (cancellable). Saved files that fail
+        # are dropped from files_data; the user can also press "Atla" to skip
+        # remaining scans entirely.
+        if not skip_safety:
+            from pipelines.safety import scan_files_with_progress
+
+            ok, err = scan_files_with_progress(batch_store, token, files_data)
+            if not ok:
+                batch_store.update(
+                    token, error=err or "Güvensiz PDF reddedildi.", done=True
+                )
+                return
+
+        # Initialize per-file progress so frontend can render rows immediately
+        files_progress = [
+            {"name": fn, "status": "pending", "kind": None, "kind_label": None,
+             "record_count": 0, "error": None}
+            for fn, _ in files_data
+        ]
         zip_path = job_dir / "_output.zip"
         produced = 0
-        batch_store.update(token, phase="processing")
+        batch_store.update(
+            token,
+            phase="processing",
+            current=0,
+            last_file=None,
+            files_progress=files_progress,
+        )
+        # Accumulator for call-log records across multiple PDFs — when target
+        # is Excel and any of the input PDFs match the call-log layout, we
+        # also produce a single merged "_cagrilar_birlesik.xlsx" inside the
+        # ZIP. Generic / scanned PDFs still get their own per-file Excel.
+        merged_call_log: list[dict] = []
+        merged_call_log_sources: list[str] = []
+
         with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
             for i, (filename, pdf_path) in enumerate(files_data):
                 orig_stem = Path(filename).stem
@@ -195,20 +252,97 @@ def batch_files_worker(
                 stem = core.safe_filename(custom) if custom else core.safe_filename(orig_stem)
                 if not stem:
                     stem = "output"
-                if target == "word":
-                    out = job_dir / f"{stem}.docx"
-                    convert_to_word(pdf_path, out)
-                    zf.write(out, arcname=f"{stem}.docx")
-                    out.unlink(missing_ok=True)
-                else:  # jpg
-                    out_dir = job_dir / stem
-                    jpgs = convert_to_jpg(pdf_path, out_dir)
-                    for j in jpgs:
-                        zf.write(j, arcname=f"{stem}/{j.name}")
-                    shutil.rmtree(out_dir, ignore_errors=True)
-                produced += 1
+
+                files_progress[i]["status"] = "processing"
+                batch_store.update(
+                    token, current=i, last_file=filename, files_progress=files_progress
+                )
+
+                try:
+                    if target == "word":
+                        out = job_dir / f"{stem}.docx"
+                        convert_to_word(pdf_path, out)
+                        zf.write(out, arcname=f"{stem}.docx")
+                        out.unlink(missing_ok=True)
+                        files_progress[i]["kind"] = "word"
+                        files_progress[i]["kind_label"] = "Word belgesi"
+                    elif target == "excel":
+                        # Per-file kind detection. Call-log PDFs are also
+                        # accumulated for the merged sheet at the end.
+                        out = job_dir / f"{stem}.xlsx"
+                        import fitz as _fitz
+
+                        doc = _fitz.open(str(pdf_path))
+                        try:
+                            if is_call_log_pdf(doc):
+                                records = parse_call_log(doc)
+                                write_call_log_excel(records, out)
+                                files_progress[i]["kind"] = "call_log"
+                                files_progress[i]["kind_label"] = "Çağrı kayıtları"
+                                files_progress[i]["record_count"] = len(records)
+                                merged_call_log.extend(records)
+                                merged_call_log_sources.append(filename)
+                            elif is_scanned_pdf(doc):
+                                write_generic_excel(doc, out)
+                                files_progress[i]["kind"] = "scanned"
+                                files_progress[i]["kind_label"] = "Görselden PDF"
+                            else:
+                                kind_label = "Metin belgesi"
+                                try:
+                                    from core.analysis import classify_pdf
+
+                                    cat = classify_pdf(pdf_path).get("category")
+                                    if cat and cat != "diğer":
+                                        kind_label = cat.capitalize()
+                                except Exception:
+                                    pass
+                                write_generic_excel(doc, out)
+                                files_progress[i]["kind"] = "generic"
+                                files_progress[i]["kind_label"] = kind_label
+                        finally:
+                            doc.close()
+                        zf.write(out, arcname=f"{stem}.xlsx")
+                        out.unlink(missing_ok=True)
+                    else:  # jpg
+                        out_dir = job_dir / stem
+                        jpgs = convert_to_jpg(
+                            pdf_path, out_dir, dpi=jpg_dpi, jpg_quality=jpg_quality
+                        )
+                        for j in jpgs:
+                            zf.write(j, arcname=f"{stem}/{j.name}")
+                        shutil.rmtree(out_dir, ignore_errors=True)
+                        files_progress[i]["kind"] = "jpg"
+                        files_progress[i]["kind_label"] = "Sayfa görselleri"
+                    files_progress[i]["status"] = "done"
+                    produced += 1
+                except Exception as inner_exc:
+                    files_progress[i]["status"] = "error"
+                    files_progress[i]["error"] = sanitize_error(inner_exc)
+                    logger.warning("batch-files: %s failed: %s", filename, inner_exc)
+
                 pdf_path.unlink(missing_ok=True)
-                batch_store.update(token, current=i + 1, last_file=filename)
+                batch_store.update(
+                    token,
+                    current=i + 1,
+                    last_file=filename,
+                    files_progress=files_progress,
+                )
+
+            # Bonus output: if we accumulated call-log records from 2+ PDFs,
+            # also write a merged Excel — gives the user the "20 dosya, 5'i
+            # call-log → tek dosyada birleştir" behaviour for free.
+            if target == "excel" and len(merged_call_log_sources) >= 2:
+                merged_out = job_dir / "_cagrilar_birlesik.xlsx"
+                try:
+                    write_call_log_excel(merged_call_log, merged_out)
+                    zf.write(merged_out, arcname="_cagrilar_birlesik.xlsx")
+                    merged_out.unlink(missing_ok=True)
+                    logger.info(
+                        "batch-files: merged %d call-log records from %d PDFs",
+                        len(merged_call_log), len(merged_call_log_sources),
+                    )
+                except Exception as merge_exc:
+                    logger.warning("batch-files merged sheet failed: %s", merge_exc)
 
         zip_name = f"pdfler_{target}_{produced}.zip"
         batch_store.update(

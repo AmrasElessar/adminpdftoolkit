@@ -177,12 +177,45 @@ def _find_clamscan() -> str | None:
 
 
 def clamav_available() -> bool:
+    # Either daemon mode (clamdscan + bundled clamd) or standalone clamscan works
+    try:
+        from core.clamav_daemon import find_clamdscan
+
+        if find_clamdscan() is not None:
+            return True
+    except Exception:
+        pass
     return _find_clamscan() is not None
 
 
 def clamav_scan(pdf_path: Path, timeout: int = 60) -> dict[str, Any] | None:
     """ClamAV ile dosya tara. None döndürürse ClamAV yok demek.
-    Aksi halde {"clean": bool, "threat": str|None, "raw": str}"""
+    Aksi halde {"clean": bool, "threat": str|None, "raw": str}.
+
+    Strategy:
+      1. If clamd daemon is running, use ``clamdscan`` (talks to daemon over
+         TCP) — signatures stay hot in RAM, scan is ~ms.
+      2. If clamd is bundled but not yet running, try to start it.
+      3. Fall back to standalone ``clamscan`` (slow: 5-15 s per scan as it
+         reloads signature DB every invocation).
+    """
+    # --- Daemon path (fast: ~100ms per scan via INSTREAM socket) -----------
+    # Talks to clamd directly over TCP — bypasses clamdscan.exe (which has
+    # Windows ANSI/UTF-8 path encoding problems with Turkish filenames) and
+    # avoids subprocess overhead entirely.
+    try:
+        from core.clamav_daemon import ensure_clamd_running, instream_scan, is_ready
+
+        if is_ready() or ensure_clamd_running(boot_timeout=2.0):
+            result = instream_scan(pdf_path, timeout=float(timeout))
+            if result is not None:
+                return result
+            # instream_scan returned None → daemon returned an unrecognized
+            # response (rare). Fall through to standalone scanner.
+    except Exception:
+        pass
+
+    # --- Standalone fallback (slow: signatures reloaded each invocation) ----
     exe = _find_clamscan()
     if not exe:
         return None
@@ -194,12 +227,10 @@ def clamav_scan(pdf_path: Path, timeout: int = 60) -> dict[str, Any] | None:
             timeout=timeout,
         )
         out = (result.stdout or "") + (result.stderr or "")
-        # Çıktı: "<path>: OK" veya "<path>: <THREAT> FOUND"
-        threat: str | None = None
+        threat = None
         for line in out.splitlines():
             line = line.strip()
             if line.endswith(" FOUND"):
-                # "<path>: <name> FOUND"
                 parts = line.rsplit(":", 1)
                 if len(parts) == 2:
                     name = parts[1].strip()
@@ -207,17 +238,17 @@ def clamav_scan(pdf_path: Path, timeout: int = 60) -> dict[str, Any] | None:
                         name = name[:-6].strip()
                     threat = name
                 break
-        # Exit code: 0 = clean, 1 = infected, 2 = error
         return {
             "clean": result.returncode == 0,
             "threat": threat,
             "exit_code": result.returncode,
+            "engine": "clamscan",
             "raw": out[:1000],
         }
     except subprocess.TimeoutExpired:
-        return {"clean": False, "threat": None, "exit_code": -1, "raw": "timeout"}
+        return {"clean": False, "threat": None, "exit_code": -1, "engine": "clamscan", "raw": "timeout"}
     except Exception as e:
-        return {"clean": True, "threat": None, "exit_code": -2, "raw": f"error: {e}"}
+        return {"clean": True, "threat": None, "exit_code": -2, "engine": "clamscan", "raw": f"error: {e}"}
 
 
 # ----------------------------------------------------------------------------

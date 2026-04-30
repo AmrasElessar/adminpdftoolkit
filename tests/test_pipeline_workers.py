@@ -478,8 +478,9 @@ def test_batch_files_worker_jpg_zips_multiple_pdfs(
 
 
 def test_batch_files_worker_records_error_and_marks_done(tmp_path: Path, fresh_token: str) -> None:
-    """A bad PDF inside the list flips the worker into the error path —
-    error is sanitised, done is set so the polling endpoint can react."""
+    """A bad PDF inside the list is now recorded per-file (not as a fatal
+    batch error) so other files can still be converted. The worker still
+    marks the job done; the bad file is flagged in files_progress."""
     job_dir = tmp_path / "job"
     job_dir.mkdir()
     bad = job_dir / "in_0.pdf"
@@ -498,11 +499,20 @@ def test_batch_files_worker_records_error_and_marks_done(tmp_path: Path, fresh_t
         job_dir=str(job_dir),
     )
 
-    batch_files_worker(fresh_token, [("broken.pdf", bad)], "word", job_dir, custom_names=None)
+    batch_files_worker(
+        fresh_token, [("broken.pdf", bad)], "word", job_dir,
+        custom_names=None, skip_safety=True,
+    )
 
     snap = batch_store.snapshot(fresh_token)
     assert snap["done"] is True
-    assert snap["error"] is not None
+    # Per-file failure: other files would keep going. The job-level error is
+    # now empty; failure is recorded in files_progress instead.
+    fp = snap.get("files_progress") or []
+    assert len(fp) == 1
+    assert fp[0]["status"] == "error"
+    assert fp[0]["error"] is not None
+    assert snap.get("produced", 0) == 0
 
 
 def test_batch_files_worker_honours_custom_names(

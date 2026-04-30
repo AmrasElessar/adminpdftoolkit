@@ -176,11 +176,16 @@ async def batch_files(
     files: list[UploadFile] = File(...),
     target: str = Form(...),
     names: str = Form("[]"),
+    jpg_quality: int = Form(90),
+    jpg_dpi: int = Form(200),
+    skip_safety: bool = Form(False),
 ) -> dict:
-    if target not in {"word", "jpg"}:
-        raise HTTPException(400, f"Bu endpoint Word/JPG içindir: {target}")
+    if target not in {"word", "jpg", "excel"}:
+        raise HTTPException(400, f"Geçersiz hedef: {target}")
     if not files:
         raise HTTPException(400, "En az bir PDF gerekli.")
+    jpg_quality = max(50, min(100, int(jpg_quality)))
+    jpg_dpi = max(72, min(600, int(jpg_dpi)))
 
     try:
         custom_names: list[str] = [str(x) for x in json.loads(names or "[]")]
@@ -195,37 +200,33 @@ async def batch_files(
             continue
         p = job_dir / f"in_{idx}.pdf"
         await core.save_upload(f, p)
-        try:
-            gate_pdf_safety(p)
-        except HTTPException as e:
-            shutil.rmtree(job_dir, ignore_errors=True)
-            raise HTTPException(
-                e.status_code,
-                f"{f.filename}: {e.detail}",
-                headers=e.headers,
-            ) from e
         files_data.append((f.filename, p))
 
     if not files_data:
         shutil.rmtree(job_dir, ignore_errors=True)
         raise HTTPException(400, "Geçerli PDF bulunamadı.")
 
+    # Safety scan is now done in the worker thread (visible via SSE, cancellable).
     token = uuid4().hex
     batch_store.create(
         token,
         type="files",
         target=target,
-        phase="starting",
+        phase="scanning" if not skip_safety else "starting",
         current=0,
         total=len(files_data),
         done=False,
         error=None,
         started_at=time.time(),
         job_dir=str(job_dir),
+        skip_safety=skip_safety,
     )
     threading.Thread(
         target=batch_files_worker,
-        args=(token, files_data, target, job_dir, custom_names),
+        args=(
+            token, files_data, target, job_dir, custom_names,
+            jpg_quality, skip_safety, jpg_dpi,
+        ),
         daemon=True,
     ).start()
     return {"token": token, "type": "files", "total": len(files_data)}
@@ -250,6 +251,7 @@ async def batch_progress(token: str) -> dict:
         "error": job.get("error"),
         "last_file": job.get("last_file"),
         "files_progress": job.get("files_progress") or [],
+        "files_safety": job.get("files_safety") or [],
     }
     if job.get("done") and job.get("type") == "convert":
         out["result"] = job.get("result")
@@ -310,6 +312,7 @@ async def batch_convert(
     files: list[UploadFile] = File(...),
     mappings: str = Form("{}"),
     skip: str = Form("[]"),
+    skip_safety: bool = Form(False),
 ) -> dict:
     if not files:
         raise HTTPException(400, "En az bir PDF gerekli.")
@@ -351,36 +354,38 @@ async def batch_convert(
             continue
         p = job_dir / f"in_{idx}.pdf"
         await core.save_upload(f, p)
-        try:
-            gate_pdf_safety(p)
-        except HTTPException as e:
-            shutil.rmtree(job_dir, ignore_errors=True)
-            raise HTTPException(
-                e.status_code,
-                f"{f.filename}: {e.detail}",
-                headers=e.headers,
-            ) from e
         files_data.append((f.filename, p))
 
     if not files_data:
         shutil.rmtree(job_dir, ignore_errors=True)
         raise HTTPException(400, "Geçerli PDF bulunamadı.")
 
+    # Safety scan moved into the worker so the user sees per-file scanning
+    # progress and can cancel via /job-skip-safety/{kind}/{token}.
     progress_token = uuid4().hex
     batch_store.create(
         progress_token,
         type="convert",
-        phase="starting",
+        phase="scanning" if not skip_safety else "starting",
         current=0,
         total=len(files_data),
         done=False,
         error=None,
         started_at=time.time(),
         job_dir=str(job_dir),
+        skip_safety=skip_safety,
     )
     threading.Thread(
         target=batch_convert_worker,
-        args=(progress_token, files_data, mappings_obj, skip_list, job_token, len(files)),
+        args=(
+            progress_token,
+            files_data,
+            mappings_obj,
+            skip_list,
+            job_token,
+            len(files),
+            skip_safety,
+        ),
         daemon=True,
     ).start()
     return {"token": progress_token, "type": "convert", "total": len(files_data)}

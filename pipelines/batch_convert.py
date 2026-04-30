@@ -243,6 +243,7 @@ def batch_convert_worker(
     skip_list: list[str],
     job_token: str,
     file_count: int,
+    skip_safety: bool = False,
 ) -> None:
     """Excel-merge worker. Parses every (non-skipped) PDF in parallel via a
     ``ProcessPoolExecutor`` when ``settings.parallel_batch_workers`` allows
@@ -256,6 +257,21 @@ def batch_convert_worker(
     warnings: list[str] = []
     target_schema = list(getattr(core, "TARGET_SCHEMA", []))
     try:
+        # Phase 0: per-file safety scan (cancellable). Pre-conversion gate
+        # used to be in the request handler; doing it here keeps the user
+        # informed via SSE and lets them press "Atla" to skip remaining.
+        if not skip_safety:
+            from pipelines.safety import scan_files_with_progress
+
+            scan_targets = [(fn, p) for fn, p in files_data if fn not in skip_list]
+            if scan_targets:
+                ok, err = scan_files_with_progress(batch_store, token, scan_targets)
+                if not ok:
+                    batch_store.update(
+                        token, error=err or "Güvensiz PDF reddedildi.", done=True
+                    )
+                    return
+
         files_progress = [
             {
                 "name": fn,

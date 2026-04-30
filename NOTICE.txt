@@ -77,6 +77,26 @@ dosyasına bakınız.
 This software includes open-source libraries distributed under
 their own licenses. See THIRD_PARTY_LICENSES.md for details.
 
+----------------------------------------------------------------
+TİCARİ MARKA BİLDİRİMLERİ / TRADEMARK NOTICES
+----------------------------------------------------------------
+
+Bu yazılım, açık kaynak ClamAV® antivirüs motorunu (Cisco Systems
+Inc. tarafından sahip olunan ve tescilli ticari marka) GNU GPL v2
+lisansı altında dahil etmektedir.
+
+  ClamAV® is a registered trademark of Cisco Systems, Inc.
+  https://www.clamav.net/
+
+ClamAV ürün ile birlikte sunulmaktadır ancak Cisco Systems Inc.
+tarafından desteklenmemekte veya onaylanmamaktadır. ClamAV ile
+ilgili tüm hakları sahibine aittir.
+
+This software bundles the open-source ClamAV® antivirus engine
+(a registered trademark owned by Cisco Systems, Inc.) under the
+GNU GPL v2 license. ClamAV is included as-is and is not endorsed
+or supported by Cisco Systems, Inc.
+
 ================================================================
 End of Notice / Bildirim Sonu
 ================================================================

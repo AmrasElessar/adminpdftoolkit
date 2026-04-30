@@ -207,7 +207,9 @@ def ocr_pdf_pages(pdf_path: Path, dpi: int = 200) -> list[str]:
     return out
 
 
-def convert_to_jpg(pdf_path: Path, out_dir: Path, dpi: int = 200) -> list[Path]:
+def convert_to_jpg(
+    pdf_path: Path, out_dir: Path, dpi: int = 200, jpg_quality: int = 90
+) -> list[Path]:
     out_dir.mkdir(parents=True, exist_ok=True)
     zoom = dpi / 72
     mat = fitz.Matrix(zoom, zoom)
@@ -217,7 +219,7 @@ def convert_to_jpg(pdf_path: Path, out_dir: Path, dpi: int = 200) -> list[Path]:
         for i, page in enumerate(doc, 1):
             pix = page.get_pixmap(matrix=mat, alpha=False)
             out = out_dir / f"sayfa_{i:03d}.jpg"
-            pix.save(str(out), jpg_quality=90)
+            pix.save(str(out), jpg_quality=jpg_quality)
             pix = None  # release Pixmap eagerly between pages
             written.append(out)
     finally:

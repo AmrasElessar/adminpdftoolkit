@@ -59,9 +59,14 @@ Bu kütüphanelerin kullanımı, ana yazılımı da AGPL-3.0 altında dağıtmam
 |---|---|---|---|
 | [PyMuPDF](https://github.com/pymupdf/PyMuPDF) (fitz) | **AGPL-3.0** | Hızlı PDF işleme | 1.27 |
 | [pdf2docx](https://github.com/dothinking/pdf2docx) | **GPL-3.0** | PDF → Word dönüşüm | 0.5 |
+| [ClamAV®](https://www.clamav.net/) | **GPL-2.0** | Antivirüs taraması (clamd daemon + INSTREAM) | 1.x |
 
 > **Not:** Permissive lisansa geçilmek istenirse bu iki kütüphane alternatifleriyle değiştirilebilir
 > (PyMuPDF → pypdfium2; pdf2docx → manuel docx üretimi).
+
+> **ClamAV® Ticari Marka Bildirimi:** ClamAV, Cisco Systems, Inc.'in tescilli
+> ticari markasıdır. Bu yazılım ClamAV motorunu içermekte olup Cisco Systems
+> Inc. tarafından desteklenmemekte veya onaylanmamaktadır.
 
 ## Çalışma Zamanı
 

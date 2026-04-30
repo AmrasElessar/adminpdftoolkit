@@ -116,7 +116,13 @@ def test_assert_safe_uses_settings_when_policy_omitted(
 # clamav_scan / pdfid_scan / mpcmdrun_scan — missing tool fallback
 # ---------------------------------------------------------------------------
 def test_clamav_returns_none_when_missing(monkeypatch: pytest.MonkeyPatch, clean_pdf: Path) -> None:
+    # Disable both the daemon path (clamd INSTREAM) and the standalone path —
+    # this asserts the "no antivirus available at all" semantics.
+    from core import clamav_daemon
+
     monkeypatch.setattr(pdf_safety, "_find_clamscan", lambda: None)
+    monkeypatch.setattr(clamav_daemon, "is_ready", lambda: False)
+    monkeypatch.setattr(clamav_daemon, "ensure_clamd_running", lambda **kw: False)
     assert clamav_scan(clean_pdf) is None
 
 
@@ -128,6 +134,11 @@ def test_pdfid_returns_none_when_missing(monkeypatch: pytest.MonkeyPatch, clean_
 def test_clamav_timeout_returns_unsafe(monkeypatch: pytest.MonkeyPatch, clean_pdf: Path) -> None:
     """A clamscan TimeoutExpired must not raise; it must return a structured
     dict so the caller can decide what to do."""
+    from core import clamav_daemon
+
+    # Disable daemon path so the standalone branch is exercised.
+    monkeypatch.setattr(clamav_daemon, "is_ready", lambda: False)
+    monkeypatch.setattr(clamav_daemon, "ensure_clamd_running", lambda **kw: False)
     monkeypatch.setattr(pdf_safety, "_find_clamscan", lambda: "clamscan")
 
     def fake_run(*args, **kwargs):
@@ -144,6 +155,11 @@ def test_clamav_malformed_output_does_not_crash(
     monkeypatch: pytest.MonkeyPatch, clean_pdf: Path
 ) -> None:
     """Garbage stdout is ignored; the scan resolves with the exit code."""
+    from core import clamav_daemon
+
+    # Disable daemon path so the standalone branch is exercised.
+    monkeypatch.setattr(clamav_daemon, "is_ready", lambda: False)
+    monkeypatch.setattr(clamav_daemon, "ensure_clamd_running", lambda **kw: False)
     monkeypatch.setattr(pdf_safety, "_find_clamscan", lambda: "clamscan")
 
     fake_result = SimpleNamespace(returncode=0, stdout="!!!nonsense!!!", stderr="")

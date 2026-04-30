@@ -136,6 +136,26 @@ def _maybe_update_clamav() -> None:
         logger.debug("clamav refresh skipped: %s", e)
 
 
+def _start_clamd_after_signatures() -> None:
+    """Wait for freshclam to land the signature DB, then spawn clamd daemon.
+
+    Daemon mode keeps signatures resident in RAM, dropping per-scan overhead
+    from 5-15 s (clamscan reloads DB every call) to ~100 ms (clamdscan talks
+    to a hot daemon over loopback TCP).
+    """
+    try:
+        from core.clamav_daemon import ensure_clamd_running
+
+        # Give freshclam a head start on cold boot. ensure_clamd_running()
+        # gracefully returns False if the DB isn't there yet, and the next
+        # actual scan will retry.
+        import time as _t
+        _t.sleep(3.0)
+        ensure_clamd_running(boot_timeout=25.0)
+    except Exception as e:
+        logger.debug("clamd autostart skipped: %s", e)
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
     logger.info("Admin PDF Toolkit v%s starting", __version__)
@@ -144,10 +164,16 @@ async def _lifespan(_app: FastAPI):
     threading.Thread(target=core.cleanup_loop, daemon=True).start()
     threading.Thread(target=_prewarm_caches, daemon=True).start()
     threading.Thread(target=_maybe_update_clamav, daemon=True).start()
+    threading.Thread(target=_start_clamd_after_signatures, daemon=True).start()
     if settings.preload_ocr_model:
         threading.Thread(target=core.preload_ocr_in_background, daemon=True).start()
     yield
     logger.info("Admin PDF Toolkit shutting down")
+    try:
+        from core.clamav_daemon import stop_clamd
+        stop_clamd()
+    except Exception as e:
+        logger.debug("clamd stop on shutdown: %s", e)
 
 
 app = FastAPI(
