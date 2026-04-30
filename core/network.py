@@ -31,8 +31,8 @@ def client_ip(request: Request) -> str:
     if trusted and direct in trusted:
         fwd = request.headers.get("x-forwarded-for")
         if fwd:
-            return fwd.split(",")[0].strip()
-    return direct
+            return str(fwd.split(",")[0].strip())
+    return str(direct)
 
 
 def is_local_request(request: Request) -> bool:
