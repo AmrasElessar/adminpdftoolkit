@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security — full audit sweep (2026-05-10)
+
+Triggered by `SECURITY_AUDIT_2026_05_10.md`; closes ~20 issues beyond
+the four documented in the Chrome extension roadmap. 394 tests still
+green; one Windows-admin-only symlink test skipped.
+
+#### Cross-origin / SSRF / LFI
+- `/pdf/from-url` redirect bypass closed — every 301/302 target is
+  re-validated through `_assert_public_url`; URL basic-auth rejected;
+  response body capped at 50 MB.
+- `/pdf/from-html` body capped at 10 MB (was the upload limit, i.e.
+  ~2 GB before the cap drop).
+- `xhtml2pdf` `link_callback` now strict: only `ht-font://` and
+  `data:` schemes resolve; `file:///etc/passwd`, external `http://`
+  return empty (defense against LFI through `<img src=…>` in
+  attacker-supplied HTML).
+- `save_pdf_upload` runs `gate_pdf_safety` by default — closes 30+
+  `/pdf/*` and `/pdf/edit/*` endpoints that previously bypassed the
+  safety scanner.
+
+#### CSRF
+- `/admin/enable-mobile`, `/admin/disable-mobile`,
+  `/admin/clamav-update`, and `DELETE /history` now require an
+  Origin/Referer matching the server's own host; blocks the
+  cross-origin POST-from-evil-site attack against the operator's
+  loopback session.
+- Mobile token migrated from `?key=` URL parameter to `#key=` URL
+  fragment — fragments never reach the server, never log, never
+  appear in referer headers. `?key=` fallback dropped from
+  middleware. Existing JS already captures the bootstrap token from
+  the URL into `localStorage`.
+
+#### Path traversal / DoS
+- `make_job_dir` hardened in three layers: explicit separator/`..`
+  reject, pre-`mkdir` resolve+containment check (avoids leftover
+  directories from rejected probes), post-`mkdir` symlink check
+  (guards against TOCTOU symlink races).
+- `routers/batch.py` token-taking endpoints validate `check_token`
+  before touching the filesystem.
+- `parse_int_list` capped at 100 000 entries (defends against
+  `1-99999999` style page lists OOMing the worker).
+- Bounded background-worker concurrency via `submit_worker` /
+  `HT_MAX_INFLIGHT_JOBS` (default 4); saturation returns 503 instead
+  of unbounded thread spawn.
+
+#### Authn / info disclosure
+- `/health` returns only `{ok: true}` to unauthenticated remote
+  callers; version + telemetry restricted to loopback / mobile-token
+  callers.
+- `pdfid.py` is now invoked through `sys.executable` (PATH-poisoning
+  defense).
+- `HT_LOOPBACK_BYPASS=false` setting for reverse-proxy deployments
+  where the proxy connects via 127.0.0.1 and would otherwise hide
+  every remote client from the auth middleware.
+
+#### Crypto / cert
+- Self-signed cert: `datetime.now(timezone.utc)` (replaces deprecated
+  `utcnow`); validity reduced 5 y → 1 y; auto-rotates when fewer than
+  30 days remain; key file is `chmod 0600` on POSIX.
+
+#### Hardening defaults
+- Default `MAX_UPLOAD_MB` lowered 2048 → 200 (raise via
+  `HT_MAX_UPLOAD_MB`).
+- `safe_filename` adds NFKC normalisation + control-char strip.
+- `extract_images` capped (50 MB / image, 200 MB / job),
+  `pdf_to_csv` at 100 k rows, `pdf_to_markdown` at 50 MB.
+- Baseline browser headers on every response:
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy: no-referrer`,
+  `Cross-Origin-Opener-Policy: same-origin`.
+
+### Added
+- `CHROME_EXTENSION_ROADMAP.md` — deferred plan for a Manifest V3
+  browser extension that bridges the operator's browser to the
+  locally-running app via `localhost`.
+
 ## [1.11.0] - 2026-04-28 — `core/` package, perf pass, ClamAV bundling
 
 ### Added — ClamAV bundled-and-self-installing

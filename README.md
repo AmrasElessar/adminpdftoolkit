@@ -45,12 +45,18 @@ Portable Paket.bat        REM tek menüden: build · update · 7z · SFX-EXE
 Bu projenin asıl tasarım önceliği — KVKK'lı kurumsal ortamlara uygun:
 
 - **Çevrimdışı çalışır.** Yüklenen dosya makineden çıkmaz; OCR modeli ilk kullanımda yerele indirilir, sonra internet bile gerekmez.
-- **Çok katmanlı PDF güvenlik tarayıcısı.** Yapısal scanner (`/JavaScript`, `/OpenAction`, `/Launch` vb. işaretleri arar) + opsiyonel ClamAV + Windows Defender (`MpCmdRun.exe`). Politika `HT_SAFETY_POLICY=off|warn|block_danger` ile kontrol edilir, varsayılan **block_danger**.
-- **SSRF guard:** URL→PDF dönüşümünde private/loopback/link-local hedefler reddedilir.
-- **XFF guard:** `X-Forwarded-For` yalnızca güvenilir proxy'lerden (`HT_TRUSTED_PROXIES`) kabul edilir; default'ta header tamamen yok sayılır.
-- **Symlink defense:** Tüm iş klasörleri tek bir `make_job_dir` kapısından açılır, work-dir'in dışına çıkmaya çalışan symlink'ler reddedilir.
-- **Mobil-auth middleware:** Loopback dışındaki istemciler tek seferlik token ile geçer; token sabit zamanlı (`hmac.compare_digest`) doğrulanır.
+- **Çok katmanlı PDF güvenlik tarayıcısı.** Yapısal scanner (`/JavaScript`, `/OpenAction`, `/Launch` vb. işaretleri arar — büyük dosyalarda full-file taraması) + opsiyonel ClamAV + Windows Defender (`MpCmdRun.exe`). Politika `HT_SAFETY_POLICY=off|warn|block_danger` ile kontrol edilir, varsayılan **block_danger**. Tüm `/pdf/*` endpoint'leri varsayılan olarak güvenlik gate'inden geçer.
+- **SSRF guard:** URL→PDF dönüşümünde private/loopback/link-local hedefler reddedilir; **her HTTP redirect ayrıca doğrulanır** (saldırgan domain → 127.0.0.1 redirect bypass'ı kapalı), yanıt gövdesi 50 MB ile sınırlı, URL içinde basic-auth kabul edilmez.
+- **HTML→PDF LFI guard:** `xhtml2pdf` link callback yalnızca `ht-font://` ve `data:` şemalarını çözer; `file:///etc/passwd` / `http://internal/` gibi URI'ler reddedilir.
+- **Cross-origin CSRF guard:** Mutating admin endpoint'lerinde (`/admin/enable-mobile`, `/admin/disable-mobile`, `/admin/clamav-update`, `DELETE /history`) Origin/Referer doğrulaması — operatörün tarayıcısındaki kötü niyetli sayfa loopback'e POST atamaz.
+- **Path-traversal defense:** `make_job_dir` üç katmanlı (separator reddi → pre-mkdir resolve check → post-mkdir symlink check); user-controlled token'larla disk-fill DoS engellenir.
+- **XFF guard:** `X-Forwarded-For` yalnızca güvenilir proxy'lerden (`HT_TRUSTED_PROXIES`) kabul edilir; default'ta header tamamen yok sayılır. Reverse-proxy senaryosu için `HT_LOOPBACK_BYPASS=false` ile loopback bypass'ı kapatılabilir.
+- **Mobil-auth middleware:** Token URL fragment'ında (`#key=`) iletilir — server'a hiç ulaşmaz, log'lara/referer'a sızmaz; sonraki istekler `X-Mobile-Key` header'ı taşır. Sabit zamanlı (`hmac.compare_digest`) doğrulama.
+- **Bounded concurrency:** Aynı anda en fazla `HT_MAX_INFLIGHT_JOBS` (default 4) ağır iş paralel çalışır; saturasyonda 503 döner. Default upload limiti 200 MB (`HT_MAX_UPLOAD_MB` ile arttırılabilir).
+- **Browser hardening header'ları:** `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, `Cross-Origin-Opener-Policy: same-origin` her cevapta.
 - **Çıktı sanitization:** Hata mesajlarında mutlak path / kullanıcı dizini sızmaz.
+
+> 2026-05 audit raporu: [`SECURITY_AUDIT_2026_05_10.md`](SECURITY_AUDIT_2026_05_10.md) — kapsamlı tarama + ayrıntılı bulgu listesi.
 
 #### Bağımsız Güvenlik Doğrulaması
 
@@ -113,7 +119,7 @@ pdf_converter.py   # Çekirdek dönüşüm fonksiyonları
 pdf_safety.py     # Yapısal + ClamAV + Defender PDF güvenlik tarayıcısı
 templates/         # index.html (vanilla TR/EN)
 static/            # PWA manifest, ikonlar, fonts, pdf.js, sw.js
-tests/             # 379 test, ~%66 coverage
+tests/             # 394 test, ~%66 coverage
 scripts/           # setup_editor_assets.py, check_packaging.py
 build_portable.py  # Portable build script
 Dockerfile         # Multi-stage prod image
@@ -206,18 +212,43 @@ sensitive in-house deployments:
 - **Runs offline.** Uploaded files never leave the machine; the OCR
   model is downloaded on first use, after that no internet is required.
 - **Multi-layered PDF safety scanner.** Structural scanner (`/JavaScript`,
-  `/OpenAction`, `/Launch` markers) plus optional ClamAV and Windows
-  Defender (`MpCmdRun.exe`). Policy via `HT_SAFETY_POLICY=off|warn|block_danger`,
-  default **block_danger**.
-- **SSRF guard:** URL→PDF refuses private/loopback/link-local targets.
+  `/OpenAction`, `/Launch` markers — full-file scan even on large PDFs)
+  plus optional ClamAV and Windows Defender (`MpCmdRun.exe`). Policy via
+  `HT_SAFETY_POLICY=off|warn|block_danger`, default **block_danger**.
+  Every `/pdf/*` endpoint runs the safety gate by default.
+- **SSRF guard:** URL→PDF refuses private/loopback/link-local targets;
+  **every HTTP redirect is re-validated** (closes the attacker-domain →
+  127.0.0.1 redirect bypass), response body capped at 50 MB, basic-auth
+  in URLs is rejected.
+- **HTML→PDF LFI guard:** `xhtml2pdf` link callback resolves only
+  `ht-font://` and `data:` schemes; `file:///etc/passwd` /
+  `http://internal/` URIs are dropped.
+- **Cross-origin CSRF guard:** Mutating admin endpoints
+  (`/admin/enable-mobile`, `/admin/disable-mobile`,
+  `/admin/clamav-update`, `DELETE /history`) require an Origin/Referer
+  matching the server — a hostile page in the operator's own browser
+  cannot drive them.
+- **Path-traversal defense:** `make_job_dir` is three-layered (separator
+  reject → pre-mkdir resolve → post-mkdir symlink check); user-supplied
+  tokens cannot trigger disk-fill DoS via crafted directory names.
 - **XFF guard:** `X-Forwarded-For` is honoured only from trusted proxies
-  (`HT_TRUSTED_PROXIES`); empty by default → header always ignored.
-- **Symlink defense:** Every job directory is opened through a single
-  `make_job_dir` gate; symlinks escaping the work directory are refused.
-- **Mobile-auth middleware:** Non-loopback clients pass with a
-  one-shot token; comparison is constant-time (`hmac.compare_digest`).
+  (`HT_TRUSTED_PROXIES`); empty by default → header always ignored. For
+  reverse-proxy deployments, set `HT_LOOPBACK_BYPASS=false` to disable
+  the loopback auth bypass.
+- **Mobile-auth middleware:** Token is conveyed via URL fragment
+  (`#key=`) — never reaches the server, never leaks via logs/referer;
+  subsequent requests carry an `X-Mobile-Key` header. Comparison is
+  constant-time (`hmac.compare_digest`).
+- **Bounded concurrency:** At most `HT_MAX_INFLIGHT_JOBS` (default 4)
+  heavy workers run in parallel; saturation returns 503. Upload cap
+  defaults to 200 MB (raise via `HT_MAX_UPLOAD_MB`).
+- **Baseline browser headers:** `X-Content-Type-Options: nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
+  `Cross-Origin-Opener-Policy: same-origin` on every response.
 - **Output sanitisation:** Error messages strip absolute paths and user
   directories before leaving the server.
+
+> 2026-05 audit report: [`SECURITY_AUDIT_2026_05_10.md`](SECURITY_AUDIT_2026_05_10.md) — full scan + detailed findings.
 
 #### Independent Security Verification
 
