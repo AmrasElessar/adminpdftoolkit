@@ -32,6 +32,7 @@ import core
 from app_http import (
     cleanup_task,
     file_response_with_name,
+    gate_pdf_safety,
     parse_color,
     parse_int_list,
     pdf_job_dir,
@@ -743,6 +744,9 @@ async def pdf_from_xlsx_endpoint(
         raise HTTPException(400, sanitize_error(e)) from e
 
 
+_FROM_HTML_MAX_BYTES = 10 * 1024 * 1024
+
+
 @router.post("/pdf/from-html", response_model=None)
 async def pdf_from_html_endpoint(
     request: Request,
@@ -751,10 +755,12 @@ async def pdf_from_html_endpoint(
 ):
     if not html.strip():
         raise HTTPException(400, "HTML içeriği boş.")
-    from state import MAX_UPLOAD_MB
 
-    if len(html.encode("utf-8")) > MAX_UPLOAD_MB * 1024 * 1024:
-        raise HTTPException(413, f"HTML içeriği {MAX_UPLOAD_MB} MB sınırını aşıyor.")
+    if len(html.encode("utf-8")) > _FROM_HTML_MAX_BYTES:
+        raise HTTPException(
+            413,
+            f"HTML içeriği {_FROM_HTML_MAX_BYTES // (1024 * 1024)} MB sınırını aşıyor.",
+        )
     job_dir = pdf_job_dir()
     try:
         out_path = job_dir / f"{core.safe_filename(output_name) or 'document'}.pdf"

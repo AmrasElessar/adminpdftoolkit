@@ -189,6 +189,13 @@ def find_text(
 
 
 # ----- Image extraction ----------------------------------------------------
+# Per-image and total-output ceilings for ``extract_images``. A malicious
+# PDF embedding one giant image (or many medium ones) would otherwise let
+# a small upload amplify into hundreds of MB on disk + RAM.
+_EXTRACT_IMAGE_PER_FILE_MAX_BYTES = 50 * 1024 * 1024  # 50 MB / single image
+_EXTRACT_IMAGE_TOTAL_MAX_BYTES = 200 * 1024 * 1024  # 200 MB / job
+
+
 def extract_images(
     input_path: Path,
     output_dir: Path,
@@ -202,18 +209,27 @@ def extract_images(
     "xref"}``. Images smaller than ``min_size`` × ``min_size`` (decorative
     icons / glyph fragments) are skipped. ``page=None`` walks every page;
     pass a 1-indexed integer to limit to one page.
+
+    Per-image and total-output sizes are capped (see
+    ``_EXTRACT_IMAGE_*_MAX_BYTES``); oversized images are dropped with a
+    debug log entry, and extraction stops early once the total cap is hit.
     """
     import fitz
 
     output_dir.mkdir(parents=True, exist_ok=True)
     out: list[dict[str, Any]] = []
+    total_bytes = 0
     with fitz.open(str(input_path)) as doc:
         if doc.is_encrypted and not doc.authenticate(""):
             raise ValueError("Şifreli PDF — önce şifreyi kaldırın.")
         seen: set[int] = set()  # dedupe shared xrefs (logos repeated across pages)
         page_iter = [(page - 1, doc[page - 1])] if page is not None else list(enumerate(doc))
         for pno, p in page_iter:
+            if total_bytes >= _EXTRACT_IMAGE_TOTAL_MAX_BYTES:
+                break
             for idx, img_info in enumerate(p.get_images(full=True)):
+                if total_bytes >= _EXTRACT_IMAGE_TOTAL_MAX_BYTES:
+                    break
                 xref = img_info[0]
                 if xref in seen:
                     continue
@@ -230,6 +246,22 @@ def extract_images(
                     out_path = output_dir / filename
                     pix.save(str(out_path))
                     pix = None
+                    try:
+                        size = out_path.stat().st_size
+                    except OSError:
+                        size = 0
+                    if size > _EXTRACT_IMAGE_PER_FILE_MAX_BYTES:
+                        logger.debug(
+                            "extract_images: xref %s exceeds per-image cap (%d bytes)",
+                            xref,
+                            size,
+                        )
+                        try:
+                            out_path.unlink()
+                        except OSError:
+                            pass
+                        continue
+                    total_bytes += size
                     out.append(
                         {
                             "page": pno + 1,

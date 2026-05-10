@@ -134,6 +134,7 @@ from .jobs import (
 from .logging_setup import logger, setup_logging
 from .network import (
     LOCAL_HOSTS,
+    assert_same_origin,
     client_ip,
     ensure_self_signed_cert,
     is_local_request,

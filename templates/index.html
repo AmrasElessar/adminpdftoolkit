@@ -7364,17 +7364,54 @@ if ("serviceWorker" in navigator) {
     } catch (e) { /* private mode */ }
   }
 
-  // 1) Capture ?key=… from the initial URL and clean it.
+  // 1) Capture the mobile token from the initial URL and clean it.
+  //
+  //    Preferred channel: ``#key=…`` URL fragment. Browsers never forward
+  //    fragments to the server, so the token doesn't show up in access
+  //    logs, referer headers, or the share-sheet preview. Strip it
+  //    immediately via history.replaceState and stash it in localStorage.
+  //
+  //    Legacy ``?key=…`` query-string is also captured for older QR codes
+  //    minted before the fragment migration; the server middleware no
+  //    longer accepts ``?key=`` so this only helps if the page is visited
+  //    while still public, but stripping it from the URL bar is still
+  //    polite. New clients should always receive a ``#key=`` link.
   (function captureKeyFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const key = params.get("key");
-    if (key) {
-      setMobileKey(key);
-      params.delete("key");
-      const q = params.toString();
-      const newUrl = window.location.pathname + (q ? "?" + q : "") + window.location.hash;
-      try { window.history.replaceState({}, "", newUrl); } catch (e) {}
+    let captured = "";
+    // Fragment first (preferred, leak-free).
+    if (window.location.hash) {
+      const hashStr = window.location.hash.startsWith("#")
+        ? window.location.hash.slice(1)
+        : window.location.hash;
+      const hashParams = new URLSearchParams(hashStr);
+      const fragKey = hashParams.get("key");
+      if (fragKey) {
+        captured = fragKey;
+        hashParams.delete("key");
+        const remaining = hashParams.toString();
+        const newHash = remaining ? "#" + remaining : "";
+        try {
+          window.history.replaceState(
+            {},
+            "",
+            window.location.pathname + window.location.search + newHash
+          );
+        } catch (e) {}
+      }
     }
+    // Backward-compat ``?key=`` query string.
+    if (!captured) {
+      const params = new URLSearchParams(window.location.search);
+      const key = params.get("key");
+      if (key) {
+        captured = key;
+        params.delete("key");
+        const q = params.toString();
+        const newUrl = window.location.pathname + (q ? "?" + q : "") + window.location.hash;
+        try { window.history.replaceState({}, "", newUrl); } catch (e) {}
+      }
+    }
+    if (captured) setMobileKey(captured);
   })();
 
   // 2) Wrap fetch — inject X-Mobile-Key header on every request that has one.

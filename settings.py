@@ -46,12 +46,28 @@ class Settings(BaseSettings):
     host: str = Field(default="0.0.0.0", description="Bind address")
     port: int = Field(default=8000, ge=1, le=65535, description="Listen port")
     https: bool = Field(default=False, description="Enable self-signed HTTPS at startup")
+    loopback_bypass: bool = Field(
+        default=True,
+        description=(
+            "When True (default), requests from 127.0.0.1 / ::1 / localhost "
+            "skip the mobile-auth check (operator's own browser). Set to "
+            "False (HT_LOOPBACK_BYPASS=false) when running behind a reverse "
+            "proxy that connects to the app via loopback — otherwise every "
+            "remote client becomes 'local' and bypasses authentication."
+        ),
+    )
 
     # ----- Upload limits -----
     max_upload_mb: int = Field(
-        default=2048,
+        default=200,
         ge=1,
-        description="Per-file upload cap in megabytes (rejected with 413 above this)",
+        description=(
+            "Per-file upload cap in megabytes (rejected with 413 above this). "
+            "Default 200 MB covers typical PDFs comfortably; operators handling "
+            "huge scans can raise via HT_MAX_UPLOAD_MB. Note: combined with the "
+            "thread pool, a 2 GB cap is a quick disk-fill DoS — keep this "
+            "modest unless you really need it."
+        ),
     )
 
     # ----- Working directories -----

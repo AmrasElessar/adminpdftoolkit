@@ -65,9 +65,18 @@ def cleanup_task(job_dir: Path) -> BackgroundTask:
     return BackgroundTask(_rm)
 
 
-async def save_pdf_upload(file: UploadFile, dest: Path, *, label: str = "PDF") -> None:
+async def save_pdf_upload(
+    file: UploadFile,
+    dest: Path,
+    *,
+    label: str = "PDF",
+    gate: bool = True,
+) -> None:
     """Stream a PDF upload to disk, enforcing ``MAX_UPLOAD_MB`` and a
-    ``.pdf`` extension."""
+    ``.pdf`` extension. By default also runs ``gate_pdf_safety`` to refuse
+    PDFs whose verdict is 'danger' under the active policy — pass
+    ``gate=False`` only when the caller intentionally wants raw bytes
+    (rare; the async workers already gate inside their own threads)."""
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, f"{label} için yalnızca .pdf dosyaları kabul edilir.")
     written = 0
@@ -77,6 +86,8 @@ async def save_pdf_upload(file: UploadFile, dest: Path, *, label: str = "PDF") -
             if written > MAX_UPLOAD_MB * 1024 * 1024:
                 raise HTTPException(413, f"Dosya {MAX_UPLOAD_MB} MB sınırını aşıyor.")
             fp.write(chunk)
+    if gate:
+        gate_pdf_safety(dest)
 
 
 def pdf_response(out_path: Path, download_name: str, job_dir: Path) -> FileResponse:
@@ -131,9 +142,18 @@ def parse_color(value: str, default: tuple[float, float, float]) -> tuple[float,
         return default
 
 
+_PARSE_INT_LIST_MAX = 100_000
+
+
 def parse_int_list(value: str) -> list[int]:
     """Parse ``"1,3,5-7"`` into ``[1,3,5,6,7]``. Raises ``HTTPException(400)``
-    on malformed input."""
+    on malformed input or when the expanded list would exceed
+    ``_PARSE_INT_LIST_MAX`` entries.
+
+    The cap defends against ``1-99999999`` style inputs that would
+    materialise 100 million Python ints and OOM the process before any
+    downstream page-count validation could intervene.
+    """
     out: list[int] = []
     for piece in (value or "").split(","):
         piece = piece.strip()
@@ -147,8 +167,19 @@ def parse_int_list(value: str) -> list[int]:
                 raise HTTPException(400, f"Geçersiz aralık: {piece}") from e
             if end < start:
                 start, end = end, start
+            span = end - start + 1
+            if span > _PARSE_INT_LIST_MAX or len(out) + span > _PARSE_INT_LIST_MAX:
+                raise HTTPException(
+                    400,
+                    f"Aralık çok büyük (en fazla {_PARSE_INT_LIST_MAX} sayfa).",
+                )
             out.extend(range(start, end + 1))
         else:
+            if len(out) + 1 > _PARSE_INT_LIST_MAX:
+                raise HTTPException(
+                    400,
+                    f"Çok fazla sayfa belirtildi (en fazla {_PARSE_INT_LIST_MAX}).",
+                )
             try:
                 out.append(int(piece))
             except ValueError as e:

@@ -7,7 +7,6 @@ persists the job dict, and starts the thread.
 from __future__ import annotations
 
 import shutil
-import threading
 import time
 from uuid import uuid4
 
@@ -17,7 +16,7 @@ from starlette.background import BackgroundTask
 
 import core
 from app_http import gate_pdf_safety
-from state import MAX_UPLOAD_MB, ocr_store
+from state import MAX_UPLOAD_MB, ocr_store, submit_worker
 
 router = APIRouter()
 
@@ -66,11 +65,12 @@ async def ocr_start(
 
     from pipelines.ocr import ocr_worker
 
-    threading.Thread(
-        target=ocr_worker,
-        args=(token, pdf_path, target, job_dir, file.filename),
-        daemon=True,
-    ).start()
+    try:
+        submit_worker(ocr_worker, token, pdf_path, target, job_dir, file.filename)
+    except HTTPException:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        ocr_store.pop(token)
+        raise
     return {"token": token}
 
 

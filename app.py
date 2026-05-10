@@ -239,6 +239,32 @@ def _is_mobile_public(path: str) -> bool:
 
 
 @app.middleware("http")
+async def _security_headers_middleware(request: Request, call_next):
+    """Inject baseline browser hardening headers on every response.
+
+    Cheap defenses that don't depend on app logic:
+
+    * ``X-Content-Type-Options: nosniff`` — stops the browser from
+      inferring a different Content-Type (e.g., promoting an uploaded
+      ``.pdf`` to ``text/html`` and executing embedded scripts).
+    * ``X-Frame-Options: DENY`` — refuses to render the UI inside an
+      ``<iframe>``; defeats clickjacking attempts that overlay our buttons.
+    * ``Referrer-Policy: no-referrer`` — when the UI navigates outward,
+      don't leak the local URL (which may include sensitive query params)
+      to third-party servers.
+    * ``Cross-Origin-Opener-Policy: same-origin`` — isolates the UI's
+      browsing context group from popups it didn't open, neutralising a
+      class of cross-window attacks.
+    """
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    return response
+
+
+@app.middleware("http")
 async def _mobile_auth_middleware(request: Request, call_next):
     """Block remote clients unless they present the live mobile token.
 
@@ -259,7 +285,13 @@ async def _mobile_auth_middleware(request: Request, call_next):
             {"detail": "Mobil erişim kapalı. Sunucu makinesinden açılmalı."},
             status_code=403,
         )
-    provided = request.headers.get("x-mobile-key") or request.query_params.get("key", "")
+    # NB: ``?key=`` URL fallback was dropped — the token leaked via browser
+    # history, server access logs, and referer headers. Mobile clients now
+    # bootstrap the token from a URL **fragment** (``#key=…``) which is
+    # browser-local and never reaches the server; the page-load JS strips
+    # the fragment and stashes the token in localStorage. From then on
+    # every request carries the ``X-Mobile-Key`` header.
+    provided = request.headers.get("x-mobile-key") or ""
     if not provided or not hmac.compare_digest(str(provided), token):
         return JSONResponse(
             {"detail": "Geçersiz veya eksik mobil erişim anahtarı."},
@@ -294,9 +326,33 @@ async def index(request: Request) -> HTMLResponse:
 _PROCESS_STARTED_AT = time.time()
 
 
+def _health_trusted_caller(request: Request) -> bool:
+    """True iff the caller can see detailed health stats: loopback OR a
+    remote client presenting the live ``mobile_token``. Anyone else gets
+    the bare-minimum public payload."""
+    if core.is_local_request(request):
+        return True
+    with state_mod.mobile_token_lock:
+        token = state_mod.mobile_token
+    if not token:
+        return False
+    provided = request.headers.get("x-mobile-key") or ""
+    return bool(provided) and hmac.compare_digest(str(provided), token)
+
+
 @app.get("/health")
-async def health() -> dict:
-    """Liveness/operational status — used by Docker HEALTHCHECK and ops dashboards."""
+async def health(request: Request) -> dict:
+    """Liveness — public minimal payload, full diagnostics for trusted callers.
+
+    Used by Docker HEALTHCHECK (which only needs HTTP 200 + ``ok``) and by
+    ops dashboards on the same host or with the mobile token. Cross-origin
+    callers without auth get the public payload only — uptime, thread
+    counts, work-dir bytes are operational telemetry that profiles the
+    operator's environment.
+    """
+    if not _health_trusted_caller(request):
+        return {"ok": True}
+
     work_bytes = 0
     work_files = 0
     try:

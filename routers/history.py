@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import sqlite3
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, Request
 
-from core import _history_lock, init_history_db
+import core
+from core import _history_lock, init_history_db, logger
 from state import HISTORY_DB_PATH
 
 router = APIRouter()
@@ -49,11 +50,24 @@ async def history(limit: int = 100) -> dict:
 
 
 @router.delete("/history")
-async def history_clear() -> dict:
+async def history_clear(request: Request) -> dict:
+    """Wipe the audit log. Mutating + destructive — requires loopback origin.
+
+    The audit trail is the only record of who used the tool. A cross-origin
+    CSRF that wipes it would let an attacker cover their tracks after
+    forcing other endpoints. We require both ``is_local_request`` (so a
+    remote caller without a token can't reach it) and an origin that
+    matches the server (so a hostile page in the operator's own browser
+    can't trigger it via cross-origin DELETE either).
+    """
+    if not core.is_local_request(request):
+        raise HTTPException(403, "Geçmişi silmek yalnızca sunucu makinesinden yapılabilir.")
+    core.assert_same_origin(request)
     init_history_db()
     with _history_lock:
         conn = sqlite3.connect(str(HISTORY_DB_PATH))
         conn.execute("DELETE FROM history")
         conn.commit()
         conn.close()
+    logger.info("history wiped — caller=%s", core.client_ip(request))
     return {"ok": True}

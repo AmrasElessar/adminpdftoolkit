@@ -15,7 +15,6 @@ import asyncio
 import io
 import json
 import shutil
-import threading
 import time
 import zipfile
 from collections.abc import Callable
@@ -43,7 +42,7 @@ from pdf_converter import (
     write_generic_excel,
 )
 from pdf_safety import full_scan as pdf_safety_scan
-from state import ALLOWED_FORMATS, MAX_UPLOAD_MB, batch_store, convert_store
+from state import ALLOWED_FORMATS, MAX_UPLOAD_MB, batch_store, convert_store, submit_worker
 
 router = APIRouter()
 
@@ -189,9 +188,9 @@ async def convert_start(
 
     from pipelines.convert import convert_worker
 
-    threading.Thread(
-        target=convert_worker,
-        args=(
+    try:
+        submit_worker(
+            convert_worker,
             token,
             pdf_path,
             target,
@@ -201,9 +200,11 @@ async def convert_start(
             jpg_quality,
             skip_safety,
             jpg_dpi,
-        ),
-        daemon=True,
-    ).start()
+        )
+    except HTTPException:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        convert_store.pop(token)
+        raise
     return {"token": token, "target": target}
 
 

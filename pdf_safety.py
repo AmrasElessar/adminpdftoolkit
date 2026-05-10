@@ -24,6 +24,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -96,16 +97,15 @@ def check_structure(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]
     # Ham PDF içinde anahtar kelime arama (compress edilmiş kısımları kaçırır
     # ama çoğu vakada işimizi görür — saldırgan paketler genelde uncompressed
     # bırakır ki AV'lardan kaçsın, biz tam tersini istiyoruz).
+    #
+    # Önceki sürümde 8 MB üstü dosyalarda yalnızca ilk + son 4 MB taranıyordu;
+    # ortaya gizlenmiş /JavaScript / /Launch payload'ı bu pencerede kaçabiliyordu.
+    # Bellek MAX_UPLOAD_MB ile sınırlı (default 200 MB), o yüzden tüm dosyayı
+    # okumak güvenli — ekstra CPU maliyeti (~ saniye altı) defense-in-depth
+    # için kabul edilebilir.
     try:
         raw = pdf_path.read_bytes()
-        # Çok büyük dosyada ilk + son 4 MB'yi tara
-        max_scan = 8 * 1024 * 1024
-        if len(raw) > max_scan:
-            half = max_scan // 2
-            sample = raw[:half] + raw[-half:]
-        else:
-            sample = raw
-        text = sample.decode("latin-1", errors="ignore")
+        text = raw.decode("latin-1", errors="ignore")
 
         for label, pattern, desc, weight in _SUSPICIOUS_PATTERNS:
             count = len(re.findall(pattern, text))
@@ -302,8 +302,15 @@ def pdfid_scan(pdf_path: Path, timeout: int = 15) -> dict[str, Any] | None:
     if not exe:
         return None
     try:
-        # pdfid.py [-f] file — count keywords; -f forces extra patterns
-        cmd = ["python", exe, str(pdf_path)] if exe.endswith(".py") else [exe, str(pdf_path)]
+        # pdfid.py [-f] file — count keywords; -f forces extra patterns.
+        # Using ``sys.executable`` (not "python") so a poisoned PATH on the
+        # operator's host can't substitute a hostile interpreter for the
+        # safety scanner.
+        cmd = (
+            [sys.executable, exe, str(pdf_path)]
+            if exe.endswith(".py")
+            else [exe, str(pdf_path)]
+        )
         result = subprocess.run(
             cmd,
             capture_output=True,

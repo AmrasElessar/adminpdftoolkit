@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import os
 import secrets
-import threading
 
 from fastapi import APIRouter, HTTPException, Request
 
 import core
 import state as state_mod
 from core import logger
+from state import submit_worker
 
 router = APIRouter(prefix="/admin")
 
@@ -25,6 +25,7 @@ async def enable_mobile(request: Request) -> dict:
     """Issue (or rotate) the mobile-access token. Local-only."""
     if not core.is_local_request(request):
         raise HTTPException(403, "Bu işlem yalnızca sunucu makinesinden yapılabilir.")
+    core.assert_same_origin(request)
     token = secrets.token_urlsafe(32)
     with state_mod.mobile_token_lock:
         state_mod.mobile_token = token
@@ -32,7 +33,13 @@ async def enable_mobile(request: Request) -> dict:
     port = int(os.environ.get("PORT", "8000"))
     use_https = os.environ.get("HTTPS", "0") in ("1", "true", "True", "yes")
     scheme = "https" if use_https else "http"
-    url = f"{scheme}://{lan}:{port}/?key={token}"
+    # Token is conveyed in the URL **fragment** (``#key=``) — browsers never
+    # forward fragments to the server, so it stays out of access logs,
+    # referer headers, and most clipboard/share sheet tracking. The
+    # page-load JS in templates/index.html strips the fragment immediately
+    # and migrates the token to localStorage; subsequent requests use the
+    # ``X-Mobile-Key`` header. (See app.py mobile-auth middleware.)
+    url = f"{scheme}://{lan}:{port}/#key={token}"
     logger.info("Mobile access enabled — token issued (length=%d)", len(token))
     return {
         "enabled": True,
@@ -50,9 +57,10 @@ async def disable_mobile(request: Request) -> dict:
     immediately start getting 403 on protected endpoints."""
     if not core.is_local_request(request):
         raise HTTPException(403, "Bu işlem yalnızca sunucu makinesinden yapılabilir.")
+    core.assert_same_origin(request)
     with state_mod.mobile_token_lock:
         state_mod.mobile_token = None
-    logger.info("Mobile access disabled")
+    logger.info("Mobile access disabled — caller=%s", core.client_ip(request))
     return {"enabled": False}
 
 
@@ -88,6 +96,7 @@ async def clamav_update(request: Request) -> dict:
     duration of a 30+ second sig pull."""
     if not core.is_local_request(request):
         raise HTTPException(403, "Bu işlem yalnızca sunucu makinesinden yapılabilir.")
+    core.assert_same_origin(request)
     from core.clamav_update import status, update_signatures
 
     pre = status()
@@ -104,5 +113,5 @@ async def clamav_update(request: Request) -> dict:
         else:
             logger.warning("manual clamav refresh failed: %s", result.get("error"))
 
-    threading.Thread(target=_run, daemon=True).start()
+    submit_worker(_run)
     return {"started": True, "status": pre}

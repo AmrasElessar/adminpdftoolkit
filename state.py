@@ -129,6 +129,52 @@ ocr_store = JobStore(ocr_jobs, ocr_lock)
 
 
 # ---------------------------------------------------------------------------
+# Bounded background-worker concurrency
+# ---------------------------------------------------------------------------
+# Endpoints like /convert-start, /batch-files, /batch-convert, /ocr-start and
+# /admin/clamav-update each spawn a daemon thread to do the heavy lifting.
+# Without a cap, a flood of requests (or a malicious actor) creates unbounded
+# threads — the GIL hides the wall-clock cost, but PyMuPDF and pdf2docx hold
+# native handles, so file descriptors and worker memory exhaust long before
+# Python's scheduler complains.
+#
+# The semaphore caps in-flight workers; ``submit_worker`` raises 503 when the
+# slots are saturated. Operators with beefy hardware can raise the cap via
+# HT_MAX_INFLIGHT_JOBS.
+MAX_INFLIGHT_JOBS: int = max(
+    1, int(os.environ.get("HT_MAX_INFLIGHT_JOBS", "4"))
+)
+_worker_semaphore = threading.BoundedSemaphore(MAX_INFLIGHT_JOBS)
+
+
+def submit_worker(target: Any, *args: Any, **kwargs: Any) -> None:
+    """Run ``target(*args, **kwargs)`` on a daemon thread, but refuse to
+    start a new one when ``MAX_INFLIGHT_JOBS`` workers are already in
+    flight.
+
+    Raises ``HTTPException(503)`` on saturation; the caller's request
+    handler propagates that to the client (typical pattern: an upload
+    just streamed to disk gets cleaned up in the except branch).
+    """
+    from fastapi import HTTPException
+
+    if not _worker_semaphore.acquire(blocking=False):
+        raise HTTPException(
+            503,
+            f"Sunucu meşgul — aynı anda en fazla {MAX_INFLIGHT_JOBS} iş çalışabilir. "
+            "Lütfen kısa bir süre sonra tekrar deneyin.",
+        )
+
+    def _wrapper() -> None:
+        try:
+            target(*args, **kwargs)
+        finally:
+            _worker_semaphore.release()
+
+    threading.Thread(target=_wrapper, daemon=True).start()
+
+
+# ---------------------------------------------------------------------------
 # Mobile / LAN access control
 # ---------------------------------------------------------------------------
 # When None, the server only accepts requests from 127.0.0.1 (the host PC's

@@ -19,7 +19,6 @@ from __future__ import annotations
 import io
 import json
 import shutil
-import threading
 import time
 import zipfile
 from pathlib import Path
@@ -48,7 +47,7 @@ from pipelines.batch_convert import (
     write_merged_excel,
 )
 from pipelines.convert import batch_files_worker
-from state import batch_store
+from state import batch_store, submit_worker
 
 router = APIRouter()
 
@@ -220,9 +219,9 @@ async def batch_files(
         job_dir=str(job_dir),
         skip_safety=skip_safety,
     )
-    threading.Thread(
-        target=batch_files_worker,
-        args=(
+    try:
+        submit_worker(
+            batch_files_worker,
             token,
             files_data,
             target,
@@ -231,9 +230,11 @@ async def batch_files(
             jpg_quality,
             skip_safety,
             jpg_dpi,
-        ),
-        daemon=True,
-    ).start()
+        )
+    except HTTPException:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        batch_store.pop(token)
+        raise
     return {"token": token, "type": "files", "total": len(files_data)}
 
 
@@ -380,9 +381,9 @@ async def batch_convert(
         job_dir=str(job_dir),
         skip_safety=skip_safety,
     )
-    threading.Thread(
-        target=batch_convert_worker,
-        args=(
+    try:
+        submit_worker(
+            batch_convert_worker,
             progress_token,
             files_data,
             mappings_obj,
@@ -390,9 +391,11 @@ async def batch_convert(
             job_token,
             len(files),
             skip_safety,
-        ),
-        daemon=True,
-    ).start()
+        )
+    except HTTPException:
+        shutil.rmtree(job_dir, ignore_errors=True)
+        batch_store.pop(progress_token)
+        raise
     return {"token": progress_token, "type": "convert", "total": len(files_data)}
 
 
@@ -521,6 +524,7 @@ async def batch_filter(
 
 @router.get("/batch-download/{token}", response_model=None)
 async def batch_download(token: str, request: Request):
+    core.check_token(token)
     job_dir = core.make_job_dir("jobs", token)
     data = load_job(token)
     xlsx = job_dir / data["filename"]
@@ -550,6 +554,7 @@ async def batch_distribute(
     strategy: str = Form(...),
     ratios: str = Form("[]"),
 ) -> dict:
+    core.check_token(token)
     data = load_job(token)
     records: list[dict] = data["records"]
     sources: list[str] = data["source_files"]
@@ -634,6 +639,7 @@ async def batch_distribute_team(token: str, team_idx: int) -> dict:
 
 @router.get("/batch-distribute/{token}/download", response_model=None)
 async def batch_distribute_download(token: str, request: Request):
+    core.check_token(token)
     dist = load_distribution(token)
     job_dir = core.make_job_dir("jobs", token)
     zip_buf = io.BytesIO()

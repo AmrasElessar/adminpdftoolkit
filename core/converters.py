@@ -156,7 +156,17 @@ def pdf_to_markdown(input_path: Path, output: Path) -> int:
         else:
             cleaned.append(ln)
             blank = False
-    output.write_text("\n".join(cleaned).strip() + "\n", encoding="utf-8")
+    body = "\n".join(cleaned).strip() + "\n"
+    # Cap markdown output at 50 MB. A pathological PDF (millions of tiny
+    # text spans) could produce a ridiculously large .md otherwise.
+    max_bytes = 50 * 1024 * 1024
+    encoded = body.encode("utf-8")
+    if len(encoded) > max_bytes:
+        encoded = encoded[:max_bytes]
+        # Trim to a clean UTF-8 boundary
+        body = encoded.decode("utf-8", errors="ignore")
+        body += "\n\n<!-- Çıktı 50 MB üst sınırına ulaştığı için kesildi. -->\n"
+    output.write_text(body, encoding="utf-8")
     return page_count
 
 
@@ -255,9 +265,32 @@ def _resolve_ht_font(uri: str) -> str | None:
 
 
 def _pisa_link_callback(uri: str, rel: str) -> str:
-    """``link_callback`` for ``pisa.CreatePDF`` — handles our font scheme."""
-    resolved = _resolve_ht_font(uri or "")
-    return resolved or uri
+    """``link_callback`` for ``pisa.CreatePDF`` — strict allow-list.
+
+    xhtml2pdf's default fetcher will happily resolve ``file:///etc/passwd``
+    or arbitrary ``http://internal/`` URLs from a ``<img src=...>`` /
+    ``<link href=...>`` and embed the bytes into the rendered PDF, leaking
+    local files or driving SSRF from the operator's host. We block
+    everything except:
+
+    * ``ht-font://`` — our internal font scheme (safe; resolved to bundled
+      / system TTF paths).
+    * ``data:`` — base64-inlined assets the caller already chose to embed
+      (no fetch performed by xhtml2pdf).
+
+    For anything else we return an empty string; xhtml2pdf logs a warning
+    and renders the asset as broken / missing — the right failure mode for
+    a server-side renderer that should never read the local filesystem on
+    behalf of attacker-supplied HTML.
+    """
+    u = (uri or "").strip()
+    if not u:
+        return ""
+    if u.startswith("ht-font://"):
+        return _resolve_ht_font(u) or ""
+    if u.startswith("data:"):
+        return u
+    return ""
 
 
 _PISA_INIT_PATCHED = False
@@ -343,7 +376,12 @@ def _xhtml2pdf_render(html: str, output: Path) -> None:
         else:
             html = font_block + html
     with output.open("wb") as fp:
-        pisa_status = pisa.CreatePDF(html, dest=fp, encoding="utf-8")
+        pisa_status = pisa.CreatePDF(
+            html,
+            dest=fp,
+            encoding="utf-8",
+            link_callback=_pisa_link_callback,
+        )
     if pisa_status.err:
         raise ValueError(f"HTML → PDF render başarısız ({pisa_status.err} hata).")
 
@@ -360,14 +398,53 @@ def html_to_pdf(html: str, output: Path) -> None:
     _xhtml2pdf_render(html, output)
 
 
+# Cap on the response body for url_to_pdf — defends against multi-GB streams
+# that would otherwise read into memory unchecked. HTML pages rarely exceed
+# this; legitimate documents above 50 MB are out of scope for an HTML→PDF tool.
+_URL_TO_PDF_MAX_BYTES = 50 * 1024 * 1024
+_URL_TO_PDF_MAX_REDIRECTS = 5
+
+
+class _SSRFGuardedRedirectHandler:
+    """``HTTPRedirectHandler`` that re-validates each redirect target.
+
+    ``urllib`` follows 302/301 by default with no opportunity to inspect the
+    new URL. Without this guard, an attacker-controlled public URL can return
+    ``Location: http://127.0.0.1:8000/admin/...`` (or cloud-metadata IPs) and
+    bypass the SSRF check entirely. Subclassing the stdlib handler is the
+    clean intercept point — every redirect, internal or external, runs
+    ``_assert_public_url`` against the new URL before being followed.
+    """
+
+    @staticmethod
+    def install() -> Any:
+        from urllib.parse import urlparse
+        from urllib.request import HTTPRedirectHandler, build_opener
+
+        import core
+
+        class _Guarded(HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+                parsed_new = urlparse(newurl)
+                if parsed_new.scheme not in ("http", "https"):
+                    raise ValueError(f"Yönlendirme reddedildi: {parsed_new.scheme}://")
+                core._assert_public_url(parsed_new)
+                return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+        return build_opener(_Guarded())
+
+
 def url_to_pdf(url: str, output: Path, *, timeout: int = 15) -> None:
     """Fetch a URL with stdlib urllib and render the response body as a PDF.
 
     Only http(s) is allowed. Charset is detected from the Content-Type header
-    when possible, otherwise UTF-8 is assumed.
+    when possible, otherwise UTF-8 is assumed. Each redirect target is
+    re-validated through ``_assert_public_url`` (see
+    ``_SSRFGuardedRedirectHandler``) and the response body is capped at
+    ``_URL_TO_PDF_MAX_BYTES``.
     """
     from urllib.parse import urlparse
-    from urllib.request import Request, urlopen
+    from urllib.request import Request
 
     import core
 
@@ -376,10 +453,13 @@ def url_to_pdf(url: str, output: Path, *, timeout: int = 15) -> None:
     parsed = urlparse(url.strip())
     if parsed.scheme not in ("http", "https"):
         raise ValueError("Yalnızca http(s) URL'leri desteklenir.")
+    if parsed.username or parsed.password:
+        raise ValueError("URL'de kullanıcı/şifre kabul edilmez.")
     core._assert_public_url(parsed)
+    opener = _SSRFGuardedRedirectHandler.install()
     req = Request(url, headers={"User-Agent": "ht-pdf-converter/1.x"})
     try:
-        with urlopen(req, timeout=timeout) as resp:
+        with opener.open(req, timeout=timeout) as resp:
             content_type = resp.headers.get("Content-Type", "")
             charset = "utf-8"
             for piece in content_type.split(";"):
@@ -387,7 +467,23 @@ def url_to_pdf(url: str, output: Path, *, timeout: int = 15) -> None:
                 if piece.startswith("charset="):
                     charset = piece.split("=", 1)[1].strip() or "utf-8"
                     break
-            raw = resp.read()
+            # Stream-read with cap; bail out as soon as we cross the limit
+            # rather than buffering the entire response and then checking.
+            chunks: list[bytes] = []
+            total = 0
+            while True:
+                chunk = resp.read(64 * 1024)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > _URL_TO_PDF_MAX_BYTES:
+                    raise ValueError(
+                        f"URL yanıtı {_URL_TO_PDF_MAX_BYTES // (1024 * 1024)} MB sınırını aştı."
+                    )
+                chunks.append(chunk)
+            raw = b"".join(chunks)
+    except ValueError:
+        raise
     except Exception as e:
         raise ValueError(f"URL açılamadı: {sanitize_error(e)}") from e
     try:

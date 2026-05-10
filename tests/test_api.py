@@ -552,11 +552,15 @@ def test_cleanup_loop_callable_with_no_args() -> None:
         )
 
 
-def test_middleware_remote_token_via_query_param(
+def test_middleware_remote_token_via_query_param_rejected(
     reset_mobile_token, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """?key= URL param works as an alternative to the header (used by the
-    initial mobile bookmark hit)."""
+    """``?key=`` URL fallback was dropped — the token leaked via browser
+    history, server access logs, and referer headers. Mobile clients now
+    must present ``X-Mobile-Key``; the bootstrap channel is a URL
+    fragment (``#key=…``) that the page-load JS reads and stashes in
+    localStorage. A request that only carries ``?key=`` is treated as
+    unauthenticated (no header → 403)."""
     import core
     import state
 
@@ -567,7 +571,7 @@ def test_middleware_remote_token_via_query_param(
     monkeypatch.setattr("core.is_local_request", lambda req: False)
     c = TestClient(app.app)
     r = c.get(f"/history?key={test_token}")
-    assert r.status_code == 200
+    assert r.status_code == 403
 
 
 def test_middleware_token_constant_time_compare(reset_mobile_token) -> None:
