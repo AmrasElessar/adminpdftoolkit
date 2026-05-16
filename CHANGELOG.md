@@ -7,6 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] — 2026-05-16
+
+### Added — multi-group batch merge
+
+Reshape the batch-Excel-merge flow from "one merged Excel" to "one
+merged Excel per detected PDF format". When `/batch-analyze` detects
+multiple compatible groups (e.g. 6 call-log + 4 same-format tabular
+PDFs), each group is processed in its own `/batch-convert` round and
+gets its own result tab — preview, dedup, filter, and 3-tier team
+distribution panel scoped per group.
+
+- Other-table groups carry their own column headers all the way through;
+  no more force-mapping to the call-log schema.
+- Dedup now accepts user-picked `match_columns` for other-table groups
+  (column-picker UI in the dedupe tab). Call-log keeps the Telefon
+  default with `normalize_phone` collapsing.
+- Defensive inline `doBatchAnalyze` in the submit handler closes the
+  regression where 3-PDF batches sometimes fell through to the ZIP
+  branch when the analyze cache wasn't populated in time.
+
+### Added — PDF editor: locally installed system fonts
+
+`/pdf/edit/fonts` now lists the host machine's installed TTF/OTF
+families alongside the bundled Noto/DejaVu set, grouped under "🖥 Bu
+bilgisayar (N font)" in the dropdown. Microsoft fonts are NOT bundled
+(EULA forbids redistribution); we read them from `C:\Windows\Fonts` at
+runtime. fsType=Restricted-License-Embedding fonts (Tahoma, Calibri,
+Times New Roman, …) are filtered out so the editor never embeds a font
+we don't have legal rights to redistribute when PyMuPDF subsets it.
+Typical Win11 yield: 6 bundled + ~148 system fonts in ~150 ms first
+scan, cached thereafter.
+
+### Added — safety pipeline: parallel scan + danger review
+
+- `pdf_safety.full_scan` and `pipelines/safety.scan_files_with_progress`
+  fan scanners / files out in parallel (ClamAV INSTREAM handles
+  concurrent sockets natively); 16-file batches drop from ~15 s to
+  ~1-2 s.
+- New `danger_review` phase suspends the worker when a scanner flags a
+  PDF and surfaces `danger_file` + `danger_findings` via SSE; the user
+  clicks "Yine de Dönüştür" (skip_safety) or "İptal" (cancel_safety)
+  on a modal. One review at a time via `danger_lock`.
+- Unsafe-accepted outputs get an "⚠ UYARI" red sheet (Excel) or top
+  paragraph (Word) and a `_GUVENSIZ` filename suffix.
+
+### Added — 3-variant installer distribution
+
+- **Portable ZIP** (`build_portable.py`) — self-contained folder with
+  vendored Python; double-click `Sunucuyu Başlat.bat`.
+- **Online Inno Setup wizard** (`build_setup_inno.py`) — ~32 MB
+  installer that pulls Python + ClamAV + EasyOCR models from the
+  network during install.
+- **Offline Inno Setup wizard** (`build_setup_offline.py`) — ~500-700
+  MB installer with everything bundled for firewalled corporate PCs.
+- `pystray`-based tray launcher replaces the old console window;
+  right-click → "Web arayüzünü aç" / "Sunucuyu durdur".
+
+### Changed
+
+- Lifespan startup now BLOCKS on clamd readiness (25 s timeout) so the
+  first scan never hits a half-warm daemon; freshclam still runs in
+  background.
+- `write_merged_excel` accepts an optional `schema=` parameter; the
+  team-distribution download honours it for per-team Excels.
+- `core/batch.py:parse_pdf_for_batch` accepts an optional `mode=`
+  parameter (5-tuple call site) — `mode="other_table"` keys rows by
+  the group's headers without forcing the call-log schema.
+
 ### Security — full audit sweep (2026-05-10)
 
 Triggered by `SECURITY_AUDIT_2026_05_10.md`; closes ~20 issues beyond
