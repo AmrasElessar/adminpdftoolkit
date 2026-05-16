@@ -291,3 +291,68 @@ def test_worker_marks_done_with_error_when_no_records(
     assert snap["done"] is True
     assert snap["error"] is not None
     assert "Birleştirilecek veri bulunamadı" in snap["error"]
+
+
+# ---------------------------------------------------------------------------
+# Other-table group output — worker writes data.json with the right shape
+# ---------------------------------------------------------------------------
+def test_worker_other_table_writes_group_metadata_in_data_json(
+    monkeypatch: pytest.MonkeyPatch, job_dir: Path, job_token: str, progress_token: str
+) -> None:
+    """When called with group_kind=other_table, the worker should:
+    - skip the call-log TARGET_SCHEMA force-mapping (records preserve the
+      group_headers verbatim)
+    - persist group_kind / group_headers / group_label in data.json
+    - default state.match_columns to [] (user must pick before deduping)
+    - return those same fields in the result dict so the polling endpoint
+      can hydrate currentJob in the frontend.
+    """
+    a = job_dir / "in_0.pdf"
+    a.write_bytes(b"%PDF-1.4\n%%EOF\n")
+
+    def fake_parse(args):
+        # mode is the 5th element when worker calls in other_table mode
+        assert len(args) == 5 and args[4] == "other_table"
+        return {
+            "filename": args[0],
+            "records": [
+                {"Müşteri": "Ali", "Tutar": "100", "Tarih": "01/05"},
+                {"Müşteri": "Veli", "Tutar": "250", "Tarih": "02/05"},
+            ],
+            "warning": None,
+        }
+
+    monkeypatch.setattr(core, "parse_pdf_for_batch", fake_parse)
+    monkeypatch.setattr(core, "TARGET_SCHEMA", ["Müşteri", "Telefon"])  # call-log default — should be ignored
+
+    _seed_job(progress_token, job_dir, total=1)
+    batch_convert_worker(
+        progress_token,
+        [("table.pdf", a)],
+        mappings_obj={},
+        skip_list=[],
+        job_token=job_token,
+        file_count=1,
+        group_kind="other_table",
+        group_headers=["Müşteri", "Tutar", "Tarih"],
+        group_label="Hesap hareketleri",
+    )
+
+    snap = batch_store.snapshot(progress_token)
+    assert snap["done"] is True
+    assert snap["error"] is None
+    # Result dict carries the group metadata for the frontend
+    assert snap["result"]["group_kind"] == "other_table"
+    assert snap["result"]["group_headers"] == ["Müşteri", "Tutar", "Tarih"]
+    assert snap["result"]["group_label"] == "Hesap hareketleri"
+
+    # data.json on disk matches
+    data = json.loads((job_dir / "data.json").read_text(encoding="utf-8"))
+    assert data["group_kind"] == "other_table"
+    assert data["group_headers"] == ["Müşteri", "Tutar", "Tarih"]
+    assert data["group_label"] == "Hesap hareketleri"
+    # match_columns starts empty for other_table — frontend prompts user to pick
+    assert data["state"]["match_columns"] == []
+    # Records preserve the group schema (not the call-log TARGET_SCHEMA)
+    assert all("Müşteri" in r and "Tutar" in r and "Tarih" in r for r in data["records"])
+

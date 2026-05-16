@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.2] — 2026-05-16 — Polish + CI fix + test coverage
+
+Follow-up to v1.13.1 — closes the small punch-list left after the
+external code reviews, plus fixes a CI failure introduced when the
+packaging scripts landed in v1.13.0.
+
+### CI
+
+- **Coverage threshold no longer fails on packaging scripts.** v1.13.0
+  added 7 build/installer helpers (`build_exe.py`, `installer.py`,
+  `launcher.py`, etc., ~770 stmts total) that run only on the
+  maintainer's machine and never execute under pytest. They dragged
+  TOTAL coverage from ~64% down to 54.92%, tripping the 62% gate.
+  Excluded via `[tool.coverage.run].omit`; metric now reflects the
+  runtime app, not the packaging toolchain.
+
+### Cleanup
+
+- **Dead code removed from `templates/index.html`.** Per-group
+  "Bu grubu birleştir" buttons were replaced by auto-orchestration in
+  v1.13.0, but `doGroupMerge()` + its `_mergeFilter` / `_forceMerge`
+  globals were left behind. Removed (~50 lines).
+- **`.gitattributes` added.** Normalizes line endings per file type;
+  stops the Windows working tree from emitting LF↔CRLF warnings on
+  every commit. `.bat` / `.cmd` / `.ps1` / `.iss` stay CRLF; everything
+  else is LF.
+- **`.gitignore` extended.** Ad-hoc bug-report screenshots
+  (`sorun*.png`, `debug*.png`) no longer show up as untracked files.
+
+### Testing
+
+- **`/batch-deduplicate` HTTP-layer validation tests.** Four new tests
+  cover the form-parameter validation paths the helper-level tests
+  don't reach: malformed `match_columns` JSON, non-list payload,
+  unknown column name, and the other_table "you must pick a column"
+  required path.
+- **`batch_convert_worker` other_table shape test.** Confirms that
+  when called with `group_kind="other_table"` the worker persists
+  `group_kind` / `group_headers` / `group_label` in `data.json`,
+  defaults `state.match_columns` to `[]`, surfaces the metadata in
+  the result dict, and keeps the records keyed by the group's own
+  headers instead of forcing them into the call-log schema.
+
+### Documentation
+
+- **SSRF DNS-rebinding TOCTOU window documented as accepted residual
+  risk.** The previous one-line "acceptable for LAN-only deployment"
+  comment is expanded into an explicit rationale: the listener binds
+  to 127.0.0.1 by default, `/pdf/from-url` is operator-only, and a
+  rebound fetch can't reach anything the operator can't reach
+  directly. Includes the trigger conditions under which the
+  assumption breaks (bind to 0.0.0.0 + reverse proxy) and what the
+  hardening path looks like.
+
 ## [1.13.1] — 2026-05-16 — Hot-fixes from external review
 
 External review (ChatGPT + Gemini) pointed to four real bugs in the

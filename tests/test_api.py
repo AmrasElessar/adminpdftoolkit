@@ -160,6 +160,78 @@ def test_batch_convert_rejects_non_int_column_index(client: TestClient) -> None:
 
 
 # ---------------------------------------------------------------------------
+# /batch-deduplicate input validation — match_columns form param
+# ---------------------------------------------------------------------------
+# These tests exercise just the HTTP-layer validation (malformed JSON, wrong
+# shape, unknown column). The happy path is covered at the helper level in
+# test_batch_pipeline_helpers.py::test_save_view_other_table_dedupes_on_user_columns.
+def _seed_dedupe_job(
+    job_token: str,
+    *,
+    group_kind: str = "other_table",
+    group_headers: list[str] | None = None,
+    records: list[dict] | None = None,
+) -> None:
+    """Drop a minimal data.json onto disk so /batch-deduplicate has something
+    to load. Schema matches what batch_convert_worker writes (post-v1.13.0)."""
+    job_dir = core.make_job_dir("jobs", job_token)
+    rows = records if records is not None else [{"Müşteri": "Ali", "Tutar": "100"}]
+    headers = group_headers if group_headers is not None else ["Müşteri", "Tutar"]
+    payload = {
+        "records": rows,
+        "source_files": ["x.pdf"] * len(rows),
+        "filename": f"birlesik_{len(rows)}_kayit.xlsx",
+        "original_records": list(rows),
+        "original_sources": ["x.pdf"] * len(rows),
+        "state": {"deduplicated": False, "filters": {}, "match_columns": []},
+        "group_kind": group_kind,
+        "group_headers": headers,
+        "group_label": "Test",
+    }
+    (job_dir / "data.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def test_batch_deduplicate_rejects_malformed_match_columns_json(client: TestClient) -> None:
+    from uuid import uuid4
+    tok = uuid4().hex
+    _seed_dedupe_job(tok)
+    r = client.post(f"/batch-deduplicate/{tok}", data={"match_columns": "not-json"})
+    assert r.status_code == 400
+    assert "match_columns" in r.json()["detail"].lower()
+
+
+def test_batch_deduplicate_rejects_non_list_match_columns(client: TestClient) -> None:
+    from uuid import uuid4
+    tok = uuid4().hex
+    _seed_dedupe_job(tok)
+    r = client.post(f"/batch-deduplicate/{tok}", data={"match_columns": '"Telefon"'})  # string, not list
+    assert r.status_code == 400
+
+
+def test_batch_deduplicate_rejects_unknown_column(client: TestClient) -> None:
+    from uuid import uuid4
+    tok = uuid4().hex
+    _seed_dedupe_job(tok, group_headers=["Müşteri", "Tutar"])
+    r = client.post(
+        f"/batch-deduplicate/{tok}",
+        data={"match_columns": json.dumps(["DoesNotExist"])},
+    )
+    assert r.status_code == 400
+    assert "geçersiz" in r.json()["detail"].lower()
+
+
+def test_batch_deduplicate_other_table_requires_columns(client: TestClient) -> None:
+    """other_table groups have no default match_columns; submitting empty
+    list (and no stored picks) should 400 instead of silently doing nothing."""
+    from uuid import uuid4
+    tok = uuid4().hex
+    _seed_dedupe_job(tok, group_kind="other_table")
+    r = client.post(f"/batch-deduplicate/{tok}", data={"match_columns": "[]"})
+    assert r.status_code == 400
+    assert "sütun" in r.json()["detail"].lower()
+
+
+# ---------------------------------------------------------------------------
 # Sanitizer
 # ---------------------------------------------------------------------------
 def test_sanitize_error_strips_windows_paths() -> None:

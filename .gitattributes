@@ -1,0 +1,36 @@
+# Normalize line endings across Windows/Mac/Linux so each commit doesn't
+# warn about LF↔CRLF conversion on Windows working trees.
+#
+# Text files: stored with LF in the repo, checked out with each platform's
+# native line ending (autocrlf-like behavior, but explicit).
+* text=auto eol=lf
+
+# Sources that are always Unix line endings (so editors / linters don't
+# choke on Windows checkouts).
+*.py    text eol=lf
+*.toml  text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+
+# Windows-only files: keep CRLF on checkout so cmd.exe doesn't break.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
+
+# Inno Setup scripts: also CRLF (compiler is Windows-only).
+*.iss   text eol=crlf
+
+# Binary assets: never run through any LF/CRLF conversion.
+*.ttf   binary
+*.otf   binary
+*.pdf   binary
+*.zip   binary
+*.exe   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pyc   binary

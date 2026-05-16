@@ -179,10 +179,20 @@ filterwarnings = [
 [tool.coverage.run]
 branch = true
 source = ["app", "pdf_converter", "pdf_safety"]
+# Build / packaging / launcher scripts are executed only on the maintainer's
+# machine (PyInstaller, Inno Setup) and never run inside the CI test job, so
+# their statements always show as uncovered. Excluding them keeps the metric
+# honest — it measures the runtime app, not the toolchain.
 omit = [
     "tests/*",
-    "build_portable.py",
     "_work/*",
+    "build_portable.py",
+    "build_exe.py",
+    "build_installer.py",
+    "build_setup_inno.py",
+    "build_setup_offline.py",
+    "installer.py",
+    "launcher.py",
 ]
 
 [tool.coverage.report]

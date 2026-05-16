@@ -108,3 +108,7 @@ _clamav_db_backup/
 # ---------------------------------------------------------------------------
 zipli
 kaspersky.txt
+# Ad-hoc screenshots the user drops at repo root during bug reporting
+# (e.g. sorun.png). Not tracked.
+sorun*.png
+debug*.png

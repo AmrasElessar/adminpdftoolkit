@@ -27,8 +27,28 @@ def _assert_public_url(parsed: Any) -> None:
     on attacks like ``http://169.254.169.254`` (cloud metadata),
     ``http://127.0.0.1:8000`` (own service), ``http://10.0.0.5`` (LAN).
 
-    There's a small TOCTOU window between resolution and the eventual
-    urlopen() call (DNS rebinding) — acceptable for our LAN-only deployment.
+    -- DNS rebinding (TOCTOU) — accepted residual risk --
+
+    Between this resolution and the eventual ``urlopen()`` call, the DNS
+    record for the hostname could change to a private IP (``rebinding``).
+    Closing this window cleanly would require pinning the resolved IP and
+    passing it to ``HTTPSConnection`` manually with the original hostname
+    as the SNI / Host header — a non-trivial rewrite of every callsite
+    (``url_to_pdf``, ``html_to_pdf`` redirect chain).
+
+    We deliberately accept this residual risk for this app because:
+      1. The HTTP listener binds to ``127.0.0.1`` by default (settings.host).
+      2. ``/pdf/from-url`` is exposed only to the operator on the same
+         machine, not to the internet.
+      3. A successful rebind attack would let an internet site trick the
+         operator's own server into fetching another internal URL — but
+         the only "internal" target that matters here is this very app,
+         and that's already reachable to the operator directly.
+
+    If the app is ever reconfigured to bind to ``0.0.0.0`` and exposed
+    behind a reverse proxy, this guard must be hardened: either disable
+    the ``/pdf/from-url`` endpoint, restrict it to the admin role, or
+    rewrite the fetch path to pin the resolved IP.
     """
     import ipaddress
 

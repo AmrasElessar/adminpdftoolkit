@@ -4724,12 +4724,7 @@
   // Excel mi ayrı ZIP mi?" seçimi sorulur. False ise sadece /batch-files
   // (ZIP) yolu açılır.
   let _cvwMergeAvailable = false;
-  // When non-null, restricts the merge to only files in this Set<filename>.
-  // Set by per-group "Bu grubu birleştir" buttons; cleared after submit.
-  let _mergeFilter = null;
-  // When true, bypass the "merge vs ZIP" confirm dialog (per-group button)
-  let _forceMerge = false;
-  // Latest analyze response (used to look up groups for per-group merge)
+  // Latest analyze response (used by submit handler to compute group buckets)
   let _batchAnalyzeData = null;
 
   // Sonuç kartı ve dağıtım modalı referansları
@@ -6169,45 +6164,6 @@
     showResultTabs(results);
   }
 
-  // Per-group merge: only sends the group's files to /batch-convert.
-  // Triggered by the "Bu grubu birleştir" button rendered per format group.
-  function doGroupMerge(groupId) {
-    if (!_batchAnalyzeData || !_batchAnalyzeData.groups) return;
-    const grp = _batchAnalyzeData.groups.find((g) => g.id === groupId);
-    if (!grp) { setStatus("err", "Grup bulunamadı: " + groupId); return; }
-    const names = grp.items.map((i) => _batchAnalyzeData.items[i].name);
-    if (!names.length) { setStatus("err", "Gruptaki dosyalar boş."); return; }
-
-    // other_table grubunda mapping yoksa kullanıcıyı uyar
-    if (grp.kind === "other_table") {
-      const unmapped = names.filter((n) => !mappings[n] && !skippedFiles.has(n));
-      if (unmapped.length === names.length) {
-        if (!confirm(
-          "Bu gruptaki PDF'ler için henüz sütun eşlemesi yapılmadı.\n\n"
-          + "Yine de devam edilirse hiçbir kayıt çıkarılamaz.\n"
-          + "Önce listedeki 'Sütunları Eşle' butonuyla en az bir PDF'i eşleyin.\n\n"
-          + "Yine de devam edilsin mi?"
-        )) return;
-      }
-    }
-
-    // Excel formatını seç + flag'leri set et + submit
-    const excelRadio = form.querySelector('input[name=target][value="excel"]');
-    if (excelRadio) {
-      excelRadio.checked = true;
-      const optCard = excelRadio.closest(".opt");
-      if (optCard) {
-        document.querySelectorAll(".opt").forEach((o) => o.classList.remove("sel"));
-        optCard.classList.add("sel");
-      }
-    }
-    _mergeFilter = new Set(names);
-    _forceMerge = true;
-    setStatus("info", names.length + " PDF birleştiriliyor (grup: " + groupId + ")…");
-    if (typeof form.requestSubmit === "function") form.requestSubmit();
-    else form.submit();
-  }
-
   // --- Eşleme modalı ---
 
   let currentMapIdx = null;
@@ -6367,7 +6323,7 @@
         }))
         .filter((g) => g.files.length >= 2);
     }
-    let _wantMerge = _autoMergeGroups.length > 0 || _forceMerge;
+    let _wantMerge = _autoMergeGroups.length > 0;
     console.log("[convert] merge decision:", {
       batchMode, target,
       analyzed: !!_batchAnalyzeData,
@@ -6382,39 +6338,25 @@
       // sonuçlar bir araya geldiğinde sekmeli sonuç paneli açılır.
       if (_wantMerge && _autoMergeGroups.length > 1) {
         await runMultiGroupMerge(_autoMergeGroups);
-        _mergeFilter = null;
-        _forceMerge = false;
         return;
       }
 
-      // Çoklu PDF birleşik akışı (tek grup veya _forceMerge ile zorlanmış) — /batch-convert
+      // Tek otomatik mergeable grup tespit edildi — doğrudan /batch-convert
+      // o grubun dosyalarını + grup metadatasını gönder.
       if (_wantMerge) {
-        // _mergeFilter set ise (per-group buton zorla tek grup), sadece o
-        // gruptaki dosyaları gönder. Aksi halde tek otomatik grup varsa
-        // onun dosyaları; yine yoksa tüm batch.
-        const _singleGroup = !_forceMerge && _autoMergeGroups.length === 1
-            ? _autoMergeGroups[0] : null;
-        const _filterSet = _mergeFilter
-            ? _mergeFilter
-            : (_singleGroup ? new Set(_singleGroup.files) : null);
-        let _appendCount = 0;
+        const _singleGroup = _autoMergeGroups[0];
+        const _filterSet = new Set(_singleGroup.files);
         for (const f of fileInput.files) {
-          if (_filterSet && !_filterSet.has(f.name)) continue;
+          if (!_filterSet.has(f.name)) continue;
           fd.append("files", f);
-          _appendCount++;
         }
         // Group metadata — backend tarafında write_merged_excel + dedup
         // doğru schema'yla çalışsın diye gönderiyoruz.
-        if (_singleGroup) {
-          fd.append("group_kind", _singleGroup.kind);
-          if (_singleGroup.kind === "other_table" && Array.isArray(_singleGroup.headers)) {
-            fd.append("group_headers", JSON.stringify(_singleGroup.headers));
-          }
-          if (_singleGroup.label) fd.append("group_label", _singleGroup.label);
+        fd.append("group_kind", _singleGroup.kind);
+        if (_singleGroup.kind === "other_table" && Array.isArray(_singleGroup.headers)) {
+          fd.append("group_headers", JSON.stringify(_singleGroup.headers));
         }
-        // One-shot flag'leri temizle — sonraki submit baseline'a dönsün
-        _mergeFilter = null;
-        _forceMerge = false;
+        if (_singleGroup.label) fd.append("group_label", _singleGroup.label);
         fd.append("mappings", JSON.stringify(mappings || {}));
         fd.append("skip", JSON.stringify(Array.from(skippedFiles || [])));
 
