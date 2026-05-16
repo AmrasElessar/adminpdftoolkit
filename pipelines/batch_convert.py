@@ -38,18 +38,52 @@ from settings import settings
 from state import batch_store
 
 
-def write_merged_excel(records: list[dict], source_files: list[str], out_path: Path) -> None:
+_CALL_LOG_COL_WIDTHS = {
+    "Sıra": 7,
+    "Kaynak PDF": 28,
+    "Kayıt No": 10,
+    "Müşteri": 28,
+    "Telefon": 18,
+    "Durum": 12,
+    "Tarih": 18,
+    "Süre": 10,
+    "Ağrı / romatizma": 22,
+    "Termal / kaplıca": 22,
+    "Yaş": 14,
+    "Medeni durum": 16,
+    "Meslek": 22,
+    "İkamet ili": 16,
+    "AI Özeti (Ham)": 50,
+}
+
+
+def write_merged_excel(
+    records: list[dict],
+    source_files: list[str],
+    out_path: Path,
+    *,
+    schema: list[str] | None = None,
+    sheet_title: str = "Birleşik Kayıtlar",
+    unsafe: bool = False,
+) -> None:
     """Write the merged-records workbook used by /batch-download and the
-    per-team distribution ZIP. Headers + column widths track the call-log
-    schema closely; ``TARGET_SCHEMA`` is read live off ``core`` so the
-    /batch-convert flow's runtime override (set in app.py at import time)
-    is honoured."""
+    per-team distribution ZIP.
+
+    ``schema`` is the list of headers to write *between* ``Sıra/Kaynak PDF``
+    and (optionally) ``AI Özeti (Ham)``. When omitted, falls back to the
+    live ``core.TARGET_SCHEMA`` + the trailing ``AI Özeti (Ham)`` column
+    (call-log layout). For ``other_table`` groups, the caller passes the
+    group's own headers and we skip the AI-summary trailing column.
+    """
     wb = Workbook()
     ws = wb.active
-    ws.title = "Birleşik Kayıtlar"
+    ws.title = sheet_title
 
-    target_schema = list(getattr(core, "TARGET_SCHEMA", []))
-    headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema, "AI Özeti (Ham)"]
+    if schema is None:
+        target_schema = list(getattr(core, "TARGET_SCHEMA", []))
+        headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema, "AI Özeti (Ham)"]
+    else:
+        headers = ["Sıra", "Kaynak PDF", *schema]
 
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill("solid", fgColor="2F5496")
@@ -73,29 +107,37 @@ def write_merged_excel(records: list[dict], source_files: list[str], out_path: P
             c = ws.cell(row=row_idx, column=col_idx, value=val)
             c.alignment = Alignment(vertical="top", wrap_text=False)
 
-    widths = {
-        "Sıra": 7,
-        "Kaynak PDF": 28,
-        "Kayıt No": 10,
-        "Müşteri": 28,
-        "Telefon": 18,
-        "Durum": 12,
-        "Tarih": 18,
-        "Süre": 10,
-        "Ağrı / romatizma": 22,
-        "Termal / kaplıca": 22,
-        "Yaş": 14,
-        "Medeni durum": 16,
-        "Meslek": 22,
-        "İkamet ili": 16,
-        "AI Özeti (Ham)": 50,
-    }
     for col_idx, h in enumerate(headers, 1):
-        ws.column_dimensions[get_column_letter(col_idx)].width = widths.get(h, 18)
+        ws.column_dimensions[get_column_letter(col_idx)].width = _CALL_LOG_COL_WIDTHS.get(h, 18)
 
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = ws.dimensions
+    if unsafe:
+        from pdf_converter import _add_excel_unsafe_sheet
+
+        _add_excel_unsafe_sheet(wb)
     wb.save(out_path)
+
+
+def _dedup_key(rec: dict, match_columns: list[str]) -> str | None:
+    """Build a composite key for dedup. For the call-log default
+    (``["Telefon"]``) we still pass through ``normalize_phone`` so that
+    ``+90 555 …`` and ``05555…`` collapse. For user-picked columns
+    (other_table groups) we lowercase-strip each field and join with a
+    delimiter that can't appear in cell text. ``None`` means "skip this
+    row" (no key info → don't dedup it away)."""
+    if match_columns == ["Telefon"]:
+        return core.normalize_phone(rec.get("Telefon")) or None
+    parts = []
+    has_any = False
+    for col in match_columns:
+        v = str(rec.get(col, "")).strip().lower()
+        if v:
+            has_any = True
+        parts.append(v)
+    if not has_any:
+        return None
+    return "\x1f".join(parts)
 
 
 def apply_pipeline(
@@ -109,14 +151,15 @@ def apply_pipeline(
     sources = list(original_sources)
 
     if state.get("deduplicated"):
+        match_columns = state.get("match_columns") or ["Telefon"]
         seen: set[str] = set()
         nrec, nsrc = [], []
         for rec, src in zip(records, sources, strict=False):
-            p = core.normalize_phone(rec.get("Telefon"))
-            if p and p in seen:
+            k = _dedup_key(rec, match_columns)
+            if k and k in seen:
                 continue
-            if p:
-                seen.add(p)
+            if k:
+                seen.add(k)
             nrec.append(rec)
             nsrc.append(src)
         records, sources = nrec, nsrc
@@ -150,7 +193,13 @@ def apply_pipeline(
 
 
 def load_job(token: str) -> dict[str, Any]:
-    """Load ``data.json`` for a batch-merge token, migrating old shape."""
+    """Load ``data.json`` for a batch-merge token, migrating old shape.
+
+    Modern ``data.json`` (written by ``batch_convert_worker``) carries
+    a ``group_kind`` (``"call_log"`` or ``"other_table"``) and an explicit
+    ``group_headers`` list — these drive the dedup default + Excel writer
+    schema. Older shapes get migrated to the call-log defaults.
+    """
     core.check_token(token)
     job_dir = core.make_job_dir("jobs", token)
     data_path = job_dir / "data.json"
@@ -158,14 +207,33 @@ def load_job(token: str) -> dict[str, Any]:
         raise HTTPException(404, "İş bulunamadı veya süresi dolmuş.")
     with data_path.open("r", encoding="utf-8") as fp:
         data: dict[str, Any] = json.load(fp)
+    migrated = False
     if "original_records" not in data:
         data["original_records"] = list(data.get("records", []))
         data["original_sources"] = list(data.get("source_files", []))
-        data["state"] = {"deduplicated": False, "filters": {}}
-        with data_path.open("w", encoding="utf-8") as fp:
-            json.dump(data, fp, ensure_ascii=False)
+        migrated = True
     if "state" not in data:
         data["state"] = {"deduplicated": False, "filters": {}}
+        migrated = True
+    if "group_kind" not in data:
+        data["group_kind"] = "call_log"
+        migrated = True
+    if "group_headers" not in data:
+        # call-log default: TARGET_SCHEMA bracketed by Kayıt No / AI Özeti (Ham)
+        target_schema = list(getattr(core, "TARGET_SCHEMA", []))
+        data["group_headers"] = ["Kayıt No", *target_schema, "AI Özeti (Ham)"]
+        migrated = True
+    if "group_label" not in data:
+        data["group_label"] = "Çağrı kayıtları" if data["group_kind"] == "call_log" else "Tablo"
+        migrated = True
+    # State sub-fields
+    st = data["state"]
+    if "match_columns" not in st:
+        st["match_columns"] = ["Telefon"] if data["group_kind"] == "call_log" else []
+        migrated = True
+    if migrated:
+        with data_path.open("w", encoding="utf-8") as fp:
+            json.dump(data, fp, ensure_ascii=False)
     return data
 
 
@@ -181,7 +249,8 @@ def save_view(token: str, state: dict) -> dict:
         old.unlink(missing_ok=True)
     out_name = f"birlesik_{len(records)}_kayit.xlsx"
     out = job_dir / out_name
-    write_merged_excel(records, sources, out)
+    schema = data["group_headers"] if data["group_kind"] == "other_table" else None
+    write_merged_excel(records, sources, out, schema=schema)
 
     data["records"] = records
     data["source_files"] = sources
@@ -244,22 +313,46 @@ def batch_convert_worker(
     job_token: str,
     file_count: int,
     skip_safety: bool = False,
+    *,
+    group_kind: str = "call_log",
+    group_headers: list[str] | None = None,
+    group_label: str | None = None,
 ) -> None:
     """Excel-merge worker. Parses every (non-skipped) PDF in parallel via a
     ``ProcessPoolExecutor`` when ``settings.parallel_batch_workers`` allows
     (auto = ``min(cpu_count, 4)``); falls back to serial parsing for small
     batches or pool-unavailable environments. Output ordering is
     deterministic — completion order is stored back at the original index
-    so the merged Excel always matches the user-supplied PDF order."""
+    so the merged Excel always matches the user-supplied PDF order.
+
+    ``group_kind`` is either ``"call_log"`` or ``"other_table"``. For
+    other_table the caller passes ``group_headers`` (the common column
+    names detected by ``/batch-analyze``); records are keyed by those
+    headers instead of being squashed into the call-log schema.
+    """
     job_dir = core.make_job_dir("jobs", job_token)
     merged: list[dict[str, Any]] = []
     source_index: list[str] = []
     warnings: list[str] = []
     target_schema = list(getattr(core, "TARGET_SCHEMA", []))
+    if group_kind == "other_table":
+        if not group_headers:
+            batch_store.update(
+                token,
+                error="other_table grubu için sütun başlıkları (group_headers) gerekli.",
+                done=True,
+            )
+            return
+        effective_headers = list(group_headers)
+        effective_label = group_label or "Tablo"
+    else:
+        effective_headers = ["Kayıt No", *target_schema, "AI Özeti (Ham)"]
+        effective_label = group_label or "Çağrı kayıtları"
     try:
         # Phase 0: per-file safety scan (cancellable). Pre-conversion gate
         # used to be in the request handler; doing it here keeps the user
         # informed via SSE and lets them press "Atla" to skip remaining.
+        unsafe_any = False
         if not skip_safety:
             from pipelines.safety import scan_files_with_progress
 
@@ -269,6 +362,8 @@ def batch_convert_worker(
                 if not ok:
                     batch_store.update(token, error=err or "Güvensiz PDF reddedildi.", done=True)
                     return
+                snap = batch_store.snapshot(token) or {}
+                unsafe_any = bool(snap.get("unsafe_files"))
 
         files_progress = [
             {
@@ -286,7 +381,14 @@ def batch_convert_worker(
         for filename, pdf_path in files_data:
             if filename in skip_list:
                 continue
-            parse_args.append((filename, str(pdf_path), mappings_obj.get(filename), target_schema))
+            # mode tells the parser how to shape records. For other_table
+            # groups we pass the group's headers as the schema (the parser
+            # extracts the table verbatim and keys rows by those headers).
+            mode = group_kind
+            schema_for_parse = effective_headers if group_kind == "other_table" else target_schema
+            parse_args.append(
+                (filename, str(pdf_path), mappings_obj.get(filename), schema_for_parse, mode)
+            )
 
         configured = settings.parallel_batch_workers
         workers = min(max(1, os.cpu_count() or 1), 4) if configured <= 0 else max(1, configured)
@@ -294,8 +396,8 @@ def batch_convert_worker(
         use_pool = workers > 1 and len(parse_args) > 3
         results_in_order: list[dict[str, Any] | None] = [None] * len(parse_args)
 
-        for fn, _, _, _ in parse_args:
-            _set_file_progress(token, fp_idx_by_name, fn, status="processing")
+        for a in parse_args:
+            _set_file_progress(token, fp_idx_by_name, a[0], status="processing")
 
         if use_pool:
             try:
@@ -385,10 +487,22 @@ def batch_convert_worker(
         for i, rec in enumerate(merged, start=1):
             rec["Sıra"] = i
 
-        out_name = f"birlesik_{len(merged)}_kayit.xlsx"
+        out_name = (
+            f"birlesik_{len(merged)}_kayit_GUVENSIZ.xlsx"
+            if unsafe_any
+            else f"birlesik_{len(merged)}_kayit.xlsx"
+        )
         out = job_dir / out_name
-        write_merged_excel(merged, source_index, out)
+        schema_for_write = effective_headers if group_kind == "other_table" else None
+        write_merged_excel(
+            merged,
+            source_index,
+            out,
+            schema=schema_for_write,
+            unsafe=unsafe_any,
+        )
 
+        default_match_columns = ["Telefon"] if group_kind == "call_log" else []
         data_path = job_dir / "data.json"
         with data_path.open("w", encoding="utf-8") as fp:
             json.dump(
@@ -398,7 +512,14 @@ def batch_convert_worker(
                     "filename": out_name,
                     "original_records": [dict(r) for r in merged],
                     "original_sources": list(source_index),
-                    "state": {"deduplicated": False, "filters": {}},
+                    "state": {
+                        "deduplicated": False,
+                        "filters": {},
+                        "match_columns": default_match_columns,
+                    },
+                    "group_kind": group_kind,
+                    "group_headers": effective_headers,
+                    "group_label": effective_label,
                 },
                 fp,
                 ensure_ascii=False,
@@ -414,6 +535,9 @@ def batch_convert_worker(
             "skipped_count": len(skip_list),
             "warnings": warnings,
             "filename": out_name,
+            "group_kind": group_kind,
+            "group_headers": effective_headers,
+            "group_label": effective_label,
         }
         batch_store.update(token, result=result, phase="done", done=True)
     except Exception as e:

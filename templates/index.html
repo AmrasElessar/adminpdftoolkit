@@ -3512,6 +3512,7 @@
             <section class="batch" id="batch">
               <div class="batch-summary" id="batchSummary"></div>
               <div class="alert warn" id="batchWarn"></div>
+              <div class="batch-groups" id="batchGroups"></div>
               <div class="batch-list" id="batchList"></div>
             </section>
           </section>
@@ -3690,10 +3691,56 @@
         <span style="flex:1"></span>
         <button type="button" class="cvw-btn cvw-btn--primary" id="cvMergeBtn" hidden>📑 Birleştir ve Devam →</button>
       </div>
+
+      <!-- Danger review modal — phase=danger_review iken görünür.
+           NOT: ``hidden`` attribute, inline ``display:flex`` tarafından
+           override olur (specificity); bu yüzden başlangıç gizliliğini
+           inline ``display:none`` ile veriyoruz, JS show/hide eder. -->
+      <div class="cvw-danger-modal" id="cvwDangerModal" role="dialog" aria-modal="true"
+           style="position:fixed; inset:0; background:rgba(0,0,0,0.5); display:none; align-items:center; justify-content:center; z-index:9999">
+        <div style="background:#fff; max-width:560px; width:90%; border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.4); overflow:hidden">
+          <div style="background:#b91c1c; color:#fff; padding:18px 22px; display:flex; align-items:center; gap:12px">
+            <span style="font-size:28px">⚠</span>
+            <div>
+              <div style="font-weight:700; font-size:17px">Güvenlik taramasında risk tespit edildi</div>
+              <div style="font-size:13px; opacity:.92">Dosya, bilinen tehlikeli PDF kalıpları içeriyor.</div>
+            </div>
+          </div>
+          <div style="padding:20px 22px">
+            <div style="margin-bottom:12px">
+              <div style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; font-weight:600">Dosya</div>
+              <div id="cvwDangerFile" style="font-family:monospace; font-size:13px; color:#111827; word-break:break-all; margin-top:2px">—</div>
+            </div>
+            <div style="margin-bottom:14px">
+              <div style="font-size:12px; color:#6b7280; text-transform:uppercase; letter-spacing:.5px; font-weight:600">Tespit edilen</div>
+              <div id="cvwDangerFindings" style="font-family:monospace; font-size:13px; color:#b91c1c; font-weight:600; margin-top:2px">—</div>
+            </div>
+            <div style="background:#fef3c7; border-left:4px solid #f59e0b; padding:10px 14px; border-radius:6px; font-size:13px; color:#78350f; line-height:1.5">
+              <strong>Yine de dönüştürürseniz:</strong> dönüştürme yapılır, ancak çıktının adına
+              <code style="background:rgba(0,0,0,0.06); padding:1px 6px; border-radius:4px">_GUVENSIZ</code>
+              eklenir ve dosya içine uyarı sayfası/paragrafı yerleştirilir. Riski siz üstlenirsiniz.
+            </div>
+          </div>
+          <div style="display:flex; gap:10px; padding:14px 22px 20px; justify-content:flex-end; background:#f9fafb; border-top:1px solid #e5e7eb">
+            <button type="button" class="cvw-btn" id="cvwDangerCancelBtn">İptal</button>
+            <button type="button" class="cvw-btn cvw-btn--primary" id="cvwDangerProceedBtn"
+                    style="background:#b91c1c; border-color:#b91c1c">
+              ⚠ Yine de Dönüştür
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ============ STEP 3 — Sonuç ============ -->
     <div class="cvw-pane" id="cvwPane3" hidden>
+      <!-- Grup sekme bar — birden fazla format grubu işlendiğinde görünür.
+           Her sekme bir grubun (call_log / other_table) sonuç paneline yönlendirir;
+           dedup + filter + distribute UI o grubun token'ıyla yeniden bağlanır. -->
+      <div class="cvw-group-tabs" id="cvwGroupTabs"
+           style="display:none; gap:6px; padding:8px 12px; background:#f3f4f6;
+                  border-radius:8px 8px 0 0; border-bottom:2px solid #e5e7eb;
+                  flex-wrap:wrap" role="tablist"></div>
       <div class="cvw-result-summary" id="resultCard">
         <div>
           <div class="head" id="resultHead">✓ Tamamlandı</div>
@@ -3752,6 +3799,27 @@
 
       <!-- Mükerrer tab -->
       <div class="cvw-tabpanel" data-tab="dedupe" role="tabpanel" hidden>
+        <!-- Sütun seçim paneli — sadece other_table grupları için görünür.
+             Kullanıcı hangi sütun(lar)dan mükerrer kontrolü yapılacağını
+             seçer; loadFullPreview tarafından doldurulur. -->
+        <div id="dedupColumnPicker" hidden
+             style="background:#fef3c7; border-left:4px solid #f59e0b;
+                    padding:12px 16px; border-radius:6px; margin-bottom:12px">
+          <div style="font-weight:600; font-size:13px; color:#78350f; margin-bottom:6px">
+            🔎 Mükerrer kontrolü için sütun(lar) seçin
+          </div>
+          <div style="font-size:12px; color:#78350f; margin-bottom:10px">
+            İşaretlediğiniz sütun(lar)ın değerleri AYNI olan satırlar mükerrer sayılır.
+            Birden fazla sütun seçerseniz hepsinin birlikte aynı olması gerekir.
+          </div>
+          <div id="dedupColumnList" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px"></div>
+          <div style="display:flex; gap:8px; align-items:center">
+            <button type="button" class="cvw-btn cvw-btn--primary cvw-btn--sm" id="dedupColumnApplyBtn">
+              Mükerrer Tara
+            </button>
+            <span id="dedupColumnHint" style="font-size:12px; color:#78350f"></span>
+          </div>
+        </div>
         <div class="dup-warn-bar" id="dupWarnBar">
           <span id="dupWarnText"></span>
           <span class="legend">
@@ -3762,7 +3830,7 @@
         </div>
         <div style="font-size:12px; color:#64748b; margin-top:10px">
           Tablodaki sarı satırlar orijinal, turuncu satırlar mükerrer kopyalardır.
-          "Teke Düşür" mükerrer telefonların kopyalarını siler — geri almak için tekrar basın.
+          "Teke Düşür" mükerrer satırların kopyalarını siler — geri almak için tekrar basın.
         </div>
       </div>
 
@@ -4639,7 +4707,30 @@
   let batchItems = [];          // backend analiz sonucu
   let mappings = {};            // {filename: {target: src_idx}}
   let skippedFiles = new Set(); // kullanıcının atlamayı seçtiği dosyalar
-  let currentJob = null;        // {token, record_count, source_count, filename, warnings}
+  let currentJob = null;        // {token, record_count, source_count, filename, warnings, group_kind, group_headers, group_label}
+  // Multi-group sonuç akışı için. Her grup için ayrı /batch-convert
+  // POST'u yapıldığında, her sonuç bir element olarak push edilir.
+  // Sekme bar bu listeyi render eder; sekme tıklandığında ``currentJob``
+  // o grubun job'una set edilir ve loadFullPreview yeniden çalıştırılır.
+  // Tek grup durumunda dizi tek elemanlıdır ve sekme bar gizli kalır.
+  let currentJobs = [];
+  let _activeGroupIdx = 0;
+  // other_table grupları için aktif dedup sütun seçimi. Kullanıcı dedup
+  // tab'ında checkbox'larla seçer; "Mükerrer Tara" butonuna basınca
+  // /batch-deduplicate'e match_columns olarak gönderilir.
+  let _dedupSelectedCols = [];
+  // Birleşik Excel akışı (/batch-convert) — batch-analyze 2+ uyumlu kayıt
+  // tespit ettiyse true olur; Dönüştür'e basınca kullanıcıya "Tek birleşik
+  // Excel mi ayrı ZIP mi?" seçimi sorulur. False ise sadece /batch-files
+  // (ZIP) yolu açılır.
+  let _cvwMergeAvailable = false;
+  // When non-null, restricts the merge to only files in this Set<filename>.
+  // Set by per-group "Bu grubu birleştir" buttons; cleared after submit.
+  let _mergeFilter = null;
+  // When true, bypass the "merge vs ZIP" confirm dialog (per-group button)
+  let _forceMerge = false;
+  // Latest analyze response (used to look up groups for per-group merge)
+  let _batchAnalyzeData = null;
 
   // Sonuç kartı ve dağıtım modalı referansları
   const resultCard = document.getElementById("resultCard");
@@ -5064,8 +5155,11 @@
       _cvwSkipSafetyClicked = false;
       const skipBtn = document.getElementById("cvwScanSkipBtn");
       if (skipBtn) {
-        skipBtn.disabled = !_cvwActiveJobToken;
-        skipBtn.textContent = "⏩ Atla & Dönüşüme Geç";
+        // Token gelmeden de basılabilsin — basılırsa upload abort eder.
+        skipBtn.disabled = !(_cvwActiveJobToken || _cvwUploadAbort);
+        skipBtn.textContent = _cvwActiveJobToken
+          ? "⏩ Atla & Dönüşüme Geç"
+          : "✕ Yüklemeyi İptal Et";
       }
       const hint = document.getElementById("cvwScanSkipHint");
       if (hint) hint.hidden = true;
@@ -5117,10 +5211,12 @@
     // Faza göre alt yazı
     if (subEl) {
       if (filesSafety.length === 0 || filesSafety.every((f) => f.status === "pending")) {
-        subEl.textContent = "ClamAV motoru hazırlanıyor (signature yükleniyor)…";
+        // Sub text token gelmeden upload mesajıyla override ediliyor (form
+        // submit'te); buraya düşersek upload bitmiş ama worker'ı bekliyoruz.
+        subEl.textContent = "Tarama başlatılıyor…";
       } else if (scanning) {
         subEl.textContent = "PDF'ler antivirüs + yapısal analizden geçiyor…";
-      } else if (filesSafety.every((f) => ["clean", "skipped", "danger"].includes(f.status))) {
+      } else if (filesSafety.every((f) => ["clean", "skipped", "danger", "danger_accepted"].includes(f.status))) {
         subEl.textContent = "✓ Tarama tamamlandı — dönüşüme geçiliyor";
       }
     }
@@ -5156,9 +5252,32 @@
       }
     }
   }
+  // Yükleme sırasında fetch'i iptal etmek için AbortController.
+  // Atla butonu, token gelmeden basılırsa upload'ı durdurur; token geldikten
+  // sonra ise scan-skip endpoint'ini çağırır.
+  let _cvwUploadAbort = null;
   // Skip butonu — kullanıcı taramayı iptal etmek istiyor
   document.getElementById("cvwScanSkipBtn")?.addEventListener("click", async () => {
-    if (!_cvwActiveJobToken || !_cvwActiveJobKind) return;
+    console.log("[scan-skip] click", { token: _cvwActiveJobToken, kind: _cvwActiveJobKind });
+    // Token henüz yoksa upload sürüyor demektir — kullanıcı upload'ı iptal ediyor.
+    if (!_cvwActiveJobToken) {
+      if (!_cvwUploadAbort) {
+        console.warn("[scan-skip] no token, no abort controller — nothing to do");
+        return;
+      }
+      const ok = confirm(
+        "Dosyalar hâlâ yükleniyor. Yüklemeyi iptal etmek istiyor musunuz?"
+      );
+      if (!ok) return;
+      const skipBtn = document.getElementById("cvwScanSkipBtn");
+      if (skipBtn) {
+        skipBtn.disabled = true;
+        skipBtn.textContent = "⏳ İptal ediliyor…";
+      }
+      _cvwUploadAbort.abort();
+      return;
+    }
+    if (!_cvwActiveJobKind) return;
     const ok = confirm(
       "Güvenlik taramasını atlayıp dönüşüme devam etmek istediğinize emin misiniz?\n\n"
       + "⚠ Tarama atlanırsa virüslü veya zararlı PDF'ler de işlenebilir."
@@ -5173,12 +5292,83 @@
     const hint = document.getElementById("cvwScanSkipHint");
     if (hint) hint.hidden = false;
     try {
-      await fetch("/job-skip-safety/" + _cvwActiveJobKind + "/" + _cvwActiveJobToken, {
+      const r = await fetch("/job-skip-safety/" + _cvwActiveJobKind + "/" + _cvwActiveJobToken, {
         method: "POST",
       });
+      console.log("[scan-skip] POST response", r.status);
     } catch (e) {
       console.warn("[scan-skip] fetch failed", e);
     }
+  });
+
+  // Danger review modal helpers — phase=danger_review iken UI'da modal göster.
+  // Kullanıcı "Yine de Dönüştür" derse skip_safety=True, "İptal" derse
+  // cancel_safety=True backend flag'i set edilir. Worker yanıt verene kadar
+  // modal kapanmaz (decision pending lock).
+  let _cvwDangerOpen = false;
+  let _cvwDangerDecisionSent = false;
+  function cvwShowDangerModal(file, findings) {
+    console.log("[danger-modal] show",
+      { file, findings, token: _cvwActiveJobToken, kind: _cvwActiveJobKind });
+    const modal = document.getElementById("cvwDangerModal");
+    const fileEl = document.getElementById("cvwDangerFile");
+    const findEl = document.getElementById("cvwDangerFindings");
+    if (!modal) return;
+    if (fileEl) fileEl.textContent = file || "(adsız)";
+    if (findEl) findEl.textContent = findings || "Bilinmeyen bulgu";
+    modal.style.display = "flex";
+    _cvwDangerOpen = true;
+    _cvwDangerDecisionSent = false;
+    // Reset button states (modal might have been shown before)
+    const yesBtn = document.getElementById("cvwDangerProceedBtn");
+    const noBtn = document.getElementById("cvwDangerCancelBtn");
+    if (yesBtn) { yesBtn.disabled = false; yesBtn.textContent = "⚠ Yine de Dönüştür"; }
+    if (noBtn) { noBtn.disabled = false; noBtn.textContent = "İptal"; }
+  }
+  function cvwHideDangerModal() {
+    const modal = document.getElementById("cvwDangerModal");
+    if (modal) modal.style.display = "none";
+    _cvwDangerOpen = false;
+  }
+  document.getElementById("cvwDangerProceedBtn")?.addEventListener("click", async () => {
+    console.log("[danger-proceed] click fired",
+      { token: _cvwActiveJobToken, kind: _cvwActiveJobKind, sent: _cvwDangerDecisionSent });
+    if (!_cvwActiveJobToken || !_cvwActiveJobKind || _cvwDangerDecisionSent) {
+      console.warn("[danger-proceed] guard blocked click");
+      return;
+    }
+    _cvwDangerDecisionSent = true;
+    const yesBtn = document.getElementById("cvwDangerProceedBtn");
+    if (yesBtn) { yesBtn.disabled = true; yesBtn.textContent = "⏳ Devam ediliyor…"; }
+    try {
+      const r = await fetch("/job-skip-safety/" + _cvwActiveJobKind + "/" + _cvwActiveJobToken, {
+        method: "POST",
+      });
+      console.log("[danger-proceed] POST response", r.status);
+    } catch (e) {
+      console.warn("[danger-proceed] fetch failed", e);
+    }
+    cvwHideDangerModal();
+  });
+  document.getElementById("cvwDangerCancelBtn")?.addEventListener("click", async () => {
+    console.log("[danger-cancel] click fired",
+      { token: _cvwActiveJobToken, kind: _cvwActiveJobKind, sent: _cvwDangerDecisionSent });
+    if (!_cvwActiveJobToken || !_cvwActiveJobKind || _cvwDangerDecisionSent) {
+      console.warn("[danger-cancel] guard blocked click");
+      return;
+    }
+    _cvwDangerDecisionSent = true;
+    const noBtn = document.getElementById("cvwDangerCancelBtn");
+    if (noBtn) { noBtn.disabled = true; noBtn.textContent = "⏳ İptal ediliyor…"; }
+    try {
+      const r = await fetch("/job-cancel-safety/" + _cvwActiveJobKind + "/" + _cvwActiveJobToken, {
+        method: "POST",
+      });
+      console.log("[danger-cancel] POST response", r.status);
+    } catch (e) {
+      console.warn("[danger-cancel] fetch failed", e);
+    }
+    cvwHideDangerModal();
   });
   function cvwAddFileRow(name) {
     const host = document.getElementById("cvFileRows");
@@ -5675,6 +5865,7 @@
       }
       const data = await res.json();
       batchItems = data.items;
+      _batchAnalyzeData = data;
       mappings = {};
       skippedFiles = new Set();
       renderBatch(data);
@@ -5686,6 +5877,14 @@
   }
 
   function renderBatch(data) {
+    // 2+ tablolu PDF varsa birleştirme seçeneği sunabiliriz.
+    // - call_log: 360 Ankara formatı, otomatik algılanır
+    // - other_table: farklı yapı, kullanıcı sütun eşleyerek dahil eder
+    // Her ikisi de birleşik Excel'e dahil edilebilir.
+    const _mergeableItems = (data.items || []).filter((i) =>
+      i.kind === "call_log" || i.kind === "other_table"
+    );
+    _cvwMergeAvailable = _mergeableItems.length >= 2;
     batchSummary.innerHTML =
       statCard("Dosya", data.file_count) +
       statCard("Uyumlu", data.compatible_count, "çağrı kaydı", true) +
@@ -5697,6 +5896,73 @@
       batchWarn.classList.add("shown");
     } else {
       batchWarn.classList.remove("shown");
+    }
+
+    // Format grupları: aynı yapıdaki PDF'leri otomatik grupla.
+    // Her grup için ayrı "Bu grubu birleştir" butonu sunulur.
+    const groupsEl = document.getElementById("batchGroups");
+    if (groupsEl) {
+      groupsEl.innerHTML = "";
+      const groups = data.groups || [];
+      if (groups.length >= 1) {
+        const head = document.createElement("div");
+        head.style.cssText = "font-weight:600;font-size:13px;margin:8px 0 4px;color:#374151";
+        head.textContent = "📋 Tespit edilen formatlar (" + groups.length + ")";
+        groupsEl.appendChild(head);
+
+        groups.forEach((g) => {
+          const card = document.createElement("div");
+          card.className = "batch-group-card";
+          card.style.cssText = "border:1px solid #e5e7eb;border-radius:6px;padding:8px 10px;margin:4px 0;background:#fafafa;display:flex;align-items:center;gap:10px";
+
+          const info = document.createElement("div");
+          info.style.cssText = "flex:1;min-width:0";
+          let label = g.kind === "call_log"
+              ? "Çağrı kaydı (otomatik tanındı)"
+              : g.kind === "other_table"
+                  ? "Tablolu PDF"
+                  : g.kind === "scanned"
+                      ? "Taranmış (görselden) PDF"
+                      : g.kind === "other"
+                          ? "Tablosuz PDF"
+                          : (g.label || g.kind);
+          const headers = g.headers && g.headers.length
+              ? " · " + g.headers.slice(0, 4).map((h) => String(h || "?")).join(" / ")
+                  + (g.headers.length > 4 ? "…" : "")
+              : "";
+          info.innerHTML =
+              "<div style=\"font-weight:600;color:#111827\">" + escapeHtml(label)
+              + " · " + g.items.length + " PDF</div>"
+              + "<div style=\"font-size:11px;color:#6b7280\">"
+              + escapeHtml(g.items.map((i) => data.items[i].name).join(" · "))
+              + escapeHtml(headers)
+              + "</div>";
+          card.appendChild(info);
+
+          // Otomatik akış: "Dönüştür" butonuna basıldığında her mergeable
+          // grup ayrı bir birleşik Excel'e ve ayrı bir sonuç sekmesine
+          // dönüşür. Burada sadece grubun birleştirme durumunu özetleriz.
+          const action = document.createElement("div");
+          if (g.mergeable && g.items.length >= 2) {
+            const note = document.createElement("span");
+            note.style.cssText = "font-size:11px;color:#16a34a;font-weight:600";
+            note.textContent = "✓ otomatik birleştirilecek";
+            action.appendChild(note);
+          } else if (g.mergeable && g.items.length === 1) {
+            const note = document.createElement("span");
+            note.style.cssText = "font-size:11px;color:#9ca3af";
+            note.textContent = "(en az 2 PDF gerekir)";
+            action.appendChild(note);
+          } else {
+            const note = document.createElement("span");
+            note.style.cssText = "font-size:11px;color:#9ca3af";
+            note.textContent = "birleşemez";
+            action.appendChild(note);
+          }
+          card.appendChild(action);
+          groupsEl.appendChild(card);
+        });
+      }
     }
 
     batchList.innerHTML = "";
@@ -5744,6 +6010,202 @@
     });
 
     batch.classList.add("shown");
+  }
+
+  // Multi-group orchestration. Called from form submit when /batch-analyze
+  // detected 2+ mergeable groups. Submits one /batch-convert per group
+  // sequentially (serial keeps the safety-scan UI simple — one scan at a
+  // time, one progress bar). Collects all results into ``currentJobs``,
+  // then opens the tabbed result panel.
+  //
+  // ``groups`` is the already-filtered list from form submit (each entry
+  // has ``id``, ``kind``, ``label``, ``headers`` (other_table only), and
+  // ``files`` — the filenames in that group, with skipped files removed).
+  async function runMultiGroupMerge(groups) {
+    const allFiles = Array.from(fileInput.files);
+    const byName = new Map(allFiles.map((f) => [f.name, f]));
+
+    // Step 2 UI — tüm dosyalar baştan listelenir, her grup işlendikçe o
+    // gruptaki rows "done" olur. Diğerleri "pending" görünür.
+    const allNames = allFiles.map((f) => f.name);
+    showCvScreenA(allNames);
+    batchPg.classList.add("shown");
+    setBatchPg(0, groups.length + " grup işlenecek · sırayla başlatılıyor…");
+
+    const results = [];
+    const skipObj = Array.from(skippedFiles || []);
+    let groupIdx = 0;
+
+    for (const grp of groups) {
+      groupIdx++;
+      const groupLabel = grp.label || (grp.kind === "call_log"
+          ? "Çağrı kayıtları" : "Tablo");
+
+      // Bu grubun dosyalarını topla — eksik olanları atla (silinmiş olabilir)
+      const groupFiles = grp.files
+          .map((name) => byName.get(name))
+          .filter(Boolean);
+      if (groupFiles.length < 2) {
+        // Atlanmış dosyalar yüzünden 2'nin altına düştüyse uyar, atla
+        setStatus("info",
+          "Grup " + groupIdx + " (" + groupLabel + ") atlandı — birleştirmek için "
+          + "en az 2 PDF gerekir, " + groupFiles.length + " bulundu.");
+        continue;
+      }
+
+      const fd = new FormData();
+      for (const f of groupFiles) fd.append("files", f);
+      fd.append("mappings", JSON.stringify(mappings || {}));
+      fd.append("skip", JSON.stringify(skipObj));
+      fd.append("group_kind", grp.kind);
+      if (grp.kind === "other_table" && Array.isArray(grp.headers)) {
+        fd.append("group_headers", JSON.stringify(grp.headers));
+      }
+      fd.append("group_label", groupLabel);
+
+      setCvwProgress(0,
+        "Grup " + groupIdx + " / " + groups.length + " · " + groupLabel,
+        groupFiles.length + " PDF birleştiriliyor…",
+        true);
+      setBatchPg(((groupIdx - 1) / groups.length) * 100,
+        "Grup " + groupIdx + "/" + groups.length + " (" + groupLabel + ") yükleniyor…");
+
+      cvwUpdateScanFiles(
+        groupFiles.map((f) => ({ name: f.name, status: "pending" })),
+        0, groupFiles.length);
+      _cvwUploadAbort = new AbortController();
+      cvwSetScanMode(true, "batch", null);
+      const _sub = document.getElementById("cvwScanSub");
+      if (_sub) _sub.textContent = "Grup " + groupIdx + ": " + groupFiles.length + " PDF yükleniyor…";
+
+      let startRes;
+      try {
+        startRes = await fetch("/batch-convert", {
+          method: "POST", body: fd, signal: _cvwUploadAbort.signal,
+        });
+      } catch (e) {
+        if (e.name === "AbortError") {
+          cvwSetScanMode(false);
+          _cvwUploadAbort = null;
+          setStatus("info", "Grup " + groupIdx + " iptal edildi.");
+          break;
+        }
+        throw e;
+      }
+      _cvwUploadAbort = null;
+      if (!startRes.ok) {
+        let msg = "Hata: " + startRes.status;
+        try { const j = await startRes.json(); if (j.detail) msg = j.detail; } catch {}
+        setStatus("err", "Grup " + groupIdx + " (" + groupLabel + "): " + msg);
+        continue;
+      }
+      const { token: gToken } = await startRes.json();
+      _cvwActiveJobToken = gToken;
+      _cvwActiveJobKind = "batch";
+      const _gskip = document.getElementById("cvwScanSkipBtn");
+      if (_gskip) { _gskip.disabled = false; _gskip.textContent = "⏩ Atla & Dönüşüme Geç"; }
+
+      // Per-group try/catch — bir grupta hata olsa bile diğer grupları
+      // bırakmadan devam etsin. ``pollOrStream`` snapshot.error ile reject
+      // eder; bunu burada yakalayıp warning'e dönüştür ve sonraki gruba geç.
+      let final = null;
+      try {
+        final = await pollOrStream("batch", gToken, {
+          intervalMs: 600,
+          onUpdate: (p) => {
+            if (p.phase === "danger_review") {
+              cvwSetScanMode(true, "batch", gToken);
+              cvwUpdateScanFiles(p.files_safety, p.current, p.total);
+              if (!_cvwDangerOpen) cvwShowDangerModal(p.danger_file, p.danger_findings);
+              return;
+            }
+            if (_cvwDangerOpen && p.phase !== "danger_review") cvwHideDangerModal();
+            if (p.phase === "scanning") {
+              cvwSetScanMode(true, "batch", gToken);
+              cvwUpdateScanFiles(p.files_safety, p.current, p.total);
+              return;
+            }
+            cvwSetScanMode(false);
+            if (Array.isArray(p.files_progress)) {
+              for (const fp of p.files_progress) {
+                updateCvFileRow(fp.name, fp.status, fp.record_count, fp.error, fp.kind_label);
+              }
+            }
+            if (p.total > 0) {
+              const groupPct = (p.current / p.total);
+              const overallPct = ((groupIdx - 1) + groupPct) / groups.length * 100;
+              const phaseLbl = ({
+                starting: "Başlatılıyor", processing: "İşleniyor",
+                writing: "Excel yazılıyor", done: "Bitti",
+              })[p.phase] || p.phase || "";
+              setBatchPg(overallPct,
+                "Grup " + groupIdx + "/" + groups.length + " · " + phaseLbl
+                + (p.last_file ? " · " + p.last_file : ""));
+            }
+          },
+        });
+      } catch (pollErr) {
+        cvwSetScanMode(false);
+        console.warn("[multi-group] grup", groupIdx, "hata:", pollErr);
+        setStatus("err",
+          "Grup " + groupIdx + " (" + groupLabel + "): "
+          + (pollErr.message || pollErr));
+        continue;
+      }
+      cvwSetScanMode(false);
+
+      if (final && final.result) {
+        results.push(final.result);
+      } else if (final && final.error) {
+        setStatus("err", "Grup " + groupIdx + ": " + final.error);
+      }
+    }
+
+    if (!results.length) {
+      throw new Error("Hiçbir grup birleştirilemedi.");
+    }
+    setBatchPg(100, results.length + " grup birleştirildi");
+    // Multi-tab sonuç paneli aç
+    showResultTabs(results);
+  }
+
+  // Per-group merge: only sends the group's files to /batch-convert.
+  // Triggered by the "Bu grubu birleştir" button rendered per format group.
+  function doGroupMerge(groupId) {
+    if (!_batchAnalyzeData || !_batchAnalyzeData.groups) return;
+    const grp = _batchAnalyzeData.groups.find((g) => g.id === groupId);
+    if (!grp) { setStatus("err", "Grup bulunamadı: " + groupId); return; }
+    const names = grp.items.map((i) => _batchAnalyzeData.items[i].name);
+    if (!names.length) { setStatus("err", "Gruptaki dosyalar boş."); return; }
+
+    // other_table grubunda mapping yoksa kullanıcıyı uyar
+    if (grp.kind === "other_table") {
+      const unmapped = names.filter((n) => !mappings[n] && !skippedFiles.has(n));
+      if (unmapped.length === names.length) {
+        if (!confirm(
+          "Bu gruptaki PDF'ler için henüz sütun eşlemesi yapılmadı.\n\n"
+          + "Yine de devam edilirse hiçbir kayıt çıkarılamaz.\n"
+          + "Önce listedeki 'Sütunları Eşle' butonuyla en az bir PDF'i eşleyin.\n\n"
+          + "Yine de devam edilsin mi?"
+        )) return;
+      }
+    }
+
+    // Excel formatını seç + flag'leri set et + submit
+    const excelRadio = form.querySelector('input[name=target][value="excel"]');
+    if (excelRadio) {
+      excelRadio.checked = true;
+      const optCard = excelRadio.closest(".opt");
+      if (optCard) {
+        document.querySelectorAll(".opt").forEach((o) => o.classList.remove("sel"));
+        optCard.classList.add("sel");
+      }
+    }
+    _mergeFilter = new Set(names);
+    _forceMerge = true;
+    setStatus("info", names.length + " PDF birleştiriliyor (grup: " + groupId + ")…");
+    if (typeof form.requestSubmit === "function") form.requestSubmit();
+    else form.submit();
   }
 
   // --- Eşleme modalı ---
@@ -5870,11 +6332,175 @@
 
     const fd = new FormData();
 
+    // Auto-merge decision:
+    //   - analyze sonucunda 2+ mergeable item var ise (call_log / other_table),
+    //     merge akışı tetiklenir. Diyalog yok — her tespit edilen format grubu
+    //     ayrı bir birleşik Excel ve ayrı bir sonuç sekmesi olur.
+    //   - Tek bir mergeable item varsa veya merge available değilse: /batch-files
+    //     (ZIP) yolu kullanılır.
+    // Hesaplanan gruplar:
+    //   _autoMergeGroups: backend'in /batch-analyze çağrısından dönen ``groups``
+    //   listesinden, atlanmış dosyaları çıkarıp 2+ üye kalanları filtrele.
+    //   Tek üyeli mergeable bir grup tek başına merge edilmez (faydası yok).
+    // Defensive: batchMode + Excel + 2+ PDF ama analyze yapılmadıysa,
+    // submit'te anlık analyze çalıştır. Aksi halde groups bilinmediği için
+    // ZIP yolu kullanılır ve birleştirme akışı sessizce atlanır.
+    if (batchMode && target === "excel" && fileInput.files.length >= 2
+        && (!_batchAnalyzeData || !_batchAnalyzeData.groups)) {
+      console.log("[convert] analyze missing, running it now…");
+      try {
+        await doBatchAnalyze(Array.from(fileInput.files));
+      } catch (e) {
+        console.warn("[convert] inline analyze failed:", e);
+      }
+    }
+    let _autoMergeGroups = [];
+    if (batchMode && target === "excel" && _batchAnalyzeData && _batchAnalyzeData.groups) {
+      _autoMergeGroups = _batchAnalyzeData.groups
+        .filter((g) => g.mergeable)
+        .map((g) => ({
+          ...g,
+          // grup içinden atlanmış dosyaları çıkar
+          files: g.items
+            .map((i) => _batchAnalyzeData.items[i].name)
+            .filter((n) => !skippedFiles.has(n)),
+        }))
+        .filter((g) => g.files.length >= 2);
+    }
+    let _wantMerge = _autoMergeGroups.length > 0 || _forceMerge;
+    console.log("[convert] merge decision:", {
+      batchMode, target,
+      analyzed: !!_batchAnalyzeData,
+      groupsRaw: _batchAnalyzeData ? _batchAnalyzeData.groups : null,
+      autoMergeGroups: _autoMergeGroups,
+      wantMerge: _wantMerge,
+    });
+
     try {
-      // Çoklu PDF: her dosya kendi çıktısını üretir, ZIP olarak inilir.
-      // (Tek dosya zaten else dalında /convert-start ile ayrı işleniyor.)
-      // /batch-convert (call-log merge) artık ayrı bir advanced akış —
-      // burada tetiklenmez; herhangi bir PDF Excel'e dönüştürülebilir.
+      // Multi-group otomatik akış — 2+ mergeable group tespit edildiyse,
+      // her grup için ayrı /batch-convert POST + ayrı pollOrStream. Tüm
+      // sonuçlar bir araya geldiğinde sekmeli sonuç paneli açılır.
+      if (_wantMerge && _autoMergeGroups.length > 1) {
+        await runMultiGroupMerge(_autoMergeGroups);
+        _mergeFilter = null;
+        _forceMerge = false;
+        return;
+      }
+
+      // Çoklu PDF birleşik akışı (tek grup veya _forceMerge ile zorlanmış) — /batch-convert
+      if (_wantMerge) {
+        // _mergeFilter set ise (per-group buton zorla tek grup), sadece o
+        // gruptaki dosyaları gönder. Aksi halde tek otomatik grup varsa
+        // onun dosyaları; yine yoksa tüm batch.
+        const _singleGroup = !_forceMerge && _autoMergeGroups.length === 1
+            ? _autoMergeGroups[0] : null;
+        const _filterSet = _mergeFilter
+            ? _mergeFilter
+            : (_singleGroup ? new Set(_singleGroup.files) : null);
+        let _appendCount = 0;
+        for (const f of fileInput.files) {
+          if (_filterSet && !_filterSet.has(f.name)) continue;
+          fd.append("files", f);
+          _appendCount++;
+        }
+        // Group metadata — backend tarafında write_merged_excel + dedup
+        // doğru schema'yla çalışsın diye gönderiyoruz.
+        if (_singleGroup) {
+          fd.append("group_kind", _singleGroup.kind);
+          if (_singleGroup.kind === "other_table" && Array.isArray(_singleGroup.headers)) {
+            fd.append("group_headers", JSON.stringify(_singleGroup.headers));
+          }
+          if (_singleGroup.label) fd.append("group_label", _singleGroup.label);
+        }
+        // One-shot flag'leri temizle — sonraki submit baseline'a dönsün
+        _mergeFilter = null;
+        _forceMerge = false;
+        fd.append("mappings", JSON.stringify(mappings || {}));
+        fd.append("skip", JSON.stringify(Array.from(skippedFiles || [])));
+
+        const fileNames = Array.from(fileInput.files).map((f) => f.name);
+        showCvScreenA(fileNames);
+        setCvwProgress(0, "Excel'e birleştiriliyor", fileNames.length + " PDF işleniyor…", true);
+        batchPg.classList.add("shown");
+        setBatchPg(0, "Dosyalar yükleniyor...");
+
+        cvwUpdateScanFiles(fileNames.map((n) => ({ name: n, status: "pending" })), 0, fileNames.length);
+        _cvwUploadAbort = new AbortController();
+        cvwSetScanMode(true, "batch", null);
+        const _scanSubM = document.getElementById("cvwScanSub");
+        if (_scanSubM) _scanSubM.textContent =
+          "Dosyalar sunucuya yükleniyor… (" + fileNames.length + " PDF)";
+
+        let mergeStart;
+        try {
+          mergeStart = await fetch("/batch-convert", {
+            method: "POST", body: fd, signal: _cvwUploadAbort.signal,
+          });
+        } catch (e) {
+          if (e.name === "AbortError") {
+            cvwSetScanMode(false);
+            _cvwUploadAbort = null;
+            if (typeof window.__cvwSetStep === "function") window.__cvwSetStep(1);
+            setStatus("info", "Yükleme iptal edildi.");
+            return;
+          }
+          throw e;
+        }
+        _cvwUploadAbort = null;
+        if (!mergeStart.ok) {
+          let msg = "Hata: " + mergeStart.status;
+          try { const j = await mergeStart.json(); if (j.detail) msg = j.detail; } catch {}
+          throw new Error(msg);
+        }
+        const { token: mergeToken } = await mergeStart.json();
+        _cvwActiveJobToken = mergeToken;
+        _cvwActiveJobKind = "batch";
+        const _mSkip = document.getElementById("cvwScanSkipBtn");
+        if (_mSkip) { _mSkip.disabled = false; _mSkip.textContent = "⏩ Atla & Dönüşüme Geç"; }
+
+        const mergeFinal = await pollOrStream("batch", mergeToken, {
+          intervalMs: 600,
+          onUpdate: (p) => {
+            if (p.phase === "danger_review") {
+              cvwSetScanMode(true, "batch", mergeToken);
+              cvwUpdateScanFiles(p.files_safety, p.current, p.total);
+              if (!_cvwDangerOpen) cvwShowDangerModal(p.danger_file, p.danger_findings);
+              return;
+            }
+            if (_cvwDangerOpen && p.phase !== "danger_review") cvwHideDangerModal();
+            if (p.phase === "scanning") {
+              cvwSetScanMode(true, "batch", mergeToken);
+              cvwUpdateScanFiles(p.files_safety, p.current, p.total);
+              return;
+            }
+            cvwSetScanMode(false);
+            if (Array.isArray(p.files_progress)) {
+              for (const fp of p.files_progress) {
+                updateCvFileRow(fp.name, fp.status, fp.record_count, fp.error, fp.kind_label);
+              }
+            }
+            if (p.total > 0) {
+              const pct = (p.current / p.total) * 100;
+              const phaseLbl = ({
+                starting: "Başlatılıyor", processing: "İşleniyor",
+                writing: "Birleşik Excel yazılıyor", done: "Tamamlandı",
+              })[p.phase] || p.phase || "";
+              setBatchPg(pct, phaseLbl + (p.last_file ? " · " + p.last_file : ""));
+            }
+          },
+        });
+        cvwSetScanMode(false);
+
+        if (!mergeFinal || !mergeFinal.result) {
+          throw new Error("Birleştirme sonucu eksik.");
+        }
+        setBatchPg(100, "Birleştirme tamamlandı");
+        currentJob = mergeFinal.result;
+        // Step 3 — birleşik tablo + dedup + dağıtım UI'sini göster
+        // (showResultTabs tek-grup durumunda group tab bar'ı gizler)
+        showResultTabs([currentJob]);
+        return;
+      }
       if (batchMode) {
         for (const f of fileInput.files) fd.append("files", f);
         fd.append("target", target);
@@ -5896,29 +6522,65 @@
         batchPg.classList.add("shown");
         setBatchPg(0, "Dosyalar yükleniyor...");
 
-        // Tarama UI'sini hemen göster — fetch sırasında ve token gelmeden önce de
-        // kullanıcı "🛡 Virüs taraması başlatıldı" yazısını görsün.
+        // Tarama UI'sini hemen göster — fetch sırasında da kullanıcı görsel
+        // bir feedback alsın. Atla butonu bu fazda "✕ Yüklemeyi İptal Et"
+        // moduna geçer; basılırsa AbortController ile fetch durdurulur.
         const fnames = Array.from(fileInput.files).map((f) => f.name);
         cvwUpdateScanFiles(fnames.map((n) => ({ name: n, status: "pending" })), 0, fnames.length);
+        _cvwUploadAbort = new AbortController();
         cvwSetScanMode(true, "batch", null);
+        // Alt yazıyı upload moduna çek (signature yükleme mesajı kafa karıştırıyordu)
+        const _scanSub0 = document.getElementById("cvwScanSub");
+        if (_scanSub0) _scanSub0.textContent =
+          "Dosyalar sunucuya yükleniyor… (" + fnames.length + " PDF)";
 
-        const startRes = await fetch(endpoint, { method: "POST", body: fd });
+        let startRes;
+        try {
+          startRes = await fetch(endpoint, {
+            method: "POST", body: fd, signal: _cvwUploadAbort.signal,
+          });
+        } catch (e) {
+          if (e.name === "AbortError") {
+            cvwSetScanMode(false);
+            _cvwUploadAbort = null;
+            if (typeof window.__cvwSetStep === "function") window.__cvwSetStep(1);
+            setStatus("info", "Yükleme iptal edildi.");
+            return;
+          }
+          throw e;
+        }
+        _cvwUploadAbort = null;
         if (!startRes.ok) {
           let msg = "Hata: " + startRes.status;
           try { const j = await startRes.json(); if (j.detail) msg = j.detail; } catch {}
           throw new Error(msg);
         }
         const { token } = await startRes.json();
-        // Token alındı — skip butonu artık çalışsın
+        // Token alındı — skip butonu artık scan-skip modunda çalışsın
         _cvwActiveJobToken = token;
         _cvwActiveJobKind = "batch";
         const _skipBtnB = document.getElementById("cvwScanSkipBtn");
-        if (_skipBtnB) _skipBtnB.disabled = false;
+        if (_skipBtnB) {
+          _skipBtnB.disabled = false;
+          _skipBtnB.textContent = "⏩ Atla & Dönüşüme Geç";
+        }
 
         // Push-based progress via SSE (with polling fallback in pollOrStream)
         const final = await pollOrStream("batch", token, {
           intervalMs: 600,
           onUpdate: (p) => {
+            // Danger review — worker bekliyor, modal aç.
+            if (p.phase === "danger_review") {
+              cvwSetScanMode(true, "batch", token);
+              cvwUpdateScanFiles(p.files_safety, p.current, p.total);
+              if (!_cvwDangerOpen) {
+                cvwShowDangerModal(p.danger_file, p.danger_findings);
+              }
+              return;
+            }
+            if (_cvwDangerOpen && p.phase !== "danger_review") {
+              cvwHideDangerModal();
+            }
             // Scanning phase: tarama UI'sini güncelle
             if (p.phase === "scanning") {
               cvwSetScanMode(true, "batch", token);
@@ -6032,6 +6694,19 @@
         await pollOrStream(wantOcr ? "ocr" : "convert", token, {
           intervalMs: 500,
           onUpdate: (p) => {
+            // Danger review — worker bekliyor, kullanıcı kararını verene kadar modal aç.
+            if (p.phase === "danger_review") {
+              cvwSetScanMode(true, "convert", token);
+              cvwUpdateScanFiles(p.files_safety, p.current, p.total);
+              if (!_cvwDangerOpen) {
+                cvwShowDangerModal(p.danger_file, p.danger_findings);
+              }
+              return;
+            }
+            // Modal açıksa ve faz değişmişse (kararı backend aldı) modal'ı kapat.
+            if (_cvwDangerOpen && p.phase !== "danger_review") {
+              cvwHideDangerModal();
+            }
             // Scanning phase
             if (p.phase === "scanning") {
               cvwSetScanMode(true, "convert", token);
@@ -6134,6 +6809,78 @@
     // Tüm kayıtları arka planda çek ve tabloya bas
     loadFullPreview(data.token);
   }
+
+  // Multi-group result entrypoint. ``jobs`` is one job-result per detected
+  // group (see ``submitOneGroup`` below). Renders the group tab bar when
+  // there's more than one group; otherwise behaves like ``showResultCard``.
+  function showResultTabs(jobs) {
+    currentJobs = Array.isArray(jobs) ? jobs.filter(Boolean) : [];
+    _activeGroupIdx = 0;
+    const tabsHost = document.getElementById("cvwGroupTabs");
+    if (!tabsHost) {
+      if (currentJobs[0]) { currentJob = currentJobs[0]; showResultCard(currentJob); }
+      return;
+    }
+    tabsHost.innerHTML = "";
+    if (currentJobs.length <= 1) {
+      tabsHost.style.display = "none";
+      if (currentJobs[0]) { currentJob = currentJobs[0]; showResultCard(currentJob); }
+      return;
+    }
+    tabsHost.style.display = "flex";
+    currentJobs.forEach((job, idx) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cvw-group-tab" + (idx === 0 ? " active" : "");
+      btn.dataset.idx = String(idx);
+      const labelTxt = job.group_label || (job.group_kind === "call_log"
+          ? "Çağrı kayıtları" : "Tablo");
+      const kindIcon = job.group_kind === "call_log" ? "📞" : "📊";
+      btn.style.cssText =
+        "padding:8px 14px; border:1px solid " + (idx === 0 ? "#2563eb" : "#d1d5db")
+        + "; background:" + (idx === 0 ? "#dbeafe" : "#fff")
+        + "; color:" + (idx === 0 ? "#1e3a8a" : "#374151")
+        + "; border-radius:6px; cursor:pointer; font-weight:" + (idx === 0 ? "600" : "500")
+        + "; font-size:13px; display:inline-flex; align-items:center; gap:6px;"
+        + " transition:all 0.15s";
+      btn.innerHTML =
+        '<span>' + kindIcon + '</span>'
+        + '<span>' + escapeHtml(labelTxt) + '</span>'
+        + '<span style="background:rgba(0,0,0,0.08); padding:1px 7px; border-radius:10px; font-size:11px; font-weight:600">'
+        + fmt(job.record_count) + '</span>';
+      btn.addEventListener("click", () => setActiveGroupTab(idx));
+      tabsHost.appendChild(btn);
+    });
+    currentJob = currentJobs[0];
+    showResultCard(currentJob);
+  }
+  function setActiveGroupTab(idx) {
+    if (idx < 0 || idx >= currentJobs.length) return;
+    _activeGroupIdx = idx;
+    const tabsHost = document.getElementById("cvwGroupTabs");
+    if (tabsHost) {
+      Array.from(tabsHost.children).forEach((btn, i) => {
+        const active = (i === idx);
+        btn.classList.toggle("active", active);
+        btn.style.borderColor = active ? "#2563eb" : "#d1d5db";
+        btn.style.background = active ? "#dbeafe" : "#fff";
+        btn.style.color = active ? "#1e3a8a" : "#374151";
+        btn.style.fontWeight = active ? "600" : "500";
+      });
+    }
+    currentJob = currentJobs[idx];
+    // Re-render result head + sub for the selected group
+    resultHead.textContent = "✓ " + (currentJob.group_label || "Sonuç") + " · "
+        + fmt(currentJob.record_count) + " kayıt";
+    const warnPart = (currentJob.warnings && currentJob.warnings.length)
+        ? " ⚠ Uyarı: " + currentJob.warnings.join("; ")
+        : "";
+    resultSub.textContent = currentJob.source_count + " PDF işlendi." + warnPart;
+    if (typeof window.__cvwActivateTab === "function") window.__cvwActivateTab("preview");
+    // Reload preview + filters + dedup state for this group's token
+    loadFullPreview(currentJob.token);
+  }
+  window.__setActiveGroupTab = setActiveGroupTab;
   // Word/JPG (single & batch) sonucunda kullanılır — sadece özet + indirme
   function showSimpleResult({ title, sub, downloadName, downloadBlob, isError }) {
     if (resultHead) resultHead.textContent = title || (isError ? "✗ Hata" : "✓ Tamamlandı");
@@ -6304,15 +7051,72 @@
       renderFullPreview(data.headers, data.rows, data.dup_flags || []);
       renderFilterChips();
 
-      // Mükerrer uyarısı (state.deduplicated true ise gizle)
+      // currentJob'a grup metadatasını yansıt — dedup butonunun
+      // doğru match_columns'u seçebilmesi için.
+      if (currentJob) {
+        currentJob.group_kind = data.group_kind || currentJob.group_kind || "call_log";
+        currentJob.group_headers = data.group_headers || currentJob.group_headers || [];
+        currentJob.group_label = data.group_label || currentJob.group_label || "";
+      }
+      const groupKind = (currentJob && currentJob.group_kind) || "call_log";
+
+      // Other_table grubu için sütun seçici paneli render et — kullanıcı
+      // hangi sütun(lar)dan mükerrer kontrolü yapılacağını işaretler.
+      const picker = document.getElementById("dedupColumnPicker");
+      const pickerList = document.getElementById("dedupColumnList");
+      if (picker && pickerList) {
+        if (groupKind === "other_table" && Array.isArray(data.dedup_candidates) && data.dedup_candidates.length) {
+          picker.hidden = false;
+          pickerList.innerHTML = "";
+          const stored = (data.state && data.state.match_columns) || [];
+          _dedupSelectedCols = stored.slice();
+          data.dedup_candidates.forEach((col) => {
+            const id = "ddc_" + col.replace(/[^a-z0-9]/gi, "_");
+            const lbl = document.createElement("label");
+            lbl.style.cssText =
+              "display:inline-flex; align-items:center; gap:6px; padding:4px 10px;"
+              + " background:#fff; border:1px solid #d97706; border-radius:14px;"
+              + " font-size:12px; color:#78350f; cursor:pointer";
+            const cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.id = id;
+            cb.value = col;
+            cb.checked = _dedupSelectedCols.includes(col);
+            cb.addEventListener("change", () => {
+              _dedupSelectedCols = Array.from(pickerList.querySelectorAll("input:checked"))
+                  .map((c) => c.value);
+              const hint = document.getElementById("dedupColumnHint");
+              if (hint) hint.textContent = _dedupSelectedCols.length
+                  ? _dedupSelectedCols.length + " sütun seçildi"
+                  : "";
+            });
+            const txt = document.createElement("span");
+            txt.textContent = col;
+            lbl.appendChild(cb);
+            lbl.appendChild(txt);
+            pickerList.appendChild(lbl);
+          });
+          const hint = document.getElementById("dedupColumnHint");
+          if (hint) hint.textContent = _dedupSelectedCols.length
+              ? _dedupSelectedCols.length + " sütun seçildi" : "";
+        } else {
+          picker.hidden = true;
+          _dedupSelectedCols = ["Telefon"];  // call_log default
+        }
+      }
+
+      // Mükerrer uyarısı (state.deduplicated true ise gizle).
+      // Sayılar artık "telefon" değil "kayıt" olarak ifade edilir; call_log
+      // grubu için anlamı aynı (her telefon bir potansiyel mükerrer).
       const dedupedActive = !!(data.state && data.state.deduplicated);
       const dupPhones = data.duplicate_phone_count || 0;
       const dupRows = data.duplicate_row_count || 0;
       const dedupeTabBtn = document.querySelector('.cvw-tab[data-tab="dedupe"]');
       const dedupeBadge = document.getElementById("tabDedupeCount");
+      const dupLabel = groupKind === "call_log" ? "telefon" : "kayıt";
       if (dupPhones > 0 && !dedupedActive) {
         dupWarnText.innerHTML =
-          "⚠ <strong>" + fmt(dupPhones) + " telefon</strong> mükerrer · "
+          "⚠ <strong>" + fmt(dupPhones) + " " + dupLabel + "</strong> mükerrer · "
           + "<strong>" + fmt(dupRows) + " satır</strong> teke düşürülebilir.";
         dupWarnBar.classList.add("shown");
         dedupeBtn.disabled = false;
@@ -6320,7 +7124,7 @@
         if (dedupeTabBtn) dedupeTabBtn.hidden = false;
         if (dedupeBadge) dedupeBadge.textContent = fmt(dupPhones);
       } else if (dedupedActive) {
-        dupWarnText.innerHTML = "✓ <strong>Mükerrer telefonlar silindi</strong>";
+        dupWarnText.innerHTML = "✓ <strong>Mükerrer kayıtlar silindi</strong>";
         dupWarnBar.classList.add("shown");
         dedupeBtn.disabled = false;
         dedupeBtn.textContent = "Geri Al";
@@ -6370,6 +7174,16 @@
     fpTable.innerHTML = parts.join("");
   }
 
+  // "Mükerrer Tara" butonu — column-picker'da sütun seçildikten sonra
+  // basılır; dedup işlemini ana dedupeBtn flow'u üzerinden tetikler.
+  document.getElementById("dedupColumnApplyBtn")?.addEventListener("click", () => {
+    if (!_dedupSelectedCols.length) {
+      setStatus("err", "Lütfen en az bir sütun seçin.");
+      return;
+    }
+    dedupeBtn.click();
+  });
+
   dedupeBtn.addEventListener("click", async () => {
     if (!currentJob) return;
     const isUndo = dedupeBtn.textContent.trim() === "Geri Al";
@@ -6377,13 +7191,32 @@
       ? "/batch-undeduplicate/" + currentJob.token
       : "/batch-deduplicate/" + currentJob.token;
     if (!isUndo) {
-      const ok = confirm("Aynı telefon numarasına sahip kayıtların 2. ve sonraki satırları silinecek (ilk geçen kalır). Devam edilsin mi?");
-      if (!ok) return;
+      // other_table grubu: kullanıcının seçtiği sütun(lar) üzerinde dedup;
+      // call_log grubu: mevcut "Telefon" varsayılanı.
+      const isOther = currentJob && currentJob.group_kind === "other_table";
+      const matchCols = isOther ? (_dedupSelectedCols || []) : ["Telefon"];
+      if (isOther && !matchCols.length) {
+        setStatus("err", "Önce 'Mükerrer Tara' bölümünden en az bir sütun seçin.");
+        return;
+      }
+      const confMsg = isOther
+        ? "Seçilen sütun(lar) (" + matchCols.join(", ") + ") aynı olan satırların kopyaları silinecek. Devam edilsin mi?"
+        : "Aynı telefon numarasına sahip kayıtların 2. ve sonraki satırları silinecek (ilk geçen kalır). Devam edilsin mi?";
+      if (!confirm(confMsg)) return;
     }
     dedupeBtn.disabled = true;
     setStatus("info", isUndo ? "Mükerrer silme geri alınıyor..." : "Mükerrerler temizleniyor...");
     try {
-      const res = await fetch(url, { method: "POST" });
+      let res;
+      if (isUndo) {
+        res = await fetch(url, { method: "POST" });
+      } else {
+        const fd = new FormData();
+        const isOther = currentJob && currentJob.group_kind === "other_table";
+        const matchCols = isOther ? (_dedupSelectedCols || []) : ["Telefon"];
+        fd.append("match_columns", JSON.stringify(matchCols));
+        res = await fetch(url, { method: "POST", body: fd });
+      }
       if (!res.ok) {
         let msg = "İşlem başarısız (" + res.status + ")";
         try { const j = await res.json(); if (j.detail) msg = j.detail; } catch {}

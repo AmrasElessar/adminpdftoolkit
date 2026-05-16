@@ -90,7 +90,7 @@ def test_worker_merges_two_pdfs_and_writes_outputs(
     b.write_bytes(b"%PDF-1.4\n%%EOF\n")
 
     def fake_parse(args):
-        filename, _path, _mapping, _schema = args
+        filename = args[0]
         return {
             "filename": filename,
             "records": [{"Telefon": "5551112233", "Müşteri": filename}],
@@ -152,7 +152,7 @@ def test_worker_preserves_input_order_when_parses_complete_out_of_order(
     b.write_bytes(b"%PDF-1.4\n%%EOF\n")
 
     def fake_parse(args):
-        filename, _, _, _ = args
+        filename = args[0]
         # Record numbers chosen to make the merged Sıra easy to verify
         recs = [{"Müşteri": f"{filename}-1"}, {"Müşteri": f"{filename}-2"}]
         return {"filename": filename, "records": recs, "warning": None}

@@ -155,6 +155,42 @@ async def batch_analyze(files: list[UploadFile] = File(...)) -> dict:
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
 
+    # Format groups: aynı yapida olan PDF'leri grupla; her grup ayri
+    # birlesik Excel'e cevrilebilir. Imza:
+    #   - call_log  -> "call_log"
+    #   - other_table -> normalized headers (lowercase, stripped, joined)
+    #   - scanned / other / invalid -> kendi turleri (gruplananamaz)
+    def _signature(it: dict) -> tuple[str, str | None]:
+        kind = it.get("kind") or ""
+        if kind == "call_log":
+            return ("call_log", None)
+        if kind == "other_table":
+            hdrs = it.get("source_headers") or []
+            norm = "|".join(
+                (str(h).strip().lower() for h in hdrs if str(h).strip())
+            )
+            return ("other_table", norm or "(empty headers)")
+        return (kind, None)
+
+    groups_by_sig: dict[tuple[str, str | None], dict] = {}
+    for idx, it in enumerate(items):
+        sig = _signature(it)
+        g = groups_by_sig.get(sig)
+        if g is None:
+            g = {
+                "id": f"g{len(groups_by_sig) + 1}",
+                "kind": sig[0],
+                "signature": sig[1],
+                "label": it.get("kind_label", ""),
+                "headers": it.get("source_headers") if sig[0] == "other_table" else None,
+                "items": [],
+                "mergeable": sig[0] in ("call_log", "other_table"),
+            }
+            groups_by_sig[sig] = g
+        g["items"].append(idx)
+
+    groups = list(groups_by_sig.values())
+
     return {
         "items": items,
         "file_count": len(files),
@@ -163,6 +199,7 @@ async def batch_analyze(files: list[UploadFile] = File(...)) -> dict:
         "total_records": total,
         "target_schema": list(getattr(core, "TARGET_SCHEMA", [])),
         "av_available": clamav_available(),
+        "groups": groups,
     }
 
 
@@ -258,6 +295,9 @@ async def batch_progress(token: str) -> dict:
         "last_file": job.get("last_file"),
         "files_progress": job.get("files_progress") or [],
         "files_safety": job.get("files_safety") or [],
+        "danger_file": job.get("danger_file"),
+        "danger_findings": job.get("danger_findings"),
+        "unsafe_files": job.get("unsafe_files") or [],
     }
     if job.get("done") and job.get("type") == "convert":
         out["result"] = job.get("result")
@@ -319,6 +359,9 @@ async def batch_convert(
     mappings: str = Form("{}"),
     skip: str = Form("[]"),
     skip_safety: bool = Form(False),
+    group_kind: str = Form("call_log"),
+    group_headers: str = Form("[]"),
+    group_label: str = Form(""),
 ) -> dict:
     if not files:
         raise HTTPException(400, "En az bir PDF gerekli.")
@@ -350,6 +393,22 @@ async def batch_convert(
     if not isinstance(skip_list, list):
         raise HTTPException(400, "Skip bir liste olmalı.")
     skip_list = [str(x) for x in skip_list]
+
+    # Group metadata. Frontend (/batch-analyze çıktısından) hangi grubun
+    # konvert edildiğini söyler — call_log varsayılan (geriye uyumluluk),
+    # other_table grubunda kendi header'larıyla yazılır.
+    if group_kind not in {"call_log", "other_table"}:
+        raise HTTPException(400, "group_kind 'call_log' veya 'other_table' olmalı.")
+    try:
+        headers_obj = json.loads(group_headers or "[]")
+    except json.JSONDecodeError:
+        raise HTTPException(400, "Geçersiz group_headers JSON.") from None
+    if not isinstance(headers_obj, list):
+        raise HTTPException(400, "group_headers bir liste olmalı.")
+    headers_list = [str(h).strip() for h in headers_obj if str(h).strip()]
+    if group_kind == "other_table" and not headers_list:
+        raise HTTPException(400, "other_table grubu için en az bir başlık gerekli.")
+    label_clean = group_label.strip() or None
 
     job_token = uuid4().hex
     job_dir = core.make_job_dir("jobs", job_token)
@@ -391,6 +450,9 @@ async def batch_convert(
             job_token,
             len(files),
             skip_safety,
+            group_kind=group_kind,
+            group_headers=headers_list,
+            group_label=label_clean,
         )
     except HTTPException:
         shutil.rmtree(job_dir, ignore_errors=True)
@@ -404,31 +466,51 @@ async def batch_convert(
 # ---------------------------------------------------------------------------
 @router.get("/batch-preview/{token}")
 async def batch_preview(token: str) -> dict:
+    from pipelines.batch_convert import _dedup_key
+
     data = load_job(token)
     records = data["records"]
     sources = data["source_files"]
+    group_kind = data.get("group_kind", "call_log")
+    group_headers = data.get("group_headers") or []
+    state = data.get("state") or {}
+    match_columns = state.get("match_columns") or (
+        ["Telefon"] if group_kind == "call_log" else []
+    )
 
-    phone_counts: dict[str, int] = {}
-    for rec in records:
-        p = core.normalize_phone(rec.get("Telefon"))
-        if p:
-            phone_counts[p] = phone_counts.get(p, 0) + 1
+    # Duplicate stats based on the active match_columns. For other_table
+    # groups with no columns picked yet, dup stats are 0 — frontend shows
+    # the column picker in that case.
+    if match_columns:
+        key_counts: dict[str, int] = {}
+        for rec in records:
+            k = _dedup_key(rec, match_columns)
+            if k:
+                key_counts[k] = key_counts.get(k, 0) + 1
+        duplicate_phone_count = sum(1 for c in key_counts.values() if c > 1)
+        duplicate_row_count = sum(c - 1 for c in key_counts.values() if c > 1)
+        seen: dict[str, int] = {}
+        dup_flags: list[int] = []
+        for rec in records:
+            k = _dedup_key(rec, match_columns)
+            if not k or key_counts[k] == 1:
+                dup_flags.append(0)
+            else:
+                seen[k] = seen.get(k, 0) + 1
+                dup_flags.append(1 if seen[k] == 1 else 2)
+    else:
+        duplicate_phone_count = 0
+        duplicate_row_count = 0
+        dup_flags = [0 for _ in records]
 
-    duplicate_phone_count = sum(1 for c in phone_counts.values() if c > 1)
-    duplicate_row_count = sum(c - 1 for c in phone_counts.values() if c > 1)
-
-    seen: dict[str, int] = {}
-    dup_flags: list[int] = []
-    for rec in records:
-        p = core.normalize_phone(rec.get("Telefon"))
-        if not p or phone_counts[p] == 1:
-            dup_flags.append(0)
-        else:
-            seen[p] = seen.get(p, 0) + 1
-            dup_flags.append(1 if seen[p] == 1 else 2)
-
-    target_schema = list(getattr(core, "TARGET_SCHEMA", []))
-    headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema]
+    # Preview headers: includes the source-PDF column. For call_log we keep
+    # the legacy "Kayıt No + target_schema" layout; for other_table we use
+    # the group's own column names.
+    if group_kind == "call_log":
+        target_schema = list(getattr(core, "TARGET_SCHEMA", []))
+        headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema]
+    else:
+        headers = ["Sıra", "Kaynak PDF", *group_headers]
     rows = []
     for rec, src in zip(records, sources, strict=False):
         row = []
@@ -446,16 +528,60 @@ async def batch_preview(token: str) -> dict:
         "duplicate_phone_count": duplicate_phone_count,
         "duplicate_row_count": duplicate_row_count,
         "dup_flags": dup_flags,
-        "state": data.get("state") or {"deduplicated": False, "filters": {}},
+        "state": state or {"deduplicated": False, "filters": {}, "match_columns": match_columns},
         "original_count": len(data.get("original_records", records)),
+        "group_kind": group_kind,
+        "group_headers": group_headers,
+        "group_label": data.get("group_label", ""),
+        "match_columns": match_columns,
+        # Columns the user can pick for dedup matching. call_log → Telefon
+        # only (semantic key). other_table → every group header.
+        "dedup_candidates": (
+            ["Telefon"] if group_kind == "call_log" else list(group_headers)
+        ),
     }
 
 
 @router.post("/batch-deduplicate/{token}")
-async def batch_deduplicate(token: str) -> dict:
+async def batch_deduplicate(
+    token: str,
+    match_columns: str = Form("[]"),
+) -> dict:
     data = load_job(token)
     state = data.get("state") or {"deduplicated": False, "filters": {}}
+    # Resolve match_columns: explicit form value wins, else fall back to
+    # state's stored picks, else call_log default. For other_table groups
+    # with no picks, refuse — the user must pick at least one column.
+    try:
+        explicit = json.loads(match_columns or "[]")
+    except json.JSONDecodeError:
+        raise HTTPException(400, "Geçersiz match_columns JSON.") from None
+    if not isinstance(explicit, list):
+        raise HTTPException(400, "match_columns bir liste olmalı.")
+    explicit_clean = [str(c).strip() for c in explicit if str(c).strip()]
+    if explicit_clean:
+        cols = explicit_clean
+    else:
+        cols = state.get("match_columns") or (
+            ["Telefon"] if data.get("group_kind", "call_log") == "call_log" else []
+        )
+    if not cols:
+        raise HTTPException(
+            400,
+            "Mükerrer kontrolü için en az bir sütun seçmelisiniz.",
+        )
+    # Validate columns exist in the group's schema (call_log: TARGET_SCHEMA;
+    # other_table: group_headers). Anything else is a bad request.
+    group_kind = data.get("group_kind", "call_log")
+    if group_kind == "call_log":
+        valid = {"Telefon"}
+    else:
+        valid = set(data.get("group_headers") or [])
+    invalid = [c for c in cols if c not in valid]
+    if invalid:
+        raise HTTPException(400, f"Geçersiz sütun(lar): {', '.join(invalid)}")
     state["deduplicated"] = True
+    state["match_columns"] = cols
     before = len(data["records"])
     result = save_view(token, state)
     removed = before - result["record_count"]
@@ -464,6 +590,7 @@ async def batch_deduplicate(token: str) -> dict:
         "remaining_count": result["record_count"],
         "filename": result["filename"],
         "state": result["state"],
+        "match_columns": cols,
     }
 
 
@@ -618,8 +745,15 @@ async def batch_distribute_team(token: str, team_idx: int) -> dict:
     if team_idx < 0 or team_idx >= len(dist["assignments"]):
         raise HTTPException(404, "Ekip bulunamadı.")
     a = dist["assignments"][team_idx]
-    target_schema = list(getattr(core, "TARGET_SCHEMA", []))
-    headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema]
+    # Headers depend on the job's group_kind. We re-read the job to pick up
+    # the right schema (call_log → TARGET_SCHEMA, other_table → group_headers).
+    data = load_job(token)
+    group_kind = data.get("group_kind", "call_log")
+    if group_kind == "call_log":
+        target_schema = list(getattr(core, "TARGET_SCHEMA", []))
+        headers = ["Sıra", "Kaynak PDF", "Kayıt No", *target_schema]
+    else:
+        headers = ["Sıra", "Kaynak PDF", *(data.get("group_headers") or [])]
     rows = []
     for rec, src in zip(a["records"], a["sources"], strict=False):
         row = []
@@ -641,6 +775,10 @@ async def batch_distribute_team(token: str, team_idx: int) -> dict:
 async def batch_distribute_download(token: str, request: Request):
     core.check_token(token)
     dist = load_distribution(token)
+    data = load_job(token)
+    schema = (
+        data.get("group_headers") if data.get("group_kind") == "other_table" else None
+    )
     job_dir = core.make_job_dir("jobs", token)
     zip_buf = io.BytesIO()
     total = 0
@@ -649,7 +787,7 @@ async def batch_distribute_download(token: str, request: Request):
             if not a["records"]:
                 continue
             team_xlsx = job_dir / f"_team_{core.safe_filename(a['name'])}.xlsx"
-            write_merged_excel(a["records"], a["sources"], team_xlsx)
+            write_merged_excel(a["records"], a["sources"], team_xlsx, schema=schema)
             zf.write(team_xlsx, arcname=f"{core.safe_filename(a['name'])}.xlsx")
             team_xlsx.unlink(missing_ok=True)
             total += len(a["records"])

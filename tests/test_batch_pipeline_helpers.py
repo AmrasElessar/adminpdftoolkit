@@ -99,7 +99,12 @@ def test_load_job_migrates_legacy_shape(job_dir: Path, job_token: str) -> None:
     data = load_job(job_token)
     assert data["original_records"] == [{"Telefon": "555"}]
     assert data["original_sources"] == ["x.pdf"]
-    assert data["state"] == {"deduplicated": False, "filters": {}}
+    # Legacy migration seeds the call-log default match_columns
+    assert data["state"]["deduplicated"] is False
+    assert data["state"]["filters"] == {}
+    assert data["state"]["match_columns"] == ["Telefon"]
+    # Legacy jobs default to call_log group_kind
+    assert data["group_kind"] == "call_log"
 
     # Re-read from disk to confirm migration was persisted.
     raw = json.loads((job_dir / "data.json").read_text(encoding="utf-8"))
@@ -122,7 +127,9 @@ def test_load_job_seeds_state_when_missing(job_dir: Path, job_token: str) -> Non
         },
     )
     data = load_job(job_token)
-    assert data["state"] == {"deduplicated": False, "filters": {}}
+    assert data["state"]["deduplicated"] is False
+    assert data["state"]["filters"] == {}
+    assert data["state"]["match_columns"] == ["Telefon"]
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +172,47 @@ def test_save_view_dedupe_rewrites_excel_and_data(job_dir: Path, job_token: str)
     assert raw["state"]["deduplicated"] is True
     # Sıra is renumbered after the pipeline runs.
     assert [r["Sıra"] for r in raw["records"]] == [1, 2]
+
+
+def test_save_view_other_table_dedupes_on_user_columns(
+    job_dir: Path, job_token: str
+) -> None:
+    """For other_table groups, dedup matches on the user-picked column set,
+    not the call-log Telefon default. Same (Müşteri, Tutar) collapses; same
+    Müşteri with different Tutar stays distinct."""
+    rows = [
+        {"Sıra": 1, "Müşteri": "Ali", "Tutar": "100", "Tarih": "01/05"},
+        {"Sıra": 2, "Müşteri": "Ali", "Tutar": "100", "Tarih": "02/05"},  # dup
+        {"Sıra": 3, "Müşteri": "Ali", "Tutar": "150", "Tarih": "03/05"},
+        {"Sıra": 4, "Müşteri": "Veli", "Tutar": "100", "Tarih": "04/05"},
+    ]
+    _seed_data_json(
+        job_dir,
+        {
+            "records": list(rows),
+            "source_files": ["a.pdf"] * len(rows),
+            "filename": "birlesik_4_kayit.xlsx",
+            "original_records": list(rows),
+            "original_sources": ["a.pdf"] * len(rows),
+            "state": {"deduplicated": False, "filters": {}, "match_columns": []},
+            "group_kind": "other_table",
+            "group_headers": ["Müşteri", "Tutar", "Tarih"],
+            "group_label": "Test tablosu",
+        },
+    )
+    # Dedup on (Müşteri, Tutar) — collapses rows 1 and 2.
+    result = save_view(
+        job_token,
+        {
+            "deduplicated": True,
+            "filters": {},
+            "match_columns": ["Müşteri", "Tutar"],
+        },
+    )
+    assert result["record_count"] == 3
+    raw = json.loads((job_dir / "data.json").read_text(encoding="utf-8"))
+    musteri_tutar = [(r["Müşteri"], r["Tutar"]) for r in raw["records"]]
+    assert musteri_tutar == [("Ali", "100"), ("Ali", "150"), ("Veli", "100")]
 
 
 def test_save_view_drops_stale_distribution(job_dir: Path, job_token: str) -> None:
