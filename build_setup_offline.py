@@ -20,6 +20,10 @@ The online installer (setup.iss / AdminPDFToolkit_Setup.exe) is left
 untouched — both can coexist for different distribution scenarios.
 """
 
+# ruff: noqa: SIM112
+# Windows env-var names are case-insensitive at the OS level; ProgramFiles /
+# ProgramFiles(x86) are the names ``set`` prints in cmd.exe.
+
 from __future__ import annotations
 
 import contextlib
@@ -57,10 +61,10 @@ def fail(msg: str) -> int:
 
 def find_iscc() -> Path | None:
     candidates = [
-        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
+        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",
         Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)"))
         / "Inno Setup 6"
-        / "ISCC.exe",  # noqa: SIM112
+        / "ISCC.exe",
         Path.home() / "AppData" / "Local" / "Programs" / "Inno Setup 6" / "ISCC.exe",
     ]
     on_path = shutil.which("iscc") or shutil.which("ISCC")

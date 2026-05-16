@@ -12,6 +12,12 @@ Pipeline
    wizard installer with download progress + native progress pages).
 """
 
+# ruff: noqa: SIM112
+# Windows env-var names are case-insensitive at the OS level; the mixed-case
+# forms (ProgramFiles, ProgramFiles(x86)) below are exactly what ``set``
+# prints in cmd.exe. ruff's SIM112 ALL_CAPS preference is a Unix convention
+# that doesn't apply here.
+
 from __future__ import annotations
 
 import contextlib
@@ -49,14 +55,11 @@ def fail(msg: str) -> int:
 
 def find_iscc() -> Path | None:
     """ISCC.exe is the Inno Setup compiler. Hunt the common install dirs."""
-    # Windows env-var lookups are case-insensitive at the OS level; the
-    # mixed-case forms below are the names shown by ``set`` in cmd. ruff's
-    # SIM112 wants ALL_CAPS but that's a Linux convention.
     candidates = [
-        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
+        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",
         Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)"))
         / "Inno Setup 6"
-        / "ISCC.exe",  # noqa: SIM112
+        / "ISCC.exe",
         Path.home() / "AppData" / "Local" / "Programs" / "Inno Setup 6" / "ISCC.exe",
     ]
     on_path = shutil.which("iscc") or shutil.which("ISCC")
