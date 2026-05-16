@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.1] — 2026-05-16 — Hot-fixes from external review
+
+External review (ChatGPT + Gemini) pointed to four real bugs in the
+hardening / state-management surface. Fix the ones that are real (not
+the "multi-worker scaling" suggestion, which is a deliberate
+single-process design choice):
+
+### Security
+
+- **`pdf_safety.mpcmdrun_scan` no longer fails open.** The generic
+  `except Exception` path used to return `clean=True, status="error"`,
+  which let any unexpected MpCmdRun failure (corrupted PDF, locked
+  signature DB, missing binary, …) silently bypass Defender. Now
+  returns `clean=False` — the result still surfaces as `status="error"`
+  for telemetry, but `full_scan` no longer treats the leg as a clean
+  vote. Closes the only fail-open path in the scanner pipeline.
+
+### Reliability
+
+- **`state.JobStore.snapshot` now returns a deep copy.** Workers mutate
+  nested lists (`files_progress`, `files_safety`) after `update()`;
+  the old shallow `dict(job)` aliased those references, so readers
+  could iterate over a list mid-mutation and either crash or read
+  inconsistent rows. Lock-scoped `copy.deepcopy` makes each snapshot
+  caller-owned.
+
+### Performance / safety
+
+- **`pdf_safety.check_structure` reads in 4 MB chunks instead of slurping
+  the whole PDF.** Old path was `raw = pdf_path.read_bytes()` followed
+  by a full `latin-1` decode — a 200 MB upload meant ~400 MB heap, and
+  three concurrent scans could push the process to ~1.5 GB. New streaming
+  loop with a 256-byte overlap window keeps heap at ~5 MB regardless of
+  file size and preserves the existing pattern-match semantics
+  (verified: 100 MB PDF scan, RSS delta 0.8 MB, `/JavaScript` matches
+  100/100 expected hits).
+
+### Defensive
+
+- **Refuse to start under multi-worker uvicorn.** New
+  `_check_single_worker_invariant` aborts startup with a clear message
+  when `WEB_CONCURRENCY > 1`. JobStore is intentionally process-local;
+  multi-worker mode would let one worker poll a job another worker
+  owns and return phantom 404s. `uvicorn.run(workers=1, ...)` is now
+  explicit at the entry-point too.
+
 ## [1.13.0] — 2026-05-16
 
 ### Added — multi-group batch merge

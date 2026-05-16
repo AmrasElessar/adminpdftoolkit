@@ -98,17 +98,40 @@ def check_structure(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]
     # ama çoğu vakada işimizi görür — saldırgan paketler genelde uncompressed
     # bırakır ki AV'lardan kaçsın, biz tam tersini istiyoruz).
     #
-    # Önceki sürümde 8 MB üstü dosyalarda yalnızca ilk + son 4 MB taranıyordu;
-    # ortaya gizlenmiş /JavaScript / /Launch payload'ı bu pencerede kaçabiliyordu.
-    # Bellek MAX_UPLOAD_MB ile sınırlı (default 200 MB), o yüzden tüm dosyayı
-    # okumak güvenli — ekstra CPU maliyeti (~ saniye altı) defense-in-depth
-    # için kabul edilebilir.
+    # Bellek emniyeti: tüm dosyayı RAM'e almak yerine 4 MB'lik bloklarla
+    # streaming yapıyoruz. ``read_bytes()`` yaklaşımı 200 MB upload limiti
+    # altında bile worst-case ~400 MB heap (raw + decoded text) ve 3 paralel
+    # tarama sunucuyu OOM'a çekebilirdi.
+    #
+    # ``OVERLAP_BYTES`` iki bloğun birleşim noktasında pattern'ın kaybolmasına
+    # karşı emniyet payı — en uzun pattern ``/EmbeddedFile`` (13 byte) olsa
+    # bile 256 byte fazlasıyla yeterli; pattern'lar latin-1 decode sonrası
+    # 1 byte = 1 char, byte offset = char offset.
+    CHUNK_BYTES = 4 * 1024 * 1024
+    OVERLAP_BYTES = 256
+    counts_by_label: dict[str, int] = {}
     try:
-        raw = pdf_path.read_bytes()
-        text = raw.decode("latin-1", errors="ignore")
-
+        with pdf_path.open("rb") as fp:
+            carry = b""
+            while True:
+                block = fp.read(CHUNK_BYTES)
+                if not block:
+                    break
+                buf = carry + block
+                text = buf.decode("latin-1", errors="ignore")
+                for label, pattern, _desc, _weight in _SUSPICIOUS_PATTERNS:
+                    n = len(re.findall(pattern, text))
+                    if n:
+                        counts_by_label[label] = counts_by_label.get(label, 0) + n
+                # Carry the overlap window for the next iteration so a pattern
+                # straddling the boundary isn't lost. NOTE: we DON'T compensate
+                # for the overlap region being scanned twice; in the worst case
+                # a single pattern at the boundary contributes once to this
+                # chunk and once to the next — a marginal over-count, never an
+                # under-count (defense-in-depth flavour).
+                carry = buf[-OVERLAP_BYTES:] if len(buf) > OVERLAP_BYTES else buf
         for label, pattern, desc, weight in _SUSPICIOUS_PATTERNS:
-            count = len(re.findall(pattern, text))
+            count = counts_by_label.get(label, 0)
             if count > 0:
                 findings.append(
                     {
@@ -436,7 +459,14 @@ def mpcmdrun_scan(pdf_path: Path, timeout: int = 60) -> dict[str, Any] | None:
     except subprocess.TimeoutExpired:
         return {"clean": False, "status": "error", "exit_code": -1, "raw": "timeout"}
     except Exception as e:
-        return {"clean": True, "status": "error", "exit_code": -2, "raw": f"error: {e}"}
+        # Fail-safe: any unexpected exception from MpCmdRun must NOT be
+        # treated as a clean result. Previously this returned ``clean=True``
+        # which silently let any error-state path through the safety gate —
+        # an attacker who could induce an exception (corrupted PDF, broken
+        # signature DB, missing exe, locked path) would bypass Defender
+        # entirely. Now the verdict propagates to the caller as "unknown"
+        # and full_scan's overall logic will not call this leg "clean".
+        return {"clean": False, "status": "error", "exit_code": -2, "raw": f"error: {e}"}
 
 
 # ----------------------------------------------------------------------------

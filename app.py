@@ -157,8 +157,36 @@ def _start_clamd_after_signatures() -> None:
         logger.debug("clamd autostart skipped: %s", e)
 
 
+def _check_single_worker_invariant() -> None:
+    """Refuse to run under multiple uvicorn workers.
+
+    State is intentionally process-local (JobStore in RAM, see state.py).
+    Multiple workers would each see only their own jobs — the polling
+    endpoint hits a load-balanced second worker, finds no record, and
+    returns 404 to a user whose batch is fine. WEB_CONCURRENCY is uvicorn's
+    own env var; manual ``--workers N`` propagates through it. We hard-fail
+    early instead of letting users debug phantom 404s later.
+
+    This is a deliberate single-process design choice (all-in-one desktop
+    tool). Scaling out means moving JobStore to Redis/SQLite first; that
+    is not on the roadmap for this app.
+    """
+    raw = os.environ.get("WEB_CONCURRENCY", "1").strip()
+    try:
+        n = int(raw)
+    except ValueError:
+        n = 1
+    if n > 1:
+        raise RuntimeError(
+            f"Admin PDF Toolkit single-worker only (WEB_CONCURRENCY={n}). "
+            "JobStore lives in process RAM; multi-worker mode breaks job "
+            "tracking. Restart with workers=1 or unset WEB_CONCURRENCY."
+        )
+
+
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
+    _check_single_worker_invariant()
     logger.info("Admin PDF Toolkit v%s starting", __version__)
     core.startup_cleanup()
     core.init_history_db()
@@ -468,12 +496,16 @@ def main() -> None:
         print("     ile yeniden başlatın.")
     print("  Durdurmak için: Ctrl+C")
     print("=" * 60)
+    # Explicit workers=1: JobStore is process-local (see
+    # _check_single_worker_invariant). Don't trust the uvicorn default to
+    # protect us — be explicit for users who run python app.py directly.
     uvicorn.run(
         "app:app",
         host=host,
         port=port,
         log_level="info",
         reload=False,
+        workers=1,
         **cert_kwargs,
     )
 

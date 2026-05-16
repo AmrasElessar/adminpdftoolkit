@@ -7,6 +7,7 @@ the same dict / lock objects without creating an import cycle through
 
 from __future__ import annotations
 
+import copy
 import os
 import threading
 from pathlib import Path
@@ -108,10 +109,17 @@ class JobStore:
                 job[k] = v
 
     def snapshot(self, token: str) -> dict[str, Any] | None:
-        """Locked dict copy or None if missing."""
+        """Locked deep copy or None if missing.
+
+        Must be a deep copy: workers mutate nested lists/dicts like
+        ``files_progress`` and ``files_safety`` after handing them off via
+        ``update()``. A shallow ``dict(job)`` would alias those references —
+        readers would see partial mutations mid-iteration. Lock-scope plus
+        ``copy.deepcopy`` keeps the snapshot caller-owned.
+        """
         with self._lock:
             job = self._jobs.get(token)
-            return dict(job) if job else None
+            return copy.deepcopy(job) if job else None
 
     def pop(self, token: str) -> dict[str, Any] | None:
         with self._lock:
