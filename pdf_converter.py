@@ -55,11 +55,94 @@ def parse_call_log(doc: fitz.Document) -> list[dict]:
 
 
 # ----------------------------------------------------------------------------
+# Unsafe stamping — when the user clicked "Yine de Dönüştür" on the danger
+# review modal, we still produce the requested output but make it clear in
+# the file itself that the source PDF flunked the safety scan.
+# ----------------------------------------------------------------------------
+
+_UNSAFE_WARNING_LINES = (
+    "⚠ GÜVENSİZ KAYNAK PDF",
+    "Bu dosya, kaynak PDF güvenlik taramasında risk işareti aldıktan "
+    "sonra kullanıcı onayıyla dönüştürüldü.",
+    "Olası tehlikeler: JavaScript, gömülü dosya, otomatik aksiyon vb.",
+    "Açmadan önce içeriği gözden geçirin; şüphelendiğiniz makro/script "
+    "çalıştırmayın.",
+)
+
+
+def _add_excel_unsafe_sheet(wb) -> None:
+    """Prepend an "⚠ UYARI" sheet that warns the user the source PDF was
+    flagged as unsafe. Called when ``unsafe=True`` is passed to Excel writers.
+    """
+    from openpyxl.styles import Alignment, Font, PatternFill
+
+    ws = wb.create_sheet(title="⚠ UYARI", index=0)
+    ws.column_dimensions["A"].width = 90
+    red_fill = PatternFill("solid", fgColor="B91C1C")
+    white_bold = Font(bold=True, color="FFFFFF", size=14)
+    body = Font(color="111827", size=11)
+    align = Alignment(horizontal="left", vertical="top", wrap_text=True)
+    for i, line in enumerate(_UNSAFE_WARNING_LINES, 1):
+        c = ws.cell(row=i, column=1, value=line)
+        c.alignment = align
+        if i == 1:
+            c.font = white_bold
+            c.fill = red_fill
+            ws.row_dimensions[i].height = 26
+        else:
+            c.font = body
+            ws.row_dimensions[i].height = 22
+
+
+def stamp_unsafe_word(out_path: Path) -> None:
+    """Open a pdf2docx-produced .docx and prepend a red warning paragraph at
+    the very top of the document.
+
+    pdf2docx writes the file before returning, so we re-open it with
+    python-docx to inject the warning — slightly redundant but keeps the
+    pdf2docx call path untouched.
+    """
+    from docx import Document
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.shared import Pt, RGBColor
+
+    doc = Document(str(out_path))
+    body = doc.paragraphs[0]._element.getparent() if doc.paragraphs else None
+    # Insert warning before the first existing paragraph
+    warn_para = doc.add_paragraph()
+    warn_para.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    run = warn_para.add_run(_UNSAFE_WARNING_LINES[0])
+    run.bold = True
+    run.font.size = Pt(14)
+    run.font.color.rgb = RGBColor(0xB9, 0x1C, 0x1C)
+    for line in _UNSAFE_WARNING_LINES[1:]:
+        p = doc.add_paragraph()
+        sub = p.add_run(line)
+        sub.font.size = Pt(11)
+        sub.font.color.rgb = RGBColor(0x11, 0x18, 0x27)
+    # Move the four warning paragraphs (last 4 added) to the top.
+    if body is not None:
+        warns = doc.paragraphs[-len(_UNSAFE_WARNING_LINES):]
+        for w in reversed(warns):
+            body.insert(0, w._element)
+    doc.save(str(out_path))
+
+
+def unsafe_suffix(stem: str) -> str:
+    """Append ``_GUVENSIZ`` to a filename stem (idempotent)."""
+    if stem.endswith("_GUVENSIZ"):
+        return stem
+    return f"{stem}_GUVENSIZ"
+
+
+# ----------------------------------------------------------------------------
 # Excel yazımı
 # ----------------------------------------------------------------------------
 
 
-def write_call_log_excel(records: list[dict], out_path: Path) -> None:
+def write_call_log_excel(
+    records: list[dict], out_path: Path, *, unsafe: bool = False
+) -> None:
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.utils import get_column_letter
@@ -126,10 +209,14 @@ def write_call_log_excel(records: list[dict], out_path: Path) -> None:
 
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = ws.dimensions
+    if unsafe:
+        _add_excel_unsafe_sheet(wb)
     wb.save(out_path)
 
 
-def write_generic_excel(doc: fitz.Document, out_path: Path) -> None:
+def write_generic_excel(
+    doc: fitz.Document, out_path: Path, *, unsafe: bool = False
+) -> None:
     """Çağrı kaydı olmayan PDF'ler için — her sayfayı ayrı sheet'e metin olarak yazar."""
     from openpyxl import Workbook
 
@@ -141,6 +228,8 @@ def write_generic_excel(doc: fitz.Document, out_path: Path) -> None:
         for row_idx, ln in enumerate(lines, 1):
             ws.cell(row=row_idx, column=1, value=ln)
         ws.column_dimensions["A"].width = 120
+    if unsafe:
+        _add_excel_unsafe_sheet(wb)
     wb.save(out_path)
 
 
@@ -149,7 +238,9 @@ def write_generic_excel(doc: fitz.Document, out_path: Path) -> None:
 # ----------------------------------------------------------------------------
 
 
-def convert_to_word(pdf_path: Path, out_path: Path) -> None:
+def convert_to_word(
+    pdf_path: Path, out_path: Path, *, unsafe: bool = False
+) -> None:
     from pdf2docx import Converter as Pdf2DocxConverter
 
     cv = Pdf2DocxConverter(str(pdf_path))
@@ -157,6 +248,8 @@ def convert_to_word(pdf_path: Path, out_path: Path) -> None:
         cv.convert(str(out_path), start=0, end=None)
     finally:
         cv.close()
+    if unsafe:
+        stamp_unsafe_word(out_path)
 
 
 # ----------------------------------------------------------------------------

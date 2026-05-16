@@ -361,7 +361,7 @@ def test_convert_worker_call_log_routes_to_specialised_writer(
     monkeypatch.setattr(
         convert_pipeline,
         "write_call_log_excel",
-        lambda recs, out: (
+        lambda recs, out, **kw: (
             seen.setdefault("recs", recs),
             seen.setdefault("out", out),
             out.write_bytes(b"PK\x03\x04stub"),

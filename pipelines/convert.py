@@ -24,6 +24,7 @@ from pdf_converter import (
     is_call_log_pdf,
     is_scanned_pdf,
     parse_call_log,
+    unsafe_suffix,
     write_call_log_excel,
     write_generic_excel,
 )
@@ -77,9 +78,17 @@ def convert_worker(
                 convert_store.update(token, error=err or "Güvensiz PDF reddedildi.", done=True)
                 return
 
+        # If the user accepted a dangerous PDF via the danger_review modal,
+        # the safety pipeline recorded it under ``unsafe_files`` — propagate
+        # that into the output via filename suffix + an in-file warning.
+        snap = convert_store.snapshot(token) or {}
+        unsafe_seen = bool(snap.get("unsafe_files"))
+
         stem = Path(orig_filename).stem
         safe_custom = core.safe_filename(custom_name.strip()) if custom_name else ""
         final_stem = safe_custom or core.safe_filename(stem)
+        if unsafe_seen:
+            final_stem = unsafe_suffix(final_stem)
 
         convert_store.update(token, phase="preparing", current=0, last_file=None)
 
@@ -136,7 +145,7 @@ def convert_worker(
             pdf2docx_logger.addHandler(handler)
             try:
                 out = job_dir / f"{final_stem}.docx"
-                convert_to_word(pdf_path, out)
+                convert_to_word(pdf_path, out, unsafe=unsafe_seen)
             finally:
                 pdf2docx_logger.removeHandler(handler)
                 pdf2docx_logger.setLevel(old_level)
@@ -162,9 +171,9 @@ def convert_worker(
             if is_call_log_pdf(doc):
                 records = parse_call_log(doc)
                 record_count = len(records)
-                write_call_log_excel(records, out)
+                write_call_log_excel(records, out, unsafe=unsafe_seen)
             else:
-                write_generic_excel(doc, out)
+                write_generic_excel(doc, out, unsafe=unsafe_seen)
         finally:
             doc.close()
 
@@ -208,7 +217,9 @@ def batch_files_worker(
     try:
         # Phase 1: per-file safety scan (cancellable). Saved files that fail
         # are dropped from files_data; the user can also press "Atla" to skip
-        # remaining scans entirely.
+        # remaining scans entirely. Files the user accepted as unsafe end up
+        # in ``unsafe_files`` so we can stamp their outputs as GÜVENSİZ.
+        unsafe_set: set[str] = set()
         if not skip_safety:
             from pipelines.safety import scan_files_with_progress
 
@@ -216,6 +227,8 @@ def batch_files_worker(
             if not ok:
                 batch_store.update(token, error=err or "Güvensiz PDF reddedildi.", done=True)
                 return
+            snap = batch_store.snapshot(token) or {}
+            unsafe_set = set(snap.get("unsafe_files") or [])
 
         # Initialize per-file progress so frontend can render rows immediately
         files_progress = [
@@ -254,6 +267,9 @@ def batch_files_worker(
                 stem = core.safe_filename(custom) if custom else core.safe_filename(orig_stem)
                 if not stem:
                     stem = "output"
+                file_unsafe = filename in unsafe_set
+                if file_unsafe:
+                    stem = unsafe_suffix(stem)
 
                 files_progress[i]["status"] = "processing"
                 batch_store.update(
@@ -263,7 +279,7 @@ def batch_files_worker(
                 try:
                     if target == "word":
                         out = job_dir / f"{stem}.docx"
-                        convert_to_word(pdf_path, out)
+                        convert_to_word(pdf_path, out, unsafe=file_unsafe)
                         zf.write(out, arcname=f"{stem}.docx")
                         out.unlink(missing_ok=True)
                         files_progress[i]["kind"] = "word"
@@ -278,14 +294,14 @@ def batch_files_worker(
                         try:
                             if is_call_log_pdf(doc):
                                 records = parse_call_log(doc)
-                                write_call_log_excel(records, out)
+                                write_call_log_excel(records, out, unsafe=file_unsafe)
                                 files_progress[i]["kind"] = "call_log"
                                 files_progress[i]["kind_label"] = "Çağrı kayıtları"
                                 files_progress[i]["record_count"] = len(records)
                                 merged_call_log.extend(records)
                                 merged_call_log_sources.append(filename)
                             elif is_scanned_pdf(doc):
-                                write_generic_excel(doc, out)
+                                write_generic_excel(doc, out, unsafe=file_unsafe)
                                 files_progress[i]["kind"] = "scanned"
                                 files_progress[i]["kind_label"] = "Görselden PDF"
                             else:
@@ -298,7 +314,7 @@ def batch_files_worker(
                                         kind_label = cat.capitalize()
                                 except Exception:
                                     pass
-                                write_generic_excel(doc, out)
+                                write_generic_excel(doc, out, unsafe=file_unsafe)
                                 files_progress[i]["kind"] = "generic"
                                 files_progress[i]["kind_label"] = kind_label
                         finally:

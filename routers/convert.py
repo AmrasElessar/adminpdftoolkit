@@ -227,6 +227,9 @@ async def convert_progress(token: str) -> dict:
         "output_name": job.get("output_name"),
         "record_count": job.get("record_count"),
         "files_safety": job.get("files_safety") or [],
+        "danger_file": job.get("danger_file"),
+        "danger_findings": job.get("danger_findings"),
+        "unsafe_files": job.get("unsafe_files") or [],
     }
 
 
@@ -456,10 +459,10 @@ async def job_events(kind: str, token: str):
 
 
 # ---------------------------------------------------------------------------
-# /job-skip-safety/{kind}/{token} — user clicked "Atla" on the scanning UI.
-# Sets skip_safety flag in the appropriate store; the worker checks the flag
-# between files and after a scan exception, treating remaining files as
-# accepted.
+# /job-skip-safety/{kind}/{token} — user clicked "Atla" on the scanning UI
+# (skip remaining scans) or "Yine de Dönüştür" on the danger_review modal
+# (accept the flagged file and continue). The worker's safety loop picks up
+# the flag between files and during a danger_review wait.
 # ---------------------------------------------------------------------------
 @router.post("/job-skip-safety/{kind}/{token}")
 async def job_skip_safety(kind: str, token: str) -> dict:
@@ -472,3 +475,22 @@ async def job_skip_safety(kind: str, token: str) -> dict:
         raise HTTPException(404, "İş bulunamadı.")
     store.update(token, skip_safety=True)
     return {"ok": True, "skip_safety": True}
+
+
+# ---------------------------------------------------------------------------
+# /job-cancel-safety/{kind}/{token} — user clicked "İptal" on the
+# danger_review modal. Tells the safety pipeline to abort instead of
+# accepting the flagged file. The worker reports a clean cancellation
+# error rather than blowing up.
+# ---------------------------------------------------------------------------
+@router.post("/job-cancel-safety/{kind}/{token}")
+async def job_cancel_safety(kind: str, token: str) -> dict:
+    if kind not in {"convert", "batch"}:
+        raise HTTPException(404, "Geçersiz iş türü.")
+    core.check_token(token)
+    store = convert_store if kind == "convert" else batch_store
+    job = store.snapshot(token)
+    if not job:
+        raise HTTPException(404, "İş bulunamadı.")
+    store.update(token, cancel_safety=True)
+    return {"ok": True, "cancel_safety": True}

@@ -165,7 +165,21 @@ async def _lifespan(_app: FastAPI):
     threading.Thread(target=core.cleanup_loop, daemon=True).start()
     threading.Thread(target=_prewarm_caches, daemon=True).start()
     threading.Thread(target=_maybe_update_clamav, daemon=True).start()
-    threading.Thread(target=_start_clamd_after_signatures, daemon=True).start()
+    # Block startup until clamd is responsive. If signatures live on disk
+    # already (typical) this returns in ~1-3 s; first-run cold boot can take
+    # longer while freshclam lands the DB, in which case we time out at 25 s
+    # and let the standalone clamscan fallback kick in for the first few
+    # scans. The user's first conversion never waits on a half-warm daemon.
+    try:
+        from core.clamav_daemon import ensure_clamd_running
+
+        t0 = time.time()
+        if ensure_clamd_running(boot_timeout=25.0):
+            logger.info("clamd ready in %.1fs (signatures hot, ready to scan)", time.time() - t0)
+        else:
+            logger.warning("clamd not ready after 25s — first scans fall back to clamscan")
+    except Exception as e:
+        logger.warning("clamd autostart failed: %s — standalone clamscan fallback active", e)
     if settings.preload_ocr_model:
         threading.Thread(target=core.preload_ocr_in_background, daemon=True).start()
     yield

@@ -447,11 +447,29 @@ def mpcmdrun_scan(pdf_path: Path, timeout: int = 60) -> dict[str, Any] | None:
 def full_scan(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]:
     """Run every available scanner. ``doc`` is forwarded to ``check_structure``
     so callers that already opened the PDF for other work don't pay a second
-    ``fitz.open``."""
-    structure = check_structure(pdf_path, doc=doc)
-    av = clamav_scan(pdf_path)
-    pdfid = pdfid_scan(pdf_path)
-    mpcmd = mpcmdrun_scan(pdf_path) if av is None else None  # only as fallback
+    ``fitz.open``.
+
+    Scanners run in parallel via ``ThreadPoolExecutor`` — total wall time is
+    bounded by the slowest scanner (typically pdfid or Defender) instead of
+    the sum. Each scanner is independent and side-effect free, so parallelism
+    is safe. ``mpcmdrun`` only runs when clamav is unavailable; that decision
+    is made eagerly here based on ``clamav_available()`` to keep the parallel
+    fan-out simple.
+    """
+    from concurrent.futures import ThreadPoolExecutor
+
+    run_defender = not clamav_available()
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        fut_struct = pool.submit(check_structure, pdf_path, doc=doc)
+        fut_av = pool.submit(clamav_scan, pdf_path)
+        fut_pdfid = pool.submit(pdfid_scan, pdf_path)
+        fut_mpcmd = pool.submit(mpcmdrun_scan, pdf_path) if run_defender else None
+
+        structure = fut_struct.result()
+        av = fut_av.result()
+        pdfid = fut_pdfid.result()
+        mpcmd = fut_mpcmd.result() if fut_mpcmd is not None else None
     overall: str
     if av is not None and not av["clean"]:
         overall = "danger"  # ClamAV imza tabanlı tehdit
