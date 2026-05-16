@@ -94,9 +94,7 @@ def scan_files_with_progress(
         ``ok=False`` and ``error_message`` set when the user cancelled the
             danger modal (or the review timed out).
     """
-    files_safety: list[dict[str, Any]] = [
-        {"name": name, "status": "pending"} for name, _ in files
-    ]
+    files_safety: list[dict[str, Any]] = [{"name": name, "status": "pending"} for name, _ in files]
     store.update(
         token,
         phase="scanning",
@@ -206,9 +204,7 @@ def scan_files_with_progress(
                 return
 
     with ThreadPoolExecutor(max_workers=_SCAN_PARALLELISM) as pool:
-        futures = [
-            pool.submit(_scan_one, i, fn, path) for i, (fn, path) in enumerate(files)
-        ]
+        futures = [pool.submit(_scan_one, i, fn, path) for i, (fn, path) in enumerate(files)]
         for fut in as_completed(futures):
             # Surface unexpected exceptions; user-cancelled is handled via
             # the ``cancelled`` dict, not exceptions.

@@ -323,7 +323,9 @@ def test_worker_other_table_writes_group_metadata_in_data_json(
         }
 
     monkeypatch.setattr(core, "parse_pdf_for_batch", fake_parse)
-    monkeypatch.setattr(core, "TARGET_SCHEMA", ["Müşteri", "Telefon"])  # call-log default — should be ignored
+    monkeypatch.setattr(
+        core, "TARGET_SCHEMA", ["Müşteri", "Telefon"]
+    )  # call-log default — should be ignored
 
     _seed_job(progress_token, job_dir, total=1)
     batch_convert_worker(
@@ -355,4 +357,3 @@ def test_worker_other_table_writes_group_metadata_in_data_json(
     assert data["state"]["match_columns"] == []
     # Records preserve the group schema (not the call-log TARGET_SCHEMA)
     assert all("Müşteri" in r and "Tutar" in r and "Tarih" in r for r in data["records"])
-

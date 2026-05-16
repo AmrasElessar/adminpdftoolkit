@@ -54,7 +54,9 @@ def find_iscc() -> Path | None:
     # SIM112 wants ALL_CAPS but that's a Linux convention.
     candidates = [
         Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
-        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
+        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)"))
+        / "Inno Setup 6"
+        / "ISCC.exe",  # noqa: SIM112
         Path.home() / "AppData" / "Local" / "Programs" / "Inno Setup 6" / "ISCC.exe",
     ]
     on_path = shutil.which("iscc") or shutil.which("ISCC")
@@ -81,12 +83,19 @@ def ensure_launcher_exe() -> bool:
             return False
     rc = subprocess.run(
         [
-            sys.executable, "-m", "PyInstaller",
-            "--onefile", "--console",
-            "--name", "Admin PDF Toolkit",
-            "--workpath", str(ROOT / "build" / "_pyinstaller"),
-            "--distpath", str(ROOT / "build" / "_pyinstaller_dist"),
-            "--specpath", str(ROOT / "build" / "_pyinstaller"),
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            "--onefile",
+            "--console",
+            "--name",
+            "Admin PDF Toolkit",
+            "--workpath",
+            str(ROOT / "build" / "_pyinstaller"),
+            "--distpath",
+            str(ROOT / "build" / "_pyinstaller_dist"),
+            "--specpath",
+            str(ROOT / "build" / "_pyinstaller"),
             "--noconfirm",
             str(ROOT / "launcher.py"),
         ],
@@ -129,8 +138,7 @@ def main() -> int:
     step("App code (portable folder) hazır mı?")
     if not ensure_portable_app_code():
         return fail(
-            "dist/Admin_PDF_Toolkit_Portable/ eksik veya bozuk.\n"
-            "  Önce: python build_portable.py"
+            "dist/Admin_PDF_Toolkit_Portable/ eksik veya bozuk.\n  Önce: python build_portable.py"
         )
     info("app code dist/Admin_PDF_Toolkit_Portable/ altında mevcut")
 

@@ -329,11 +329,7 @@ def pdfid_scan(pdf_path: Path, timeout: int = 15) -> dict[str, Any] | None:
         # Using ``sys.executable`` (not "python") so a poisoned PATH on the
         # operator's host can't substitute a hostile interpreter for the
         # safety scanner.
-        cmd = (
-            [sys.executable, exe, str(pdf_path)]
-            if exe.endswith(".py")
-            else [exe, str(pdf_path)]
-        )
+        cmd = [sys.executable, exe, str(pdf_path)] if exe.endswith(".py") else [exe, str(pdf_path)]
         result = subprocess.run(
             cmd,
             capture_output=True,

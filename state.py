@@ -149,9 +149,7 @@ ocr_store = JobStore(ocr_jobs, ocr_lock)
 # The semaphore caps in-flight workers; ``submit_worker`` raises 503 when the
 # slots are saturated. Operators with beefy hardware can raise the cap via
 # HT_MAX_INFLIGHT_JOBS.
-MAX_INFLIGHT_JOBS: int = max(
-    1, int(os.environ.get("HT_MAX_INFLIGHT_JOBS", "4"))
-)
+MAX_INFLIGHT_JOBS: int = max(1, int(os.environ.get("HT_MAX_INFLIGHT_JOBS", "4")))
 _worker_semaphore = threading.BoundedSemaphore(MAX_INFLIGHT_JOBS)
 
 

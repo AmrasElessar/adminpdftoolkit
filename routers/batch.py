@@ -166,9 +166,7 @@ async def batch_analyze(files: list[UploadFile] = File(...)) -> dict:
             return ("call_log", None)
         if kind == "other_table":
             hdrs = it.get("source_headers") or []
-            norm = "|".join(
-                str(h).strip().lower() for h in hdrs if str(h).strip()
-            )
+            norm = "|".join(str(h).strip().lower() for h in hdrs if str(h).strip())
             return ("other_table", norm or "(empty headers)")
         return (kind, None)
 
@@ -474,9 +472,7 @@ async def batch_preview(token: str) -> dict:
     group_kind = data.get("group_kind", "call_log")
     group_headers = data.get("group_headers") or []
     state = data.get("state") or {}
-    match_columns = state.get("match_columns") or (
-        ["Telefon"] if group_kind == "call_log" else []
-    )
+    match_columns = state.get("match_columns") or (["Telefon"] if group_kind == "call_log" else [])
 
     # Duplicate stats based on the active match_columns. For other_table
     # groups with no columns picked yet, dup stats are 0 — frontend shows
@@ -536,9 +532,7 @@ async def batch_preview(token: str) -> dict:
         "match_columns": match_columns,
         # Columns the user can pick for dedup matching. call_log → Telefon
         # only (semantic key). other_table → every group header.
-        "dedup_candidates": (
-            ["Telefon"] if group_kind == "call_log" else list(group_headers)
-        ),
+        "dedup_candidates": (["Telefon"] if group_kind == "call_log" else list(group_headers)),
     }
 
 
@@ -773,9 +767,7 @@ async def batch_distribute_download(token: str, request: Request):
     core.check_token(token)
     dist = load_distribution(token)
     data = load_job(token)
-    schema = (
-        data.get("group_headers") if data.get("group_kind") == "other_table" else None
-    )
+    schema = data.get("group_headers") if data.get("group_kind") == "other_table" else None
     job_dir = core.make_job_dir("jobs", token)
     zip_buf = io.BytesIO()
     total = 0

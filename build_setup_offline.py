@@ -58,7 +58,9 @@ def fail(msg: str) -> int:
 def find_iscc() -> Path | None:
     candidates = [
         Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
-        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
+        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)"))
+        / "Inno Setup 6"
+        / "ISCC.exe",  # noqa: SIM112
         Path.home() / "AppData" / "Local" / "Programs" / "Inno Setup 6" / "ISCC.exe",
     ]
     on_path = shutil.which("iscc") or shutil.which("ISCC")
@@ -79,16 +81,13 @@ def main() -> int:
     iscc = find_iscc()
     if iscc is None:
         return fail(
-            "ISCC.exe bulunamadı. Inno Setup yükle:\n"
-            "  winget install --id JRSoftware.InnoSetup"
+            "ISCC.exe bulunamadı. Inno Setup yükle:\n  winget install --id JRSoftware.InnoSetup"
         )
     info(f"ISCC: {iscc}")
 
     step("Tray launcher .exe hazır mı?")
     if not LAUNCHER_EXE.exists():
-        return fail(
-            "Launcher .exe yok. Önce: python build_exe.py"
-        )
+        return fail("Launcher .exe yok. Önce: python build_exe.py")
     info(f"launcher: {LAUNCHER_EXE.name}")
 
     step("Portable klasör + python + clamav + EasyOCR hazır mı?")

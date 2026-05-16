@@ -65,8 +65,7 @@ _UNSAFE_WARNING_LINES = (
     "Bu dosya, kaynak PDF güvenlik taramasında risk işareti aldıktan "
     "sonra kullanıcı onayıyla dönüştürüldü.",
     "Olası tehlikeler: JavaScript, gömülü dosya, otomatik aksiyon vb.",
-    "Açmadan önce içeriği gözden geçirin; şüphelendiğiniz makro/script "
-    "çalıştırmayın.",
+    "Açmadan önce içeriği gözden geçirin; şüphelendiğiniz makro/script çalıştırmayın.",
 )
 
 
@@ -122,7 +121,7 @@ def stamp_unsafe_word(out_path: Path) -> None:
         sub.font.color.rgb = RGBColor(0x11, 0x18, 0x27)
     # Move the four warning paragraphs (last 4 added) to the top.
     if body is not None:
-        warns = doc.paragraphs[-len(_UNSAFE_WARNING_LINES):]
+        warns = doc.paragraphs[-len(_UNSAFE_WARNING_LINES) :]
         for w in reversed(warns):
             body.insert(0, w._element)
     doc.save(str(out_path))
@@ -140,9 +139,7 @@ def unsafe_suffix(stem: str) -> str:
 # ----------------------------------------------------------------------------
 
 
-def write_call_log_excel(
-    records: list[dict], out_path: Path, *, unsafe: bool = False
-) -> None:
+def write_call_log_excel(records: list[dict], out_path: Path, *, unsafe: bool = False) -> None:
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Font, PatternFill
     from openpyxl.utils import get_column_letter
@@ -214,9 +211,7 @@ def write_call_log_excel(
     wb.save(out_path)
 
 
-def write_generic_excel(
-    doc: fitz.Document, out_path: Path, *, unsafe: bool = False
-) -> None:
+def write_generic_excel(doc: fitz.Document, out_path: Path, *, unsafe: bool = False) -> None:
     """Çağrı kaydı olmayan PDF'ler için — her sayfayı ayrı sheet'e metin olarak yazar."""
     from openpyxl import Workbook
 
@@ -238,9 +233,7 @@ def write_generic_excel(
 # ----------------------------------------------------------------------------
 
 
-def convert_to_word(
-    pdf_path: Path, out_path: Path, *, unsafe: bool = False
-) -> None:
+def convert_to_word(pdf_path: Path, out_path: Path, *, unsafe: bool = False) -> None:
     from pdf2docx import Converter as Pdf2DocxConverter
 
     cv = Pdf2DocxConverter(str(pdf_path))

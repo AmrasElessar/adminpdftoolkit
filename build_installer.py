@@ -44,10 +44,17 @@ OUT_NAME = "AdminPDFToolkit_Setup"
 
 # Files at the repo root to ship.
 ROOT_FILES = [
-    "app.py", "app_http.py", "state.py", "settings.py",
-    "pdf_converter.py", "pdf_safety.py",
+    "app.py",
+    "app_http.py",
+    "state.py",
+    "settings.py",
+    "pdf_converter.py",
+    "pdf_safety.py",
     "requirements.txt",
-    "LICENSE", "NOTICE.txt", "THIRD_PARTY_LICENSES.md", "README.md",
+    "LICENSE",
+    "NOTICE.txt",
+    "THIRD_PARTY_LICENSES.md",
+    "README.md",
 ]
 
 # Folders at the repo root to ship recursively. tests/ excluded — installed
@@ -79,12 +86,19 @@ def ensure_launcher_exe() -> bool:
     info("launcher .exe yok — build_exe.py mantığı çalıştırılıyor...")
     rc = subprocess.run(
         [
-            sys.executable, "-m", "PyInstaller",
-            "--onefile", "--console",
-            "--name", "Admin PDF Toolkit",
-            "--workpath", str(ROOT / "build" / "_pyinstaller"),
-            "--distpath", str(ROOT / "build" / "_pyinstaller_dist"),
-            "--specpath", str(ROOT / "build" / "_pyinstaller"),
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            "--onefile",
+            "--console",
+            "--name",
+            "Admin PDF Toolkit",
+            "--workpath",
+            str(ROOT / "build" / "_pyinstaller"),
+            "--distpath",
+            str(ROOT / "build" / "_pyinstaller_dist"),
+            "--specpath",
+            str(ROOT / "build" / "_pyinstaller"),
             "--noconfirm",
             str(ROOT / "launcher.py"),
         ],
@@ -95,6 +109,7 @@ def ensure_launcher_exe() -> bool:
 def _ensure_pyinstaller() -> bool:
     try:
         import PyInstaller  # noqa: F401
+
         return True
     except ImportError:
         rc = subprocess.run(
@@ -162,13 +177,19 @@ def run_pyinstaller() -> bool:
         if d.exists():
             shutil.rmtree(d)
     cmd = [
-        sys.executable, "-m", "PyInstaller",
+        sys.executable,
+        "-m",
+        "PyInstaller",
         "--onefile",
         "--console",
-        "--name", OUT_NAME,
-        "--workpath", str(PYI_BUILD),
-        "--distpath", str(PYI_DIST),
-        "--specpath", str(PYI_BUILD),
+        "--name",
+        OUT_NAME,
+        "--workpath",
+        str(PYI_BUILD),
+        "--distpath",
+        str(PYI_DIST),
+        "--specpath",
+        str(PYI_BUILD),
         "--noconfirm",
         # Bundle the app code zip alongside the launcher .exe.
         f"--add-data={BUNDLE_ZIP};.",

@@ -174,9 +174,7 @@ def test_save_view_dedupe_rewrites_excel_and_data(job_dir: Path, job_token: str)
     assert [r["Sıra"] for r in raw["records"]] == [1, 2]
 
 
-def test_save_view_other_table_dedupes_on_user_columns(
-    job_dir: Path, job_token: str
-) -> None:
+def test_save_view_other_table_dedupes_on_user_columns(job_dir: Path, job_token: str) -> None:
     """For other_table groups, dedup matches on the user-picked column set,
     not the call-log Telefon default. Same (Müşteri, Tutar) collapses; same
     Müşteri with different Tutar stays distinct."""

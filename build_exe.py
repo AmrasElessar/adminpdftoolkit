@@ -92,7 +92,7 @@ def main() -> int:
         "-m",
         "PyInstaller",
         "--onefile",
-        "--noconsole",                          # tray app — no console window
+        "--noconsole",  # tray app — no console window
         "--name",
         EXE_NAME,
         "--workpath",
@@ -102,8 +102,10 @@ def main() -> int:
         "--specpath",
         str(BUILD_DIR),
         "--noconfirm",
-        "--hidden-import", "pystray._win32",
-        "--collect-submodules", "pystray",
+        "--hidden-import",
+        "pystray._win32",
+        "--collect-submodules",
+        "pystray",
     ]
     if version_info.is_file():
         cmd += ["--version-file", str(version_info)]

@@ -102,7 +102,9 @@ class GenericTableParser(BaseParser):
 
         if truncated:
             rows.append([])
-            rows.append([f"# UYARI: {self._CSV_MAX_ROWS} satır üst sınırına ulaşıldı, çıktı kesildi."])
+            rows.append(
+                [f"# UYARI: {self._CSV_MAX_ROWS} satır üst sınırına ulaşıldı, çıktı kesildi."]
+            )
 
         output.parent.mkdir(parents=True, exist_ok=True)
         with output.open("w", encoding="utf-8-sig", newline="") as fp:

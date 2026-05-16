@@ -193,6 +193,7 @@ def _seed_dedupe_job(
 
 def test_batch_deduplicate_rejects_malformed_match_columns_json(client: TestClient) -> None:
     from uuid import uuid4
+
     tok = uuid4().hex
     _seed_dedupe_job(tok)
     r = client.post(f"/batch-deduplicate/{tok}", data={"match_columns": "not-json"})
@@ -202,14 +203,18 @@ def test_batch_deduplicate_rejects_malformed_match_columns_json(client: TestClie
 
 def test_batch_deduplicate_rejects_non_list_match_columns(client: TestClient) -> None:
     from uuid import uuid4
+
     tok = uuid4().hex
     _seed_dedupe_job(tok)
-    r = client.post(f"/batch-deduplicate/{tok}", data={"match_columns": '"Telefon"'})  # string, not list
+    r = client.post(
+        f"/batch-deduplicate/{tok}", data={"match_columns": '"Telefon"'}
+    )  # string, not list
     assert r.status_code == 400
 
 
 def test_batch_deduplicate_rejects_unknown_column(client: TestClient) -> None:
     from uuid import uuid4
+
     tok = uuid4().hex
     _seed_dedupe_job(tok, group_headers=["Müşteri", "Tutar"])
     r = client.post(
@@ -224,6 +229,7 @@ def test_batch_deduplicate_other_table_requires_columns(client: TestClient) -> N
     """other_table groups have no default match_columns; submitting empty
     list (and no stored picks) should 400 instead of silently doing nothing."""
     from uuid import uuid4
+
     tok = uuid4().hex
     _seed_dedupe_job(tok, group_kind="other_table")
     r = client.post(f"/batch-deduplicate/{tok}", data={"match_columns": "[]"})

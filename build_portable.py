@@ -268,8 +268,7 @@ def copy_project(dist: Path) -> None:
     clamav_src = ROOT / "clamav"
     setup = ROOT / "scripts" / "setup_clamav.py"
     needs_clamav = (
-        not (clamav_src / "clamscan.exe").exists()
-        or not (clamav_src / "database").exists()
+        not (clamav_src / "clamscan.exe").exists() or not (clamav_src / "database").exists()
     )
     if needs_clamav and setup.exists():
         info("  ↓ ClamAV (binaries + signature DB) indiriliyor (~350 MB)…")

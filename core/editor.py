@@ -372,6 +372,7 @@ def _apply_one_op(page: Any, op: dict, op_index: int) -> None:
         bold = bool(op.get("bold"))
         italic = bool(op.get("italic"))
         from core.fonts import resolve_editor_font_with_system
+
         font_path = resolve_editor_font_with_system(family_id, bold=bold, italic=italic)
         # PyMuPDF positions text by the BASELINE — adjust point.y so the
         # user's click lands at the visual top of the glyph (matches the
@@ -1091,6 +1092,7 @@ def _apply_replace_ops_for_page(
                     )
                     font_buffer = None
             from core.fonts import resolve_editor_font_with_system as _resolve_w_sys
+
             font_path = (
                 None
                 if font_buffer
@@ -1131,6 +1133,7 @@ def _apply_replace_ops_for_page(
                 # Retry once with the bundled fallback.
                 if font_buffer:
                     from core.fonts import resolve_editor_font_with_system as _resolve_w_sys_fb
+
                     fallback = _resolve_w_sys_fb(family_id, bold=bold, italic=italic)
                     kwargs.pop("fontbuffer", None)
                     if fallback:

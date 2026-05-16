@@ -39,28 +39,36 @@ for _stream_name in ("stdout", "stderr"):
             _stream.reconfigure(encoding="utf-8", errors="replace")
 
 PY_VERSION = "3.13.0"
-EMBED_URL = (
-    f"https://www.python.org/ftp/python/{PY_VERSION}/python-{PY_VERSION}-embed-amd64.zip"
-)
+EMBED_URL = f"https://www.python.org/ftp/python/{PY_VERSION}/python-{PY_VERSION}-embed-amd64.zip"
 GET_PIP_URL = "https://bootstrap.pypa.io/get-pip.py"
 
 DEFAULT_INSTALL_DIR = Path(os.environ.get("LOCALAPPDATA", str(Path.home()))) / "AdminPDFToolkit"
 
 APP_NAME = "Admin PDF Toolkit"
-APP_BUNDLE_NAME = "app_bundle.zip"   # bundled by build_installer.py
+APP_BUNDLE_NAME = "app_bundle.zip"  # bundled by build_installer.py
 LAUNCHER_BUNDLE_NAME = "Admin PDF Toolkit.exe"  # bundled launcher
 
 # Critical modules — install fails loudly if any of these can't import.
 CRITICAL_IMPORTS = [
-    "fitz", "pdfplumber", "pdf2docx", "openpyxl", "fastapi",
-    "uvicorn", "jinja2", "easyocr", "torch", "torchvision",
-    "PIL", "numpy",
+    "fitz",
+    "pdfplumber",
+    "pdf2docx",
+    "openpyxl",
+    "fastapi",
+    "uvicorn",
+    "jinja2",
+    "easyocr",
+    "torch",
+    "torchvision",
+    "PIL",
+    "numpy",
 ]
 
 
 # ---------------------------------------------------------------------------
 # UI helpers
 # ---------------------------------------------------------------------------
+
 
 def banner() -> None:
     print("=" * 64)
@@ -110,6 +118,7 @@ def confirm(prompt: str, default: bool = True) -> bool:
 # Download with progress
 # ---------------------------------------------------------------------------
 
+
 def download(url: str, dest: Path, label: str = "") -> bool:
     info(f"İndiriliyor: {label or url}")
     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -129,8 +138,7 @@ def download(url: str, dest: Path, label: str = "") -> bool:
                     if total and now - last_print > 0.2:
                         pct = written / total * 100
                         print(
-                            f"\r      {written / 1e6:7.1f} / {total / 1e6:.1f} MB "
-                            f"({pct:5.1f}%)",
+                            f"\r      {written / 1e6:7.1f} / {total / 1e6:.1f} MB ({pct:5.1f}%)",
                             end="",
                             flush=True,
                         )
@@ -151,6 +159,7 @@ def download(url: str, dest: Path, label: str = "") -> bool:
 # Resource access (works in frozen mode and dev mode)
 # ---------------------------------------------------------------------------
 
+
 def _bundled_path(name: str) -> Path:
     """Path to a resource bundled by PyInstaller (or alongside the script in dev)."""
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
@@ -161,6 +170,7 @@ def _bundled_path(name: str) -> Path:
 # ---------------------------------------------------------------------------
 # Install steps
 # ---------------------------------------------------------------------------
+
 
 def extract_app_bundle(target: Path) -> bool:
     """Extract bundled app code (zipped by build_installer.py) into target/."""
@@ -239,10 +249,17 @@ def install_pip(py_exe: Path) -> bool:
 def install_packages(py_exe: Path, requirements: Path) -> bool:
     info("Paketler kuruluyor (~500 MB-1 GB, requirements.txt'ten)...")
     cmd = [
-        str(py_exe), "-m", "pip", "install",
-        "--isolated", "--no-user", "--ignore-installed",
-        "--no-warn-script-location", "--disable-pip-version-check",
-        "-r", str(requirements),
+        str(py_exe),
+        "-m",
+        "pip",
+        "install",
+        "--isolated",
+        "--no-user",
+        "--ignore-installed",
+        "--no-warn-script-location",
+        "--disable-pip-version-check",
+        "-r",
+        str(requirements),
     ]
     rc = subprocess.run(cmd, env=_isolated_env()).returncode
     return rc == 0
@@ -332,11 +349,13 @@ def create_shortcuts(install_dir: Path) -> None:
         return
 
     desktop = Path(os.environ.get("USERPROFILE", str(Path.home()))) / "Desktop"
-    start_menu = Path(
-        os.environ.get(
-            "APPDATA", str(Path.home() / "AppData" / "Roaming")
-        )
-    ) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
+    start_menu = (
+        Path(os.environ.get("APPDATA", str(Path.home() / "AppData" / "Roaming")))
+        / "Microsoft"
+        / "Windows"
+        / "Start Menu"
+        / "Programs"
+    )
 
     for location, label in ((desktop, "masaüstü"), (start_menu, "başlat menüsü")):
         try:
@@ -376,6 +395,7 @@ def launch(install_dir: Path) -> None:
 # ---------------------------------------------------------------------------
 # Main flow
 # ---------------------------------------------------------------------------
+
 
 def main() -> int:
     banner()
@@ -426,9 +446,7 @@ def main() -> int:
     info("  ✓ Baslat.bat yazıldı")
     create_shortcuts(install_dir)
 
-    total_mb = sum(
-        f.stat().st_size for f in install_dir.rglob("*") if f.is_file()
-    ) / (1024 * 1024)
+    total_mb = sum(f.stat().st_size for f in install_dir.rglob("*") if f.is_file()) / (1024 * 1024)
 
     print()
     print("=" * 64)
