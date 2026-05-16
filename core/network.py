@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import contextlib
 import os
 import socket
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -138,9 +139,11 @@ def _existing_cert_still_valid(cert_file: Path) -> bool:
         try:
             expires = cert.not_valid_after_utc
         except AttributeError:
-            expires = cert.not_valid_after.replace(tzinfo=timezone.utc)
-        remaining = expires - datetime.now(timezone.utc)
-        return remaining.days > _CERT_RENEW_THRESHOLD_DAYS
+            expires = cert.not_valid_after.replace(tzinfo=UTC)
+        remaining = expires - datetime.now(UTC)
+        # ``remaining.days`` is typed as Any in the cryptography stubs;
+        # wrap the comparison in bool() so mypy sees a concrete return type.
+        return bool(remaining.days > _CERT_RENEW_THRESHOLD_DAYS)
     except Exception:
         return False
 
@@ -184,12 +187,10 @@ def ensure_self_signed_cert() -> tuple[Path, Path]:
         x509.IPAddress(ipaddress.ip_address("127.0.0.1")),
         x509.IPAddress(ipaddress.ip_address("::1")),
     ]
-    try:
+    with contextlib.suppress(ValueError, ipaddress.AddressValueError):
         san_entries.append(x509.IPAddress(ipaddress.ip_address(lan_ip())))
-    except (ValueError, ipaddress.AddressValueError):
-        pass
     san = x509.SubjectAlternativeName(san_entries)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -212,8 +213,6 @@ def ensure_self_signed_cert() -> tuple[Path, Path]:
     # Tighten key file permissions on POSIX; on Windows the file inherits
     # the user-profile ACL which already restricts to the current user.
     if os.name != "nt":
-        try:
+        with contextlib.suppress(OSError):
             os.chmod(key_file, 0o600)
-        except OSError:
-            pass
     return cert_file, key_file

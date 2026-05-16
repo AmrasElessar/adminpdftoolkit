@@ -57,8 +57,8 @@ def fail(msg: str) -> int:
 
 def find_iscc() -> Path | None:
     candidates = [
-        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",
-        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Inno Setup 6" / "ISCC.exe",
+        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
+        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
         Path.home() / "AppData" / "Local" / "Programs" / "Inno Setup 6" / "ISCC.exe",
     ]
     on_path = shutil.which("iscc") or shutil.which("ISCC")

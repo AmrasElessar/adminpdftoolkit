@@ -191,9 +191,9 @@ def convert_worker(
         logger.exception("convert worker failed (token=%s)", token)
         convert_store.update(token, error=sanitize_error(e), done=True)
     finally:
-        snap = convert_store.snapshot(token)
-        if snap:
-            core.persist_job_state("convert", token, snap)
+        final_snap = convert_store.snapshot(token)
+        if final_snap:
+            core.persist_job_state("convert", token, final_snap)
 
 
 def batch_files_worker(
@@ -376,6 +376,6 @@ def batch_files_worker(
         logger.exception("batch-files worker failed (token=%s)", token)
         batch_store.update(token, error=sanitize_error(e), done=True)
     finally:
-        snap = batch_store.snapshot(token)
-        if snap:
-            core.persist_job_state("batch", token, snap)
+        final_snap = batch_store.snapshot(token)
+        if final_snap:
+            core.persist_job_state("batch", token, final_snap)

@@ -49,9 +49,12 @@ def fail(msg: str) -> int:
 
 def find_iscc() -> Path | None:
     """ISCC.exe is the Inno Setup compiler. Hunt the common install dirs."""
+    # Windows env-var lookups are case-insensitive at the OS level; the
+    # mixed-case forms below are the names shown by ``set`` in cmd. ruff's
+    # SIM112 wants ALL_CAPS but that's a Linux convention.
     candidates = [
-        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",
-        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Inno Setup 6" / "ISCC.exe",
+        Path(os.environ.get("ProgramFiles", "C:/Program Files")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
+        Path(os.environ.get("ProgramFiles(x86)", "C:/Program Files (x86)")) / "Inno Setup 6" / "ISCC.exe",  # noqa: SIM112
         Path.home() / "AppData" / "Local" / "Programs" / "Inno Setup 6" / "ISCC.exe",
     ]
     on_path = shutil.which("iscc") or shutil.which("ISCC")

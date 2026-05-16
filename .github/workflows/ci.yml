@@ -87,10 +87,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements-dev.txt
       - name: Run pytest with coverage
-        # Coverage threshold pinned conservatively below the current
-        # number so flaky/skipped tests don't immediately red-light CI;
-        # raise it when the worker / pdf_tools paths get more coverage.
-        run: pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=62
+        # Coverage threshold pinned below the current number so flaky /
+        # skipped tests don't immediately red-light CI. On Mac/Linux,
+        # tests that need ``static/fonts/`` (Noto/DejaVu TTFs) are
+        # auto-skipped and the editor / engine code they cover doesn't
+        # count, knocking ~4 points off the Windows-local number.
+        # Threshold is 58 to absorb that platform delta with margin.
+        run: pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=58
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
         uses: codecov/codecov-action@v6

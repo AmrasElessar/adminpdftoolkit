@@ -32,7 +32,6 @@ import core
 from app_http import (
     cleanup_task,
     file_response_with_name,
-    gate_pdf_safety,
     parse_color,
     parse_int_list,
     pdf_job_dir,

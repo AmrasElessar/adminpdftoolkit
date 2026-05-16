@@ -130,7 +130,7 @@ def check_structure(pdf_path: Path, *, doc: Any | None = None) -> dict[str, Any]
                 # chunk and once to the next — a marginal over-count, never an
                 # under-count (defense-in-depth flavour).
                 carry = buf[-OVERLAP_BYTES:] if len(buf) > OVERLAP_BYTES else buf
-        for label, pattern, desc, weight in _SUSPICIOUS_PATTERNS:
+        for label, _pattern, desc, weight in _SUSPICIOUS_PATTERNS:
             count = counts_by_label.get(label, 0)
             if count > 0:
                 findings.append(

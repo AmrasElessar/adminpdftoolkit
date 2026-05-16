@@ -21,7 +21,6 @@ This script is stdlib-only so the compiled installer .exe stays small.
 from __future__ import annotations
 
 import contextlib
-import io
 import os
 import shutil
 import subprocess
@@ -238,7 +237,7 @@ def install_pip(py_exe: Path) -> bool:
 
 
 def install_packages(py_exe: Path, requirements: Path) -> bool:
-    info(f"Paketler kuruluyor (~500 MB-1 GB, requirements.txt'ten)...")
+    info("Paketler kuruluyor (~500 MB-1 GB, requirements.txt'ten)...")
     cmd = [
         str(py_exe), "-m", "pip", "install",
         "--isolated", "--no-user", "--ignore-installed",
@@ -384,7 +383,7 @@ def main() -> int:
     print()
     print(f"Kurulum klasörü: {install_dir}")
     if install_dir.exists() and any(install_dir.iterdir()):
-        print(f"  ! bu klasör boş değil — içine kurulum yapılacak")
+        print("  ! bu klasör boş değil — içine kurulum yapılacak")
     if not confirm("Devam edilsin mi?", default=True):
         print("Kurulum iptal edildi.")
         return 0
@@ -433,10 +432,10 @@ def main() -> int:
 
     print()
     print("=" * 64)
-    print(f"  Kurulum tamamlandı.")
+    print("  Kurulum tamamlandı.")
     print(f"  Klasör  : {install_dir}")
     print(f"  Boyut   : ~{total_mb:.0f} MB")
-    print(f"  Kısayol : Masaüstü + Başlat Menüsü")
+    print("  Kısayol : Masaüstü + Başlat Menüsü")
     print("=" * 64)
     print()
 

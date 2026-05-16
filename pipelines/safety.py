@@ -114,7 +114,7 @@ def scan_files_with_progress(
     danger_lock = threading.Lock()  # only one danger modal at a time
     progress = {"done": 0}
     unsafe_files: list[str] = []
-    cancelled = {"flag": False, "reason": ""}
+    cancelled: dict[str, Any] = {"flag": False, "reason": ""}
 
     def _bump_progress(filename: str | None = None) -> None:
         with state_lock:
@@ -218,7 +218,8 @@ def scan_files_with_progress(
     store.update(token, unsafe_files=list(unsafe_files), files_safety=files_safety)
 
     if cancelled["flag"]:
-        return False, cancelled["reason"] or "Güvenlik taraması iptal edildi."
+        reason = str(cancelled["reason"]) if cancelled["reason"] else ""
+        return False, reason or "Güvenlik taraması iptal edildi."
     return True, None
 
 
@@ -232,4 +233,4 @@ def scan_single_file(
     return scan_files_with_progress(store, token, [(filename, path)])
 
 
-__all__ = ["scan_files_with_progress", "scan_single_file", "UnsafePDFError", "full_scan"]
+__all__ = ["UnsafePDFError", "full_scan", "scan_files_with_progress", "scan_single_file"]

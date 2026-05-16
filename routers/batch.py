@@ -167,7 +167,7 @@ async def batch_analyze(files: list[UploadFile] = File(...)) -> dict:
         if kind == "other_table":
             hdrs = it.get("source_headers") or []
             norm = "|".join(
-                (str(h).strip().lower() for h in hdrs if str(h).strip())
+                str(h).strip().lower() for h in hdrs if str(h).strip()
             )
             return ("other_table", norm or "(empty headers)")
         return (kind, None)
@@ -573,10 +573,7 @@ async def batch_deduplicate(
     # Validate columns exist in the group's schema (call_log: TARGET_SCHEMA;
     # other_table: group_headers). Anything else is a bad request.
     group_kind = data.get("group_kind", "call_log")
-    if group_kind == "call_log":
-        valid = {"Telefon"}
-    else:
-        valid = set(data.get("group_headers") or [])
+    valid = {"Telefon"} if group_kind == "call_log" else set(data.get("group_headers") or [])
     invalid = [c for c in cols if c not in valid]
     if invalid:
         raise HTTPException(400, f"Geçersiz sütun(lar): {', '.join(invalid)}")

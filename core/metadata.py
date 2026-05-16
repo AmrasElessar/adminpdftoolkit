@@ -8,6 +8,7 @@ both the editor and the PDF Tools side, sharing one codebase.
 
 from __future__ import annotations
 
+import contextlib
 import re
 from pathlib import Path
 from typing import Any
@@ -256,10 +257,8 @@ def extract_images(
                             xref,
                             size,
                         )
-                        try:
+                        with contextlib.suppress(OSError):
                             out_path.unlink()
-                        except OSError:
-                            pass
                         continue
                     total_bytes += size
                     out.append(

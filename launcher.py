@@ -278,7 +278,7 @@ class TrayApp:
 def main() -> int:
     try:
         return TrayApp().run()
-    except Exception as e:  # noqa: BLE001
+    except Exception as e:
         _messagebox(APP_TITLE, f"Beklenmedik hata:\n{e}")
         return 1
 

@@ -37,7 +37,6 @@ from core import logger, sanitize_error
 from settings import settings
 from state import batch_store
 
-
 _CALL_LOG_COL_WIDTHS = {
     "Sıra": 7,
     "Kaynak PDF": 28,
@@ -545,6 +544,6 @@ def batch_convert_worker(
         batch_store.update(token, error=sanitize_error(e), done=True)
         shutil.rmtree(job_dir, ignore_errors=True)
     finally:
-        snap = batch_store.snapshot(token)
-        if snap:
-            core.persist_job_state("batch", token, snap)
+        final_snap = batch_store.snapshot(token)
+        if final_snap:
+            core.persist_job_state("batch", token, final_snap)
