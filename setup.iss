@@ -20,8 +20,8 @@
 ; ===========================================================================
 
 #define MyAppName       "Admin PDF Toolkit"
-#define MyAppVersion    "1.0.0"
-#define MyAppPublisher  "Engin"
+#define MyAppVersion    "1.13.0"
+#define MyAppPublisher  "D Brand"
 #define MyAppExeName    "Admin PDF Toolkit.exe"
 #define MyAppId         "F4C7E2A1-7E2D-4B6A-91AC-PDFTOOLKIT01"
 

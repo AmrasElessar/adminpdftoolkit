@@ -83,6 +83,10 @@ def main() -> int:
         if d.exists():
             shutil.rmtree(d)
 
+    # Windows Explorer "Properties → Details" pane reads VS_VERSIONINFO
+    # from the .exe's PE header. ``--version-file`` is how PyInstaller
+    # embeds those strings (CompanyName=D Brand, ProductName etc).
+    version_info = ROOT / "launcher_version_info.txt"
     cmd = [
         sys.executable,
         "-m",
@@ -100,8 +104,10 @@ def main() -> int:
         "--noconfirm",
         "--hidden-import", "pystray._win32",
         "--collect-submodules", "pystray",
-        str(LAUNCHER),
     ]
+    if version_info.is_file():
+        cmd += ["--version-file", str(version_info)]
+    cmd.append(str(LAUNCHER))
 
     print(">>> PyInstaller calisiyor...")
     rc = subprocess.run(cmd).returncode
