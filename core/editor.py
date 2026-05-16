@@ -141,6 +141,12 @@ def editor_font_catalog() -> list[dict[str, Any]]:
     variants (``["regular", "bold", "italic", "bolditalic"]``) actually
     available on disk. Frontend uses this to gate the bold / italic
     checkboxes per family.
+
+    NOTE: This returns only **bundled** families. The user-facing catalog
+    (bundled + locally installed system fonts) lives in
+    :func:`core.fonts.editor_font_catalog_with_system`, which the
+    ``/pdf/edit/fonts`` route uses. Keep this thin function for internal
+    callers that explicitly want the bundled-only list.
     """
     out: list[dict[str, Any]] = []
     for fam in EDITOR_FONT_FAMILIES:
@@ -156,6 +162,7 @@ def editor_font_catalog() -> list[dict[str, Any]]:
                 "label": fam["label"],
                 "category": fam["category"],
                 "variants": present,
+                "source": "bundled",
             }
         )
     return out
@@ -172,6 +179,9 @@ def resolve_editor_font(
     Falls back to the family's regular variant if the requested style is not
     bundled, then to Noto Sans, then to whatever ``_find_unicode_font()``
     returns. Returns ``None`` only when no Unicode TTF is available at all.
+
+    NOTE: handles only **bundled** families. For system-font-aware lookup
+    (sys:* ids), use :func:`core.fonts.resolve_editor_font_with_system`.
     """
     family = next((f for f in EDITOR_FONT_FAMILIES if f["id"] == family_id), None)
     if family is None:
@@ -361,7 +371,8 @@ def _apply_one_op(page: Any, op: dict, op_index: int) -> None:
         family_id = str(op.get("font_id") or "noto-sans")
         bold = bool(op.get("bold"))
         italic = bool(op.get("italic"))
-        font_path = resolve_editor_font(family_id, bold=bold, italic=italic)
+        from core.fonts import resolve_editor_font_with_system
+        font_path = resolve_editor_font_with_system(family_id, bold=bold, italic=italic)
         # PyMuPDF positions text by the BASELINE — adjust point.y so the
         # user's click lands at the visual top of the glyph (matches the
         # frontend preview which draws from top-left).
@@ -1079,10 +1090,11 @@ def _apply_replace_ops_for_page(
                         total,
                     )
                     font_buffer = None
+            from core.fonts import resolve_editor_font_with_system as _resolve_w_sys
             font_path = (
                 None
                 if font_buffer
-                else resolve_editor_font(
+                else _resolve_w_sys(
                     family_id,
                     bold=bold,
                     italic=italic,
@@ -1118,7 +1130,8 @@ def _apply_replace_ops_for_page(
                 # Embedded font might be missing required glyphs (subsetted).
                 # Retry once with the bundled fallback.
                 if font_buffer:
-                    fallback = resolve_editor_font(family_id, bold=bold, italic=italic)
+                    from core.fonts import resolve_editor_font_with_system as _resolve_w_sys_fb
+                    fallback = _resolve_w_sys_fb(family_id, bold=bold, italic=italic)
                     kwargs.pop("fontbuffer", None)
                     if fallback:
                         kwargs["fontname"] = "hf-uni"

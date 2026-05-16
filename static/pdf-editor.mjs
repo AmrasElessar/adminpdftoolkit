@@ -176,8 +176,34 @@ async function ensureFonts() {
     const data = await r.json();
     const sel = document.getElementById("peFontFamily");
     if (sel && Array.isArray(data.families)) {
-      sel.innerHTML = data.families.map((f) =>
-        `<option value="${f.id}">${f.label}</option>`).join("");
+      // Bundled fontları üstte, sistem fontlarını "🖥 Bu bilgisayar" optgroup'unda
+      // grupla. Microsoft fontları (Tahoma, Calibri, Times New Roman vb.)
+      // bundle edilmez; runtime'da kullanıcının makinesinden okunur.
+      const bundled = data.families.filter((f) => f.source !== "system");
+      const system = data.families.filter((f) => f.source === "system");
+      const esc = (s) => String(s ?? "").replace(/[&<>"']/g,
+        (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+      const opts = (list) => list.map((f) =>
+        `<option value="${esc(f.id)}">${esc(f.label)}</option>`).join("");
+      let html = "";
+      if (bundled.length) {
+        html += '<optgroup label="Uygulama fontları">' + opts(bundled) + "</optgroup>";
+      }
+      if (system.length) {
+        html += '<optgroup label="🖥 Bu bilgisayar (' + system.length + ' font)">'
+                + opts(system) + "</optgroup>";
+      }
+      // Microsoft'un PDF'e gömmesine izin vermediği fontlar (Tahoma, Calibri,
+      // Times New Roman, Courier New, Consolas vb.) lisans gereği listelenmez —
+      // tooltip ile kullanıcıya açıklayalım.
+      sel.title =
+        "Bu liste, lisansı PDF dosyasına gömmeye izin veren fontları gösterir."
+        + " Tahoma, Calibri, Times New Roman gibi bazı Microsoft fontları,"
+        + " EULA'ları gereği bu listede görünmez (ekranda gösterilebilir,"
+        + " ama PDF içine gömülemez).";
+      // Eğer hiçbir kategori yoksa düz liste — savunmalı
+      if (!html) html = opts(data.families);
+      sel.innerHTML = html;
       sel.addEventListener("change", refreshBoldItalicAvailability);
       fontsCatalog = data.families;
       refreshBoldItalicAvailability();

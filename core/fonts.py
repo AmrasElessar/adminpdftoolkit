@@ -278,7 +278,12 @@ def resolve_editor_font_with_system(
 
 
 def editor_font_catalog_with_system() -> list[dict[str, Any]]:
-    """Public catalog: bundled (Noto/DejaVu) first, then host system fonts."""
+    """Public catalog: bundled (Noto/DejaVu) first, then host system fonts.
+
+    Each entry carries a ``source`` flag (``"bundled"`` or ``"system"``)
+    that the frontend uses to render two distinct ``<optgroup>`` blocks —
+    user sees "Uygulama fontları" + "🖥 Bu bilgisayar (N font)".
+    """
     bundled = []
     for fam in EDITOR_FONT_FAMILIES:
         present: list[str] = []
@@ -291,12 +296,19 @@ def editor_font_catalog_with_system() -> list[dict[str, Any]]:
             {
                 "id": fam["id"],
                 "label": fam["label"],
-                "category": "bundled",
+                "category": fam.get("category") or "bundled",
                 "variants": present,
+                "source": "bundled",
             }
         )
     sys_fonts = [
-        {"id": f["id"], "label": f["label"], "category": f["category"], "variants": f["variants"]}
+        {
+            "id": f["id"],
+            "label": f["label"],
+            "category": f["category"],
+            "variants": f["variants"],
+            "source": "system",
+        }
         for f in discover_system_fonts()
     ]
     return bundled + sys_fonts

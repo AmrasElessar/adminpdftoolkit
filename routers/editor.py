@@ -2,7 +2,7 @@
 
 Three endpoints:
 
-* ``GET  /pdf/edit/fonts`` — bundled font catalogue (id / family / variants).
+* ``GET  /pdf/edit/fonts`` — bundled + locally installed system font catalogue.
 * ``POST /pdf/edit/spans`` — per-page text-span metadata + extractability.
 * ``POST /pdf/edit/save``  — apply an operation list and return the resulting PDF.
 """
@@ -24,13 +24,20 @@ router = APIRouter()
 
 @router.get("/pdf/edit/fonts")
 async def pdf_editor_fonts() -> dict:
-    families = core.editor_font_catalog()
+    # Bundled (Noto/DejaVu) + locally discovered system fonts. We never
+    # bundle Microsoft fonts (EULA forbids redistribution), but we may
+    # list and use the user's own installed copies at runtime.
+    from core.fonts import editor_font_catalog_with_system
+
+    families = editor_font_catalog_with_system()
     return {
         "families": families,
         "fallback": "noto-sans"
         if any(f["id"] == "noto-sans" for f in families)
         else (families[0]["id"] if families else None),
         "count": len(families),
+        "bundled_count": sum(1 for f in families if f.get("source") == "bundled"),
+        "system_count": sum(1 for f in families if f.get("source") == "system"),
     }
 
 
