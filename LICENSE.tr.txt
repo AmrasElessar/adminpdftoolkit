@@ -1,0 +1,63 @@
+﻿═══════════════════════════════════════════════════════════════════════
+  ADMIN PDF TOOLKIT — LİSANS BİLGİSİ (TÜRKÇE ÖZET)
+═══════════════════════════════════════════════════════════════════════
+
+Bu yazılım GNU Affero General Public License sürüm 3 (AGPL-3.0)
+altında lisanslanmıştır. Aşağıdaki Türkçe metin BİLGİLENDİRME amaçlıdır;
+yasal olarak bağlayıcı olan resmi İngilizce sözleşme metnidir.
+
+  TEMEL HAKLARINIZ
+  ────────────────
+  • Yazılımı dilediğiniz amaçla ÜCRETSİZ kullanabilirsiniz.
+  • Kaynak kodunu inceleyebilir, değiştirebilirsiniz.
+  • Kopyalarını başkalarına dağıtabilirsiniz.
+  • Değiştirdiğiniz sürümleri yayımlayabilirsiniz.
+  • Ticari kullanım serbesttir (kendi şirketinizde, müşterilerinize vs.).
+
+  YÜKÜMLÜLÜKLERİNİZ
+  ─────────────────
+  • Yazılımı değiştirip dağıtırsanız (örn. müşterinize veya halka),
+    DEĞİŞTİRDİĞİNİZ KAYNAK KODU da AYNI AGPL-3.0 lisansıyla paylaşmak
+    ZORUNDASINIZ. Kapalı kaynak yapamazsınız.
+  • Yazılımı bir AĞ SERVİSİ (web sunucusu) olarak çalıştırırsanız —
+    örneğin müşterilerinizin tarayıcıdan erişmesine izin verirseniz —
+    KULLANICILARA KAYNAK KODUNU SUNMANIZ GEREKİR. Bu, AGPL'i normal
+    GPL'den ayıran asıl maddedir ve "ağ üzerinden boşluk" olarak
+    bilinen açığı kapatır.
+  • Lisans bildirimini ve telif hakkı uyarısını korumanız gerekir.
+  • Garanti VERİLMEZ — yazılımı "olduğu gibi" alırsınız.
+
+  DEĞİŞTİRMEDEN KULLANIMDA NE YAPMAM GEREK?
+  ─────────────────────────────────────────
+  Hiçbir şey. Yazılımı kurun, kullanın. Kaynak kodu zaten herkese
+  açıktır (GitHub). Sadece son kullanıcı olarak çalıştırıyorsanız
+  hiçbir paylaşım yükümlülüğünüz yoktur.
+
+  ŞİRKETİMDE / BÜRO İÇİ AĞIMDA KULLANABİLİR MİYİM?
+  ────────────────────────────────────────────────
+  Evet. AGPL şirketinizdeki iç kullanıma kısıtlama getirmez.
+  Yalnızca yazılımı DIŞ KULLANICILARA hizmet olarak sunarsanız
+  (örn. SaaS olarak satarsanız) yükümlülük doğar.
+
+  AGPL ÖZGÜR VE AÇIK KAYNAK MI?
+  ─────────────────────────────
+  Evet. Free Software Foundation (FSF) ve Open Source Initiative (OSI)
+  tarafından onaylı, dünyada en yaygın kullanılan "güçlü copyleft"
+  lisanslarından biridir. Mastodon, Nextcloud, MongoDB (eski),
+  Grafana (eski) gibi büyük projeler bu lisansı kullanır.
+
+  TAM YASAL METİN
+  ───────────────
+  Aşağıdaki İngilizce metin, Free Software Foundation tarafından
+  yayımlanan resmi GNU Affero General Public License sürüm 3
+  metnidir. Yasal anlaşmazlık durumunda BAĞLAYICI OLAN BU METİNDİR.
+  Türkçe çevirileri bilgi amaçlıdır ve mahkemede geçerli değildir.
+
+  Ek bilgi: https://www.gnu.org/licenses/agpl-3.0.tr.html (resmi olmayan TR çeviri)
+  Resmi metin : https://www.gnu.org/licenses/agpl-3.0.en.html
+
+═══════════════════════════════════════════════════════════════════════
+  GNU AFFERO GENERAL PUBLIC LICENSE — Version 3, 19 November 2007
+  (Official English text — legally binding)
+═══════════════════════════════════════════════════════════════════════
+

@@ -18,6 +18,7 @@ Adımlar:
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import os
 import shutil
@@ -26,6 +27,13 @@ import sys
 import urllib.request
 import zipfile
 from pathlib import Path
+
+# Force UTF-8 stdout so "✓" and Turkish chars render on cp1254 consoles.
+for _stream_name in ("stdout", "stderr"):
+    _stream = getattr(sys, _stream_name, None)
+    if _stream is not None and hasattr(_stream, "reconfigure"):
+        with contextlib.suppress(Exception):
+            _stream.reconfigure(encoding="utf-8", errors="replace")
 
 ROOT = Path(__file__).resolve().parent
 DIST = ROOT / "dist" / "Admin_PDF_Toolkit_Portable"
@@ -254,21 +262,34 @@ def copy_project(dist: Path) -> None:
             shutil.copytree(src, target)
             info(f"  ✓ {d}/")
 
-    # Optional: bundle ClamAV binaries when the operator has run setup_clamav.py.
-    # Skip the database/ subdir — freshclam re-downloads on first boot.
+    # Auto-bundle ClamAV: binaries + signature DB so end users don't need
+    # internet on first boot. setup_clamav.py is idempotent — it skips if
+    # everything's already in place.
     clamav_src = ROOT / "clamav"
-    if clamav_src.exists() and (clamav_src / "clamscan.exe").exists():
+    setup = ROOT / "scripts" / "setup_clamav.py"
+    needs_clamav = (
+        not (clamav_src / "clamscan.exe").exists()
+        or not (clamav_src / "database").exists()
+    )
+    if needs_clamav and setup.exists():
+        info("  ↓ ClamAV (binaries + signature DB) indiriliyor (~350 MB)…")
+        rc = subprocess.run([sys.executable, str(setup)], cwd=str(ROOT)).returncode
+        if rc != 0:
+            info(f"  ! setup_clamav.py exit {rc} — ClamAV atlandi")
+    if (clamav_src / "clamscan.exe").exists():
         target = dist / "clamav"
         if target.exists():
             shutil.rmtree(target)
+        # Bundle the database/ subdir too — first boot stays offline.
         shutil.copytree(
             clamav_src,
             target,
-            ignore=shutil.ignore_patterns("database", "_download.zip"),
+            ignore=shutil.ignore_patterns("_download.zip"),
         )
-        info("  ✓ clamav/ (binaries; signature DB lazy-fetched on first boot)")
+        has_db = (target / "database").exists() and any((target / "database").iterdir())
+        info(f"  ✓ clamav/ (binaries{' + signature DB' if has_db else ''})")
     else:
-        info("  · clamav/ skipped (run scripts/setup_clamav.py to bundle)")
+        info("  · clamav/ skipped (setup_clamav.py bulunamadi veya basarisiz)")
 
 
 def write_starter_bat(dist: Path) -> None:

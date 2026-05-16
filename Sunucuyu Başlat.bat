@@ -30,8 +30,17 @@ rem  halde cmd.exe (CP-857/CP-1254 OEM codepage ile) bayt dizilerini
 rem  yanlis cozer ve "X is not recognized as a command" hatalari verir.
 rem =======================================================================
 
-rem --- Python var mi? ---
-where python >nul 2>&1
+rem --- Python var mi? Microsoft Store stub'ini reddet. ---
+rem `where python` Win10/11'de MS Store placeholder'i bulup errorlevel 0 doner;
+rem o stub gercek Python degil. Gercek bir interpreter oldugundan emin olmak
+rem icin `python -c "import sys"` deneriz; stub'da bu komut sessizce cikar.
+set "PY_FOUND=0"
+for /f "delims=" %%i in ('where python 2^>nul') do (
+    echo %%i | findstr /i "WindowsApps" >nul
+    if errorlevel 1 set "PY_FOUND=1"
+)
+if "%PY_FOUND%"=="0" goto NO_PYTHON
+python -c "import sys; sys.exit(0)" >nul 2>&1
 if errorlevel 1 goto NO_PYTHON
 
 rem --- Paketler daha once kuruldu mu? ---
@@ -129,11 +138,27 @@ echo ============================================================
 echo   [HATA] Bu bilgisayarda Python yuklu degil
 echo ============================================================
 echo.
+echo   NOT: Microsoft Store'un Python "placeholder" dosyasi varsa
+echo   o gercek Python sayilmaz; bu .bat onu otomatik atlar.
+echo.
+echo   IS PC / SIRKET BILGISAYARI ICIN ONERI:
+echo   --------------------------------------
+echo   Sirket firewall'i pip'i engelliyorsa Python kurmaya bile
+echo   ugrasmayin. Ev PC'sinde build edilen PORTABLE klasoru
+echo   kullanin (icinde Python + tum paketler hazirdir):
+echo.
+echo       dist\Admin_PDF_Toolkit_Portable\  klasorunu ZIP'le,
+echo       USB ile bu PC'ye tasi, ac, ICINDEKI
+echo       "Admin PDF Toolkit.exe" cift tikla.
+echo.
+echo   Internet hic gerekmez, kurulum gerekmez, admin gerekmez.
+echo.
 
 rem Windows Paket Yoneticisi (winget) varsa otomatik kurulum onerelim
 where winget >nul 2>&1
 if errorlevel 1 goto MANUAL_PYTHON
 
+echo   Veya Python kurmak isterseniz:
 echo   Windows'un paket yoneticisi (winget) kullanilabilir.
 echo   Python 3.13 otomatik kurmak ister misiniz?
 echo.
@@ -170,8 +195,23 @@ echo.
 echo ============================================================
 echo   [HATA] Paketler indirilemedi
 echo ============================================================
-echo   Internet baglantinizi kontrol edin ve tekrar deneyin.
-echo   Sirket guvenlik duvari pip'i engelliyor olabilir.
+echo   Sebep muhtemelen:
+echo     - Internet baglantisi yok, veya
+echo     - Sirket guvenlik duvari pypi.org'u engelliyor
+echo.
+echo   COZUM (sirket PC'si icin onerilir):
+echo   -----------------------------------
+echo   Ev PC'sinde build edilen PORTABLE klasoru kullanin —
+echo   icinde Python + tum paketler hazirdir, internet gerekmez.
+echo.
+echo       dist\Admin_PDF_Toolkit_Portable\  klasorunu ZIP'le,
+echo       USB ile bu PC'ye tasi, ac, ICINDEKI
+echo       "Admin PDF Toolkit.exe" cift tikla.
+echo.
+echo   Alternatif: BT'ye sorup pip icin proxy ayari yaptirin:
+echo       set HTTP_PROXY=http://kurumsalproxy:port
+echo       set HTTPS_PROXY=http://kurumsalproxy:port
+echo       sonra bu .bat'i yeniden calistirin.
 echo ============================================================
 echo.
 pause
