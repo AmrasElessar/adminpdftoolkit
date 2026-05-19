@@ -371,9 +371,12 @@ def _apply_one_op(page: Any, op: dict, op_index: int) -> None:
         family_id = str(op.get("font_id") or "noto-sans")
         bold = bool(op.get("bold"))
         italic = bool(op.get("italic"))
+        weight = str(op.get("weight") or "")
         from core.fonts import resolve_editor_font_with_system
 
-        font_path = resolve_editor_font_with_system(family_id, bold=bold, italic=italic)
+        font_path = resolve_editor_font_with_system(
+            family_id, weight=weight or None, bold=bold, italic=italic,
+        )
         # PyMuPDF positions text by the BASELINE — adjust point.y so the
         # user's click lands at the visual top of the glyph (matches the
         # frontend preview which draws from top-left).
@@ -437,36 +440,14 @@ def _apply_one_op(page: Any, op: dict, op_index: int) -> None:
 
 # ----- Replace op support ------------------------------------------------
 def _map_font_name_to_family(font_name: str) -> tuple[str, bool, bool]:
-    """Best-effort guess of (family_id, bold, italic) from a PDF font name.
-
-    PDF font names are arbitrary strings ("Helvetica", "Arial-BoldMT",
-    "TimesNewRomanPS-ItalicMT", "Courier New Bold Italic"). We grep for
-    well-known keywords to pick the closest bundled family + style.
+    """Legacy wrapper — eski testler/callers için (family_id, bold, italic).
+    Yeni kod ``match_pdf_font_name``'in dict çıktısını doğrudan kullansın
+    (weight bilgisi orada var).
     """
-    raw = (font_name or "").strip()
-    lower = raw.lower()
-    bold = any(token in lower for token in ("bold", "heavy", "black", "demi", "bd-", "-bd"))
-    italic = any(token in lower for token in ("italic", "oblique", "-it", "it-", "slant"))
-    if any(t in lower for t in ("mono", "courier", "consolas", "menlo", "fixed")):
-        family = "noto-mono"
-    elif any(
-        t in lower
-        for t in (
-            "times",
-            "serif",
-            "garamond",
-            "georgia",
-            "palatino",
-            "minion",
-            "caslon",
-            "baskerville",
-            "didot",
-        )
-    ):
-        family = "noto-serif"
-    else:
-        family = "noto-sans"
-    return family, bold, italic
+    from .fonts import match_pdf_font_name
+
+    info = match_pdf_font_name(font_name)
+    return (info["family_id"], info["bold"], info["italic"])
 
 
 def _color_int_to_rgb(value: int) -> tuple[float, float, float]:
@@ -720,17 +701,20 @@ def _make_span_dict(
     color_int: Any,
     granularity: str,
 ) -> dict[str, Any]:
-    family, bold, italic = _map_font_name_to_family(font_name)
+    from .fonts import match_pdf_font_name
+
+    info = match_pdf_font_name(font_name)
     return {
         "page": page_idx + 1,
         "rect": [float(b) for b in rect],
         "text": text,
         "font_name": font_name,
-        "font_id": family,
+        "font_id": info["family_id"],
         "fontsize": float(fontsize or 0),
         "color": list(_color_int_to_rgb(color_int)),
-        "bold": bold,
-        "italic": italic,
+        "bold": info["bold"],          # legacy bool
+        "italic": info["italic"],
+        "weight": info["weight"],      # granular weight (CSS axis)
         "granularity": granularity,
     }
 
@@ -1093,11 +1077,13 @@ def _apply_replace_ops_for_page(
                     font_buffer = None
             from core.fonts import resolve_editor_font_with_system as _resolve_w_sys
 
+            weight = str(op.get("weight") or "")
             font_path = (
                 None
                 if font_buffer
                 else _resolve_w_sys(
                     family_id,
+                    weight=weight or None,
                     bold=bold,
                     italic=italic,
                 )
@@ -1134,7 +1120,9 @@ def _apply_replace_ops_for_page(
                 if font_buffer:
                     from core.fonts import resolve_editor_font_with_system as _resolve_w_sys_fb
 
-                    fallback = _resolve_w_sys_fb(family_id, bold=bold, italic=italic)
+                    fallback = _resolve_w_sys_fb(
+                        family_id, weight=weight or None, bold=bold, italic=italic,
+                    )
                     kwargs.pop("fontbuffer", None)
                     if fallback:
                         kwargs["fontname"] = "hf-uni"

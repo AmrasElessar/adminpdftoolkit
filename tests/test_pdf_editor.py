@@ -561,6 +561,8 @@ def test_extract_text_spans_finds_visible_text(text_pdf):
 
 
 def test_font_name_mapping_helvetica_is_sans():
+    # Helvetica Mac/Adobe default — Windows/Linux sistemlerinde genelde yok,
+    # bundled fallback (noto-sans) bekleniyor.
     fam, bold, italic = core._map_font_name_to_family("Helvetica")
     assert fam == "noto-sans"
     assert bold is False
@@ -568,20 +570,45 @@ def test_font_name_mapping_helvetica_is_sans():
 
 
 def test_font_name_mapping_arial_bold():
+    # Arial sistem'de yüklüyse system:arial tercih edilir; yoksa bundled.
     fam, bold, _italic = core._map_font_name_to_family("Arial-BoldMT")
-    assert fam == "noto-sans"
+    assert fam in ("system:arial", "noto-sans")
     assert bold is True
 
 
 def test_font_name_mapping_times_italic():
+    # "Times" stem matchi: Windows'ta "Times New Roman" → key "times-new-roman"
+    # ("times" ile eşleşmez) → bundled noto-serif. Sistem'de düz "Times" varsa
+    # (Mac/Adobe) system:times olabilir.
     fam, _bold, italic = core._map_font_name_to_family("Times-Italic")
-    assert fam == "noto-serif"
+    assert fam in ("system:times", "noto-serif")
     assert italic is True
 
 
 def test_font_name_mapping_courier_is_mono():
+    # "Courier" stem: Windows'ta "Courier New" → "courier-new" (key match yok)
+    # → bundled noto-mono. Düz "Courier" yüklüyse system:courier de geçerli.
     fam, _b, _i = core._map_font_name_to_family("Courier-Bold")
-    assert fam == "noto-mono"
+    assert fam in ("system:courier", "noto-mono")
+
+
+def test_font_name_mapping_full_microsoft_names():
+    # "TimesNewRomanPSMT" gibi PDF'in gerçekten yazdığı isim sistem'de varsa
+    # tam karşılığa eşleşmeli.
+    from core.fonts import discover_system_fonts
+
+    sys_keys = {f["id"] for f in discover_system_fonts()}
+    fam, _, _ = core._map_font_name_to_family("TimesNewRomanPSMT")
+    if "system:times-new-roman" in sys_keys:
+        assert fam == "system:times-new-roman"
+    else:
+        assert fam == "noto-serif"
+
+    fam2, bold, italic = core._map_font_name_to_family("ABCDEF+CalibriBoldItalic")
+    if "system:calibri" in sys_keys:
+        assert fam2 == "system:calibri"
+    assert bold is True
+    assert italic is True
 
 
 def test_apply_replace_swaps_text(text_pdf, tmp_path):
