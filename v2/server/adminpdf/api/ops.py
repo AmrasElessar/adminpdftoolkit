@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -9,7 +10,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from ..core.files import FileStore, MissingFileError
 from ..jobs.engine import JobEngine
-from ..ops.base import REGISTRY
+from ..ops.base import REGISTRY, file_params
 from . import deps
 
 router = APIRouter(prefix="/api/ops", tags=["ops"])
@@ -62,5 +63,17 @@ async def run(
             status_code=422,
             detail=[{"field": ".".join(map(str, err["loc"])), "message": err["msg"]} for err in e.errors()],
         ) from None
-    job = engine.submit(op.name, params.model_dump(mode="json"), inputs)
+    files: dict[str, tuple[Path, str]] = {}
+    for field_name, accept in file_params(op.Params).items():
+        file_id = getattr(params, field_name, "")
+        if not file_id:
+            continue
+        try:
+            meta = store.get(file_id)
+            files[field_name] = (store.path(file_id), meta.name)
+        except MissingFileError:
+            raise deps.not_found(f"{field_name}: file not found (it may have expired)") from None
+        if accept and meta.kind not in accept:
+            raise HTTPException(status_code=415, detail=f"{field_name}: expected {', '.join(accept)}, got {meta.kind}")
+    job = engine.submit(op.name, params.model_dump(mode="json"), inputs, files)
     return job.public()

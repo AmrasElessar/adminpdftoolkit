@@ -268,3 +268,28 @@ def test_render_pixel_budget_caps_huge_pages(api: Api) -> None:
     f = api.upload(make_pdf(1, size=(14400, 14400)))
     job = api.run("pdf_to_images", [f["id"]], {"dpi": 600, "format": "jpg", "quality": 30})
     assert job["status"] == "done", job
+
+
+def test_image_stamp_uses_file_param(api: Api) -> None:
+    f = api.upload(make_pdf(2))
+    logo = api.upload(make_png(120, 60), "logo.png")
+    job = api.run("image_stamp", [f["id"]], {"image": logo["id"], "position": "top-right", "opacity": 0.5})
+    assert job["status"] == "done", job
+    with open_bytes(api.download(job["result"]["id"])) as doc:
+        assert len(doc[0].get_images()) == 1
+        assert doc[0].get_images()[0][0] == doc[1].get_images()[0][0]  # shared xref
+
+
+def test_file_param_kind_is_checked(api: Api) -> None:
+    f = api.upload(make_pdf(1))
+    assert api.start("image_stamp", [f["id"]], {"image": f["id"]}).status_code == 415
+    assert api.start("image_stamp", [f["id"]], {"image": "x" * 22}).status_code == 404
+
+
+def test_info_returns_data(api: Api) -> None:
+    f = api.upload(make_pdf(3))
+    job = api.run("info", [f["id"]])
+    assert job["status"] == "done", job
+    assert job["result"] is None
+    assert job["data"]["pages"] == 3
+    assert job["data"]["page_sizes"] == {"595 × 842 pt": 3}

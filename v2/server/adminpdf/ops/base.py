@@ -32,6 +32,37 @@ def Field(default: Any = ..., *, tr: str, en: str, help_tr: str = "", help_en: s
     return _Field(default, title=en, json_schema_extra=extra, **kw)
 
 
+def FileParam(  # noqa: N802
+    *, tr: str, en: str, accept: list[str], required: bool = True, help_tr: str = "", help_en: str = ""
+) -> Any:
+    """A parameter naming another uploaded file (certificate, image, font…).
+
+    The value is a file id. The API checks it exists and has an accepted
+    kind, and the worker receives it as ``ctx.files[<field name>]``.
+    """
+    return Field(
+        ... if required else "",
+        tr=tr,
+        en=en,
+        help_tr=help_tr,
+        help_en=help_en,
+        max_length=64,
+        ui={"widget": "file", "accept": accept},
+    )
+
+
+def file_params(params_cls: type[BaseModel]) -> dict[str, list[str]]:
+    """``{field_name: accepted_kinds}`` for every FileParam of a model."""
+    out: dict[str, list[str]] = {}
+    for name, f in params_cls.model_fields.items():
+        extra = f.json_schema_extra
+        ui = extra.get("ui") if isinstance(extra, dict) else None
+        if isinstance(ui, dict) and ui.get("widget") == "file":
+            accept = ui.get("accept")
+            out[name] = [str(a) for a in accept] if isinstance(accept, list) else []
+    return out
+
+
 class Params(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -63,6 +94,10 @@ class Context:
     output_dir: Path
     progress: ProgressFn = lambda _f, _m: None
     outputs: list[Output] = field(default_factory=list)
+    # Extra files referenced by FileParam fields, keyed by field name.
+    files: dict[str, InputFile] = field(default_factory=dict)
+    # JSON-serialisable result for "query" operations (inspect, validate…).
+    data: dict[str, Any] | None = None
 
     def output(self, name: str) -> Path:
         """Reserve a unique, safe output path and record it as a result."""
@@ -91,6 +126,10 @@ class Operation:
     min_inputs: ClassVar[int] = 1
     max_inputs: ClassVar[int] = 1
     Params: ClassVar[type[Params]] = NoParams
+    # True for operations whose main result is ``ctx.data`` rather than files.
+    returns_data: ClassVar[bool] = False
+    # Hidden from the tool grid; driven by a dedicated UI (e.g. the editor).
+    hidden: ClassVar[bool] = False
 
     def run(self, ctx: Context, params: Any) -> None:
         raise NotImplementedError
@@ -105,6 +144,8 @@ class Operation:
             "accepts": sorted(cls.accepts),
             "min_inputs": cls.min_inputs,
             "max_inputs": cls.max_inputs,
+            "returns_data": cls.returns_data,
+            "hidden": cls.hidden,
             "schema": cls.Params.model_json_schema(),
         }
 
@@ -120,7 +161,16 @@ def register(cls: type[Operation]) -> type[Operation]:
 
 
 def load_all() -> dict[str, type[Operation]]:
-    """Import every operation module so their ``@register`` calls run."""
-    from . import convert, office, optimize, pages, protect, stamp  # noqa: F401
+    """Import every module in this package (and installed plugins) so their
+    ``@register`` calls run. New tools need no edit here."""
+    import importlib
+    import pkgutil
 
+    from .. import plugins
+
+    for pkg in (__package__, plugins.__name__):
+        module = importlib.import_module(pkg)
+        for info in pkgutil.iter_modules(module.__path__):
+            if not info.name.startswith("_") and info.name != "base":
+                importlib.import_module(f"{pkg}.{info.name}")
     return REGISTRY

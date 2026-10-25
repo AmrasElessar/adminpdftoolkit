@@ -42,6 +42,7 @@ class Job:
     error: dict[str, str] | None = None
     outputs: list[StoredFile] = field(default_factory=list)
     result: StoredFile | None = None
+    data: dict[str, Any] | None = None
     created: float = field(default_factory=time.time)
     finished: float | None = None
     version: int = 0
@@ -56,6 +57,7 @@ class Job:
             "error": self.error,
             "outputs": [o.public() for o in self.outputs],
             "result": self.result.public() if self.result else None,
+            "data": self.data,
         }
 
 
@@ -86,10 +88,16 @@ class JobEngine:
     def get(self, job_id: str) -> Job | None:
         return self._jobs.get(job_id)
 
-    def submit(self, op: str, params: dict[str, Any], inputs: list[tuple[Path, str, str]]) -> Job:
+    def submit(
+        self,
+        op: str,
+        params: dict[str, Any],
+        inputs: list[tuple[Path, str, str]],
+        files: dict[str, tuple[Path, str]] | None = None,
+    ) -> Job:
         job = Job(id=secrets.token_urlsafe(16), op=op)
         self._jobs[job.id] = job
-        task = asyncio.create_task(self._run(job, params, inputs))
+        task = asyncio.create_task(self._run(job, params, inputs, files or {}))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return job
@@ -134,7 +142,13 @@ class JobEngine:
         async with self._changed:
             self._changed.notify_all()
 
-    async def _run(self, job: Job, params: dict[str, Any], inputs: list[tuple[Path, str, str]]) -> None:
+    async def _run(
+        self,
+        job: Job,
+        params: dict[str, Any],
+        inputs: list[tuple[Path, str, str]],
+        files: dict[str, tuple[Path, str]],
+    ) -> None:
         job_dir = self.work_dir / job.id
         try:
             async with self._sem:
@@ -143,7 +157,7 @@ class JobEngine:
                     return
                 job_dir.mkdir()
                 await self._update(job, status="running")
-                outcome = await self._execute(job, params, inputs, job_dir)
+                outcome = await self._execute(job, params, inputs, files, job_dir)
             await self._finish(job, outcome)
         except asyncio.CancelledError:
             raise
@@ -160,13 +174,26 @@ class JobEngine:
             shutil.rmtree(job_dir, ignore_errors=True)
 
     async def _execute(
-        self, job: Job, params: dict[str, Any], inputs: list[tuple[Path, str, str]], job_dir: Path
+        self,
+        job: Job,
+        params: dict[str, Any],
+        inputs: list[tuple[Path, str, str]],
+        files: dict[str, tuple[Path, str]],
+        job_dir: Path,
     ) -> tuple[str, Any]:
         loop = asyncio.get_running_loop()
         parent, child = self._mp.Pipe(duplex=False)
         proc = self._mp.Process(
             target=worker.run,
-            args=(child, job.op, params, [(str(p), n, pw) for p, n, pw in inputs], str(job_dir), self.memory_mb),
+            args=(
+                child,
+                job.op,
+                params,
+                [(str(p), n, pw) for p, n, pw in inputs],
+                str(job_dir),
+                self.memory_mb,
+                {k: (str(p), n) for k, (p, n) in files.items()},
+            ),
             daemon=True,
         )
         self._procs[job.id] = proc
@@ -212,11 +239,24 @@ class JobEngine:
         now = time.time()
         if kind == "done":
             loop = asyncio.get_running_loop()
+            produced = payload["outputs"]
             outputs = [
-                await loop.run_in_executor(None, self.store.register_output, Path(p), name) for p, name in payload
+                await loop.run_in_executor(None, self.store.register_output, Path(p), name) for p, name in produced
             ]
-            result = outputs[0] if len(outputs) == 1 else await self._bundle(job, payload)
-            await self._update(job, status="done", progress=1.0, outputs=outputs, result=result, finished=now)
+            result = None
+            if len(outputs) == 1:
+                result = outputs[0]
+            elif outputs:
+                result = await self._bundle(job, produced)
+            await self._update(
+                job,
+                status="done",
+                progress=1.0,
+                outputs=outputs,
+                result=result,
+                data=payload["data"],
+                finished=now,
+            )
         elif kind == "cancelled":
             await self._update(job, status="cancelled", finished=now)
         elif kind == "error":

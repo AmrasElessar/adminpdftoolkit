@@ -42,7 +42,7 @@ class StoredFile:
     id: str
     name: str
     size: int
-    kind: str  # pdf | image | docx | xlsx | pptx | other
+    kind: str  # pdf | image | docx | xlsx | pptx | font | cert | other
     mime: str
     created: float
     pages: int | None = None
@@ -83,6 +83,10 @@ def sniff(head: bytes, name: str) -> tuple[str, str]:
         return "image", "image/webp"
     if head.startswith(b"BM"):
         return "image", "image/bmp"
+    if head[:4] in (b"\x00\x01\x00\x00", b"OTTO", b"true"):
+        return "font", "font/ttf" if head[:4] != b"OTTO" else "font/otf"
+    if lower.endswith((".p12", ".pfx")) and head[:1] == b"\x30":
+        return "cert", "application/x-pkcs12"
     if head.startswith(b"PK\x03\x04"):
         for ext, kind, mime in (
             (".docx", "docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),

@@ -10,7 +10,7 @@ import pymupdf
 
 from ..core.errors import UserError
 from ..core.pdf import open_pdf, parse_page_spec, save_pdf, unicode_font, unicode_font_path
-from .base import Context, Field, InputFile, Operation, Params, register
+from .base import Context, Field, FileParam, InputFile, Operation, Params, register
 
 _TOKEN_RE = re.compile(r"\{(n|total|date|file)\}")
 
@@ -203,3 +203,88 @@ class PageNumbers(Operation):
         fields: dict[str, Any] = {"footer_center": "", key: params.template}
         hf = HeaderFooterParams(font_size=params.font_size, start_at=params.start_at, pages=params.pages, **fields)
         stamp_header_footer(ctx, hf, "numarali")
+
+
+def _translucent_png(path: Any, opacity: float) -> tuple[bytes, int, int]:
+    """Bake opacity into the alpha channel (insert_image has no opacity)."""
+    import io
+
+    from PIL import Image, UnidentifiedImageError
+
+    try:
+        with Image.open(path) as im:
+            im.load()
+            rgba = im.convert("RGBA")
+    except (UnidentifiedImageError, OSError) as e:
+        raise UserError("Görsel okunamadı.", "Cannot read the image.") from e
+    if rgba.width * rgba.height > 40_000_000:
+        raise UserError("Görsel çok büyük.", "The image is too large.")
+    if opacity < 1:
+        alpha = rgba.getchannel("A").point(lambda a: int(a * opacity))
+        rgba.putalpha(alpha)
+    buf = io.BytesIO()
+    rgba.save(buf, "PNG", optimize=True)
+    return buf.getvalue(), rgba.width, rgba.height
+
+
+class ImageStampParams(Params):
+    image: str = FileParam(tr="Görsel", en="Image", accept=["image"])
+    position: Literal["center", "top-left", "top-right", "bottom-left", "bottom-right"] = Field(
+        "center",
+        tr="Konum",
+        en="Position",
+        ui={
+            "options": {
+                "center": {"tr": "Orta", "en": "Centre"},
+                "top-left": {"tr": "Üst sol", "en": "Top left"},
+                "top-right": {"tr": "Üst sağ", "en": "Top right"},
+                "bottom-left": {"tr": "Alt sol", "en": "Bottom left"},
+                "bottom-right": {"tr": "Alt sağ", "en": "Bottom right"},
+            }
+        },
+    )
+    scale: float = Field(0.4, tr="Boyut (sayfa genişliğine oran)", en="Size (share of page width)", ge=0.02, le=1.0)
+    opacity: float = Field(0.35, tr="Saydamlık", en="Opacity", ge=0.02, le=1.0, ui={"widget": "range", "step": 0.01})
+    margin: float = Field(24, tr="Kenar boşluğu (pt)", en="Margin (pt)", ge=0, le=200)
+    pages: str = Field("", tr="Sayfalar (boş = tümü)", en="Pages (empty = all)", max_length=2000)
+    behind: bool = Field(False, tr="İçeriğin arkasına yerleştir", en="Place behind content")
+
+
+@register
+class ImageStamp(Operation):
+    name = "image_stamp"
+    category = "stamp"
+    title_tr, title_en = "Görsel Damga / Logo", "Image Stamp / Logo"
+    description_tr = "Sayfalara logo, kaşe veya görsel filigran yerleştirir."
+    description_en = "Place a logo, seal or image watermark on pages."
+    Params = ImageStampParams
+
+    def run(self, ctx: Context, params: ImageStampParams) -> None:
+        data, iw, ih = _translucent_png(ctx.files["image"].path, params.opacity)
+        inp = ctx.inputs[0]
+        with open_pdf(inp.path, inp.password) as doc:
+            targets = sorted(set(parse_page_spec(params.pages, doc.page_count)))
+            xref = 0
+            for k, i in enumerate(targets):
+                page = doc[i]
+                vis = page.rect
+                w = vis.width * params.scale
+                h = w * ih / iw
+                m = params.margin
+                x = {"left": vis.x0 + m, "right": vis.x1 - m - w}.get(
+                    params.position.split("-")[-1], (vis.width - w) / 2
+                )
+                y = {"top": vis.y0 + m, "bottom": vis.y1 - m - h}.get(
+                    params.position.split("-")[0], (vis.height - h) / 2
+                )
+                box = pymupdf.Rect(x, y, x + w, y + h) * page.derotation_matrix
+                # Re-use one image xref across pages: the file grows once.
+                xref = page.insert_image(
+                    box,
+                    stream=data if not xref else None,
+                    xref=xref,
+                    overlay=not params.behind,
+                    rotate=-page.rotation,
+                )
+                ctx.progress((k + 1) / len(targets), "")
+            save_pdf(doc, ctx.output(f"{inp.stem}_damgali.pdf"))
