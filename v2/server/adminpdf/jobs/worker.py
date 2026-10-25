@@ -37,6 +37,9 @@ def run(
     memory_mb: int,
 ) -> None:
     _limit_memory(memory_mb)
+    from ..core.proc import install_sigterm_handler
+
+    install_sigterm_handler()
     try:
         from ..ops.base import Context, InputFile, load_all
 

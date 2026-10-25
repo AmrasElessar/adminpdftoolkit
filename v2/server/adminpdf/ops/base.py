@@ -121,6 +121,6 @@ def register(cls: type[Operation]) -> type[Operation]:
 
 def load_all() -> dict[str, type[Operation]]:
     """Import every operation module so their ``@register`` calls run."""
-    from . import convert, optimize, pages, protect, stamp  # noqa: F401
+    from . import convert, office, optimize, pages, protect, stamp  # noqa: F401
 
     return REGISTRY

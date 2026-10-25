@@ -101,3 +101,48 @@ def client(settings: Settings) -> Iterator[TestClient]:
 @pytest.fixture
 def api(client: TestClient) -> Api:
     return Api(client)
+
+
+def make_docx(text: str = "Merhaba dünya — İĞŞÇÖÜ") -> bytes:
+    import docx
+
+    d = docx.Document()
+    d.add_heading("Başlık", level=1)
+    p = d.add_paragraph()
+    p.add_run(text).bold = True
+    t = d.add_table(rows=2, cols=2)
+    t.cell(0, 0).text = "Ad"
+    t.cell(0, 1).text = "Tutar"
+    t.cell(1, 0).text = "Şükrü"
+    t.cell(1, 1).text = "1.250,50"
+    buf = io.BytesIO()
+    d.save(buf)
+    return buf.getvalue()
+
+
+def make_xlsx() -> bytes:
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Satış"
+    ws.append(["Ürün", "Adet"])
+    ws.append(["Çay", 12])
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
+def make_table_pdf() -> bytes:
+    doc = pymupdf.open()
+    page = doc.new_page()
+    rows = [["Ad", "Tutar", "Not"], ["Ali", "1.250,50", "=HYPERLINK(1)"], ["Ayşe", "300", "ok"]]
+    x0, y0, w, h = 72, 72, 150, 24
+    for r, row in enumerate(rows):
+        for c, value in enumerate(row):
+            rect = pymupdf.Rect(x0 + c * w, y0 + r * h, x0 + (c + 1) * w, y0 + (r + 1) * h)
+            page.draw_rect(rect, color=(0, 0, 0), width=0.8)
+            page.insert_text((rect.x0 + 4, rect.y1 - 7), value, fontsize=11)
+    data: bytes = doc.tobytes()
+    doc.close()
+    return data

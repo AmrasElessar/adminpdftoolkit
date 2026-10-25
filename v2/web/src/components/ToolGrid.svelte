@@ -33,8 +33,11 @@
   function blocker(op: OpInfo): string | null {
     const sel = workspace.selected;
     if (!sel.length) return t("Önce dosya seçin", "Select files first");
-    if (sel.some((e) => !op.accepts.includes(e.file!.kind)))
-      return op.accepts.includes("pdf") ? t("Yalnızca PDF", "PDF only") : t("Yalnızca görsel", "Images only");
+    if (sel.some((e) => !op.accepts.includes(e.file!.kind))) {
+      if (op.accepts.includes("pdf")) return t("Yalnızca PDF", "PDF only");
+      if (op.accepts.includes("image")) return t("Yalnızca görsel", "Images only");
+      return t("Yalnızca Word / Excel / PowerPoint", "Word / Excel / PowerPoint only");
+    }
     if (sel.length < op.min_inputs) return t(`En az ${op.min_inputs} dosya`, `At least ${op.min_inputs} files`);
     if (sel.length > op.max_inputs)
       return op.max_inputs === 1 ? t("Tek dosya seçin", "Select one file") : t(`En çok ${op.max_inputs} dosya`, `At most ${op.max_inputs} files`);

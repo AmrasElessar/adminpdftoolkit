@@ -51,7 +51,7 @@
 
   <button class="drop" onclick={() => picker.click()}>
     <strong>{t("Dosya seçin veya buraya bırakın", "Choose files or drop them here")}</strong>
-    <span>PDF, JPG, PNG, TIFF, WebP · {t("en fazla", "up to")} {maxUploadMb} MB</span>
+    <span>PDF, Word, Excel, PowerPoint, JPG, PNG · {t("en fazla", "up to")} {maxUploadMb} MB</span>
   </button>
   <input bind:this={picker} type="file" multiple hidden onchange={onPick} />
 
