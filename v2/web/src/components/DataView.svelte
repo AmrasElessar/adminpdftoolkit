@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import DataView from "./DataView.svelte";
 
   let { value, depth = 0 }: { value: unknown; depth?: number } = $props();
@@ -6,7 +7,14 @@
   const MAX_ROWS = 300;
 
   function isRecord(v: unknown): v is Record<string, unknown> {
-    return typeof v === "object" && v !== null && !Array.isArray(v);
+    return typeof v === "object" && v !== null && !Array.isArray(v) && !isText(v);
+  }
+
+  /** Bilingual `{tr, en}` messages from the server render as one string. */
+  function isText(v: unknown): v is { tr: string; en: string } {
+    if (typeof v !== "object" || v === null || Array.isArray(v)) return false;
+    const keys = Object.keys(v);
+    return keys.length === 2 && "tr" in v && "en" in v;
   }
 
   function humanKey(k: string): string {
@@ -24,6 +32,8 @@
   function scalar(v: unknown): string {
     if (v === null || v === undefined || v === "") return "—";
     if (typeof v === "boolean") return v ? "✓" : "✗";
+    if (isText(v)) return t(v);
+    if (Array.isArray(v) && v.every(isText)) return v.map((x) => t(x)).join(" · ");
     if (Array.isArray(v) && v.every((x) => typeof x !== "object")) return v.join(", ") || "—";
     if (typeof v === "object") return JSON.stringify(v);
     return String(v);
@@ -54,7 +64,7 @@
     {#each Object.entries(value) as [k, v] (k)}
       <dt>{humanKey(k)}</dt>
       <dd>
-        {#if typeof v === "object" && v !== null && !(Array.isArray(v) && v.every((x) => typeof x !== "object"))}
+        {#if typeof v === "object" && v !== null && !isText(v) && !(Array.isArray(v) && (v.every((x) => typeof x !== "object") || v.every(isText)))}
           <DataView value={v} depth={depth + 1} />
         {:else}
           {scalar(v)}

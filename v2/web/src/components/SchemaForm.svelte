@@ -58,15 +58,18 @@
     values[name] = on ? [...cur.filter((x) => x !== v), v] : cur.filter((x) => x !== v);
   }
 
+  /** Raw text while the user types; otherwise the value pretty-printed.
+   * (No state writes here: this runs during render.) */
   function jsonValue(name: string): string {
-    if (!(name in jsonText)) jsonText[name] = values[name] === undefined || values[name] === "" ? "" : JSON.stringify(values[name], null, 2);
-    return jsonText[name] ?? "";
+    if (name in jsonText) return jsonText[name] ?? "";
+    const v = values[name];
+    return v === undefined || v === null || v === "" ? "" : JSON.stringify(v, null, 2);
   }
 
   function setJson(name: string, raw: string): void {
     jsonText[name] = raw;
     try {
-      values[name] = raw.trim() ? JSON.parse(raw) : undefined;
+      values[name] = raw.trim() ? JSON.parse(raw) : null;
     } catch {
       values[name] = raw; // the server reports it as invalid
     }

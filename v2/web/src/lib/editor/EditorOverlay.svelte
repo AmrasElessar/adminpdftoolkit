@@ -562,6 +562,9 @@
   }
   .textobj.replace {
     outline-color: rgb(24 121 78 / 0.6);
+    /* The server shrinks replacement text to the original line; mirror it. */
+    white-space: pre;
+    overflow: visible;
   }
   .textobj textarea {
     position: absolute;
