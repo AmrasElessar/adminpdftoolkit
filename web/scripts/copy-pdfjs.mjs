@@ -11,4 +11,6 @@ mkdirSync(dst, { recursive: true });
 for (const dir of ["cmaps", "standard_fonts", "wasm", "iccs"]) {
   cpSync(join(src, dir), join(dst, dir), { recursive: true });
 }
+// Apache-2.0 §4: ship pdf.js's licence with the copied files.
+cpSync(join(src, "LICENSE"), join(dst, "LICENSE"));
 console.log("pdf.js assets copied to public/pdfjs");

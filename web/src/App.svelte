@@ -100,6 +100,9 @@
       <img src="/icon.svg" alt="" width="28" height="28" />
       <span>Admin PDF Toolkit</span>
       {#if session}<small>v{session.version}</small>{/if}
+      <!-- AGPL-3.0 §13: every user, also over the LAN, gets a way to the source. -->
+      <a class="source" href="https://github.com/AmrasElessar/adminpdftoolkit" target="_blank" rel="noopener noreferrer" title={t("Özgür yazılım (AGPL-3.0) — kaynak kodu ve lisans", "Free software (AGPL-3.0) — source code and licence")}>AGPL-3.0 · {t("Kaynak kod", "Source")}</a>
+      <a class="source" href="/licenses.txt" target="_blank" rel="noopener" title={t("Kullanılan açık kaynak bileşenler ve lisansları", "Open-source components used and their licences")}>{t("Lisanslar", "Licences")}</a>
     </div>
     <button class="ghost small kb" onclick={() => (ui.showShortcuts = true)} title={t("Klavye kısayolları (?)", "Keyboard shortcuts (?)")} aria-keyshortcuts="?">⌨ <span>{t("Kısayollar", "Shortcuts")}</span></button>
     <div class="lang" role="group" aria-label={t("Dil", "Language")}>
@@ -194,6 +197,14 @@
     position: sticky;
     top: 0;
     z-index: 5;
+  }
+  .source {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .source:hover,
+  .source:focus-visible {
+    color: var(--accent);
   }
   .brand {
     display: flex;

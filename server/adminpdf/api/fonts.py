@@ -6,10 +6,11 @@ import re
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
 from ..core.fonts import get_catalogue, style_bytes
+from ..core.security import is_loopback
 from . import deps
 
 router = APIRouter(prefix="/api/fonts", tags=["fonts"])
@@ -27,9 +28,14 @@ def catalogue() -> list[dict[str, Any]]:
 
 
 @router.get("/{style_id}/file")
-def font_file(style_id: str) -> Response:
+def font_file(style_id: str, request: Request) -> Response:
     """The font program of one style, for ``new FontFace(...)``. Style ids
-    are opaque catalogue keys — paths are never accepted."""
+    are opaque catalogue keys — paths are never accepted.
+
+    Fonts installed on this computer (e.g. Microsoft's) are licensed to it, so
+    their files go only to a browser on the same machine; LAN devices preview
+    with their own fonts. Embedding into the PDF happens here, on the server,
+    and follows each font's fsType permission."""
     if not _STYLE_ID.fullmatch(style_id):
         raise deps.not_found()
     style = get_catalogue().style(style_id)
@@ -37,6 +43,9 @@ def font_file(style_id: str) -> Response:
         raise deps.not_found()
     if style.restricted:
         raise HTTPException(status_code=403, detail="Font licence does not allow redistribution")
+    client = request.client.host if request.client else None
+    if style.family_id.startswith("system:") and not is_loopback(client):
+        raise HTTPException(status_code=403, detail="System fonts are only served to this computer")
     path = Path(style.path)
     head = b""
     try:

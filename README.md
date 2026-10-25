@@ -141,7 +141,7 @@ cd ../server && python -m adminpdf --open
 İsteğe bağlı sistem araçları — yoksa ilgili araç açık bir uyarı verir, diğerleri çalışır:
 **Tesseract** + `tur` dil paketi (OCR), **LibreOffice** (Office → PDF yüksek doğruluk), **Ghostscript** (PDF/A), **qpdf** (onarım), **ClamAV** (virüs taraması).
 
-> **Windows'ta OCR:** [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) kurulumunda *Additional language data* altından **Turkish**'i işaretleyin. PATH'e eklemeniz gerekmez; uygulama `Program Files\Tesseract-OCR` ve `Program Files\gs` klasörlerini kendisi bulur. Kurulumdan sonra uygulamayı yeniden başlatın.
+> **Windows'ta OCR:** paketteki **`OCR Kur (Windows).bat`** dosyasını çalıştırın; Tesseract'ı ve Türkçe dil paketini kendisi kurar (ilk açılışta da sorulur). Elle kurmak isterseniz: [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) kurulumunda *Additional language data* altından **Turkish**'i işaretleyin. PATH'e eklemeniz gerekmez; uygulama `Program Files\Tesseract-OCR` ve `Program Files\gs` klasörlerini kendisi bulur. Kurulumdan sonra uygulamayı yeniden başlatın.
 
 <details>
 <summary>🇬🇧 Installation (English)</summary>
@@ -150,7 +150,7 @@ cd ../server && python -m adminpdf --open
 - **Docker:** `docker compose up -d --build` — includes OCR, LibreOffice, Ghostscript and ClamAV.
 - **From source:** `pip install -e ".[dev]"` in `server/`, `npm ci && npm run build` in `web/`, then `python -m adminpdf --open`.
 - Optional tools: Tesseract (+`tur`), LibreOffice, Ghostscript, qpdf, ClamAV. Missing tools only disable their own features.
-- OCR on Windows: install [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) and tick **Turkish** under *Additional language data*. No PATH change needed — the default install folders of Tesseract and Ghostscript are detected. Restart the app afterwards.
+- OCR on Windows: run **`OCR Kur (Windows).bat`** from the package — it installs Tesseract and the Turkish data (also offered on first start). Manually: install [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) and tick **Turkish** under *Additional language data*. No PATH change needed — the default install folders of Tesseract and Ghostscript are detected. Restart the app afterwards.
 
 </details>
 

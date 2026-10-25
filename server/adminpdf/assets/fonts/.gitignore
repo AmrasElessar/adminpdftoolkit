@@ -1,9 +1,14 @@
-# Extra font binaries are fetched by scripts/fetch_fonts.py and not committed.
-# DejaVu Sans ships with the app so inserted text extracts correctly on every
-# OS (system Arial maps space/NBSP and hyphen/soft-hyphen to one glyph, which
-# corrupts copy/search of stamped text).
+# Only the free fonts below ship with the app; every other font comes from the
+# device it runs on.
+# - DejaVu Sans: inserted text extracts correctly on every OS (system Arial maps
+#   space/NBSP and hyphen/soft-hyphen to one glyph, which corrupts copy/search).
+# - Liberation Sans/Serif/Mono (SIL OFL 1.1): metric-compatible with Arial,
+#   Times New Roman and Courier New, so edits keep the layout on devices that
+#   don't have the Microsoft fonts.
 *
 !.gitignore
 !DejaVuSans.ttf
 !DejaVuSans-Bold.ttf
 !DejaVu-LICENSE.txt
+!Liberation*.ttf
+!Liberation-LICENSE.txt

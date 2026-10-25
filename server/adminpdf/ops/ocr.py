@@ -15,7 +15,7 @@ from typing import Any, Literal
 from ..core import proc
 from ..core.errors import UserError
 from ..core.pdf import open_pdf, parse_page_spec
-from ..core.tools import find_tool
+from ..core.tools import find_tool, use_user_tessdata
 from ._ocrmypdf import find_ghostscript, plain_input, run_ocrmypdf
 from .base import Context, Field, Operation, Params, register
 
@@ -26,6 +26,7 @@ TESSERACT_URL = "https://github.com/UB-Mannheim/tesseract/wiki"
 
 
 def find_tesseract() -> str | None:
+    use_user_tessdata()
     return find_tool(
         ("tesseract",),
         windows_globs=("Tesseract-OCR/tesseract.exe",),
@@ -123,11 +124,12 @@ class Ocr(Operation):
     def run(self, ctx: Context, params: OcrParams) -> None:
         if find_tesseract() is None:
             raise UserError(
-                "OCR motoru (Tesseract) bulunamadı. Windows için kurulum: "
-                f"{TESSERACT_URL} — kurarken 'Additional language data' altından Turkish'i seçin, "
-                "sonra uygulamayı yeniden başlatın.",
-                f"The OCR engine (Tesseract) was not found. Windows installer: {TESSERACT_URL} — "
-                "select Turkish under 'Additional language data', then restart the app.",
+                "OCR motoru (Tesseract) bulunamadı. Windows'ta uygulama klasöründeki 'OCR Kur (Windows).bat' "
+                f"dosyasını çalıştırın ya da {TESSERACT_URL} adresinden kurup 'Additional language data' "
+                "altından Turkish'i seçin; sonra uygulamayı yeniden başlatın.",
+                "The OCR engine (Tesseract) was not found. On Windows run 'OCR Kur (Windows).bat' in the app "
+                f"folder, or install it from {TESSERACT_URL} and tick Turkish under 'Additional language data'; "
+                "then restart the app.",
             )
         installed = tesseract_languages()
         languages = list(dict.fromkeys(params.languages.split("+")))
@@ -136,9 +138,9 @@ class Ocr(Operation):
             have = ", ".join(sorted(installed - {"osd"})) or "—"
             raise UserError(
                 f"Dil paketi yüklü değil: {', '.join(missing)}. Yüklü diller: {have}. "
-                "Tesseract kurulumunu yeniden çalıştırıp 'Additional language data' altından ekleyin.",
+                "Windows'ta 'OCR Kur (Windows).bat' Türkçe paketi ekler.",
                 f"Language pack not installed: {', '.join(missing)}. Installed: {have}. "
-                "Re-run the Tesseract installer and add it under 'Additional language data'.",
+                "On Windows, 'OCR Kur (Windows).bat' adds the Turkish data.",
             )
         notes: list[dict[str, str]] = []
         options: dict[str, Any] = {

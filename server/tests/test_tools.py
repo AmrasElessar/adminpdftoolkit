@@ -30,3 +30,24 @@ def test_windows_install_folder_is_found_and_added_to_path(tmp_path: Path, monke
     found = tools.find_tool(("apt-no-such-gs",), windows_globs=("gs/gs*/bin/gswin64c.exe",))
     assert found == str(exe)
     assert os.environ["PATH"].split(os.pathsep)[0] == str(exe.parent)
+
+
+def test_user_tessdata_is_used_when_filled(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("TESSDATA_PREFIX", "")  # recorded, so the test's own change is undone afterwards
+    monkeypatch.delenv("TESSDATA_PREFIX")
+    tools.use_user_tessdata()
+    assert "TESSDATA_PREFIX" not in os.environ  # empty folder: leave Tesseract's default
+    tools.user_tessdata().mkdir(parents=True)
+    (tools.user_tessdata() / "tur.traineddata").write_bytes(b"")
+    tools.use_user_tessdata()
+    assert os.environ["TESSDATA_PREFIX"] == str(tools.user_tessdata())
+
+
+def test_user_tessdata_respects_explicit_prefix(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
+    monkeypatch.setenv("TESSDATA_PREFIX", "/custom")
+    tools.user_tessdata().mkdir(parents=True)
+    (tools.user_tessdata() / "tur.traineddata").write_bytes(b"")
+    tools.use_user_tessdata()
+    assert os.environ["TESSDATA_PREFIX"] == "/custom"

@@ -9,6 +9,8 @@ WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY web/ ./
+# /licenses.txt starts with the project's attribution page.
+COPY THIRD_PARTY_LICENSES.md /THIRD_PARTY_LICENSES.md
 # Vite writes into ../server/adminpdf/web_dist
 RUN mkdir -p /server/adminpdf && npm run build
 

@@ -57,3 +57,17 @@ def _add_to_path(folder: str) -> None:
     parts = os.environ.get("PATH", "").split(os.pathsep)
     if folder not in parts:
         os.environ["PATH"] = os.pathsep.join([folder, *parts])
+
+
+def user_tessdata() -> Path:
+    """Per-user Tesseract language folder filled by ``install-ocr-windows.ps1``."""
+    base = os.environ.get("LOCALAPPDATA") or str(Path.home() / ".local" / "share")
+    return Path(base) / "AdminPDFToolkit" / "tessdata"
+
+
+def use_user_tessdata() -> None:
+    """Point Tesseract at the per-user language folder when it has data,
+    unless TESSDATA_PREFIX is already set by the user."""
+    folder = user_tessdata()
+    if "TESSDATA_PREFIX" not in os.environ and any(folder.glob("*.traineddata")):
+        os.environ["TESSDATA_PREFIX"] = str(folder)

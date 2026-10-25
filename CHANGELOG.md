@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `OCR Kur (Windows).bat` / `scripts/install-ocr-windows.ps1`: installs Tesseract with winget and
+  adds the Turkish language data (per-user folder, no administrator rights needed for that step);
+  the first start on Windows offers it. The app picks the per-user language folder up automatically.
+- Full attribution page: every direct and transitive library, external program, font, dataset and
+  published algorithm with its licence (`THIRD_PARTY_LICENSES.md`, generated Python table via
+  `scripts/python_licenses.py`). The UI serves it at `/licenses.txt` together with the full licence
+  texts of all bundled npm packages, collected at build time; header links to the source code
+  (AGPL-3.0 §13) and the licences.
+
+### Changed
+- Liberation Sans/Serif/Mono (SIL OFL 1.1) now ship with the app, metric-compatible with Arial,
+  Times New Roman and Courier New, so edits keep their layout on devices without Microsoft fonts.
+  All other fonts are taken from the device.
+- Fonts installed on the server computer (e.g. Microsoft fonts) are only sent to a browser on the
+  same computer; LAN devices preview with their own fonts. Embedding into PDFs is unchanged and
+  follows each font's fsType permission.
+
 ### Fixed
 - OCR said "Tesseract is not installed" on Windows when Tesseract was installed in its default
   folder but not on PATH. Tesseract and Ghostscript are now found in `Program Files` (newest
