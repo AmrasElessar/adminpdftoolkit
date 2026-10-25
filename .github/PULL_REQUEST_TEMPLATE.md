@@ -19,11 +19,12 @@ Katkı için teşekkürler! Lütfen aşağıdaki bölümleri doldur.
 ## Checklist
 
 - [ ] I have read [CONTRIBUTING.md](../CONTRIBUTING.md)
-- [ ] My code follows the style of this project (`ruff check .`, `ruff format .`)
+- [ ] Server checks pass (`cd server && ruff check . && ruff format --check . && mypy adminpdf && pytest`)
+- [ ] Web checks pass (`cd web && npm run check && npm run build`)
 - [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] All new and existing tests pass locally (`pytest`)
 - [ ] I have updated `CHANGELOG.md` under `[Unreleased]`
-- [ ] I have updated user-facing strings in **both** Turkish and English (`window.I18N`)
+- [ ] User-facing strings are in **both** Turkish and English (`Field(tr=, en=)` / `t("tr", "en")`)
+- [ ] The UI stays keyboard-accessible (WCAG 2.1 AA)
 - [ ] Documentation is updated (both Turkish and English sections of `README.md` if applicable)
 
 ## Linked issues / Bağlı issue'lar

@@ -1,0 +1,25 @@
+{
+  "name": "adminpdf-web",
+  "private": true,
+  "version": "2.0.0-dev",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/copy-pdfjs.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/copy-pdfjs.mjs",
+    "build": "vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "e2e:a11y": "node e2e/a11y.mjs"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@tsconfig/svelte": "5.0.8",
+    "axe-core": "4.10.3",
+    "pdfjs-dist": "5.7.284",
+    "playwright": "1.56.1",
+    "svelte": "5.57.2",
+    "svelte-check": "4.7.7",
+    "typescript": "5.9.3",
+    "vite": "8.3.5"
+  }
+}

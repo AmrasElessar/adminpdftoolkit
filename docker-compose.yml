@@ -1,35 +1,28 @@
 services:
-  pdfconverter:
+  adminpdf:
     build:
       context: .
-      dockerfile: Dockerfile
+      args:
+        WITH_LIBREOFFICE: "true"
     image: admin-pdf-toolkit:latest
-    container_name: admin-pdf-toolkit
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"   # change to "8000:8000" to expose on the LAN
     environment:
-      HOST: "0.0.0.0"
-      PORT: "8000"
-      MAX_UPLOAD_MB: "2048"
-      # HTTPS: "1"     # uncomment to enable self-signed HTTPS
+      APT_MAX_UPLOAD_MB: "500"
+      APT_MAX_WORKERS: "2"
+      # LAN access with pairing (phones etc.):
+      # APT_LAN_ENABLED: "true"
+      # APT_PAIRING_KEY: "change-me"
+      # APT_ALLOWED_HOSTS: "pdf.example.local"
     volumes:
-      - pdf_work:/app/_work
-      - pdf_output:/app/output
-      - pdf_history:/app/history
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/',timeout=3).status==200 else 1)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "5"
+      - adminpdf-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /home/app
+    security_opt:
+      - no-new-privileges:true
 
 volumes:
-  pdf_work:
-  pdf_output:
-  pdf_history:
+  adminpdf-data:

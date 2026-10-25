@@ -1,93 +1,56 @@
 # syntax=docker/dockerfile:1.7
-# ---------------------------------------------------------------------------
-# Admin PDF Toolkit — production image
-# Multi-stage build: builder installs deps, runtime is minimal.
-# ---------------------------------------------------------------------------
+# Admin PDF Toolkit — build from the repository root:
+#   docker build -t admin-pdf-toolkit .
+#   docker build --build-arg WITH_LIBREOFFICE=false -t admin-pdf-toolkit:slim .
 
-# ---- Builder ---------------------------------------------------------------
-FROM python:3.14-slim AS builder
+# ---- Web UI ------------------------------------------------------------------
+FROM node:22-slim AS web
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+# Vite writes into ../server/adminpdf/web_dist
+RUN mkdir -p /server/adminpdf && npm run build
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
-
-WORKDIR /build
-
-# System deps for pdfplumber / pymupdf / easyocr / pycairo (xhtml2pdf chain).
-# pycairo ships sdist-only on Linux so libcairo2-dev + pkg-config are
-# required to build the wheel here in the builder stage.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        build-essential \
-        libgl1 \
-        libglib2.0-0 \
-        libcairo2-dev \
-        pkg-config \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN pip wheel --wheel-dir=/wheels -r requirements.txt
-
-# ---- Runtime ---------------------------------------------------------------
-FROM python:3.14-slim AS runtime
+# ---- Runtime -----------------------------------------------------------------
+FROM python:3.13-slim AS runtime
+ARG WITH_LIBREOFFICE=true
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    APP_HOME=/app \
-    HOST=0.0.0.0 \
-    PORT=8000 \
-    MAX_UPLOAD_MB=2048
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    APT_HOST=0.0.0.0 \
+    APT_PORT=8000 \
+    APT_DATA_DIR=/data \
+    # Requests arrive from the Docker bridge, not loopback.
+    APT_TRUSTED_NETWORKS=172.16.0.0/12
 
-# Runtime libs only — libcairo2 (no -dev) for the pre-built pycairo wheel
-# imported by svglib.
+# OCR (Tesseract tr+en), PDF/A (Ghostscript), repair (qpdf), antivirus
+# (ClamAV), fonts with Turkish coverage, and optionally LibreOffice for
+# high-fidelity Office → PDF.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        libgl1 \
-        libglib2.0-0 \
-        libcairo2 \
-        clamav \
-        tini \
+        tini tesseract-ocr tesseract-ocr-tur tesseract-ocr-eng ghostscript qpdf \
+        clamav fonts-dejavu-core fonts-liberation2 fonts-noto-core \
+    && if [ "$WITH_LIBREOFFICE" = "true" ]; then \
+        apt-get install -y --no-install-recommends libreoffice-writer-nogui libreoffice-calc-nogui libreoffice-impress-nogui; \
+       fi \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system app \
-    && useradd  --system --gid app --home ${APP_HOME} app
+    && groupadd --system app && useradd --system --gid app --create-home app \
+    && mkdir -p /data && chown app:app /data
 
-WORKDIR ${APP_HOME}
-
-COPY --from=builder /wheels /wheels
-COPY requirements.txt .
-RUN pip install --no-index --find-links=/wheels -r requirements.txt \
-    && rm -rf /wheels
-
-COPY --chown=app:app app.py app_http.py state.py settings.py \
-                     pdf_converter.py pdf_safety.py ./
-COPY --chown=app:app core/ ./core/
-COPY --chown=app:app routers/ ./routers/
-COPY --chown=app:app pipelines/ ./pipelines/
-COPY --chown=app:app parsers/ ./parsers/
-COPY --chown=app:app templates/ ./templates/
-COPY --chown=app:app static/ ./static/
-COPY --chown=app:app LICENSE NOTICE.txt THIRD_PARTY_LICENSES.md ./
-
-# ClamAV in the container is expected to come from the system package
-# (installed in the builder stage if desired); pdf_safety falls back to
-# whatever clamscan is on PATH. The bundled ./clamav/ Windows portable is
-# not relevant inside Linux containers.
-
-RUN mkdir -p _work output && chown -R app:app _work output
+WORKDIR /app
+COPY server/pyproject.toml ./
+COPY server/adminpdf ./adminpdf
+COPY --from=web /server/adminpdf/web_dist ./adminpdf/web_dist
+RUN pip install . \
+    && python -c "import adminpdf.app"
 
 USER app
+VOLUME ["/data"]
 EXPOSE 8000
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD python -c "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/',timeout=3).status==200 else 1)" || exit 1
-
-ENTRYPOINT ["/usr/bin/tini", "--"]
-CMD ["python", "app.py"]
-
-LABEL org.opencontainers.image.title="Admin PDF Toolkit" \
-      org.opencontainers.image.description="Offline PDF toolkit by Engin — convert / edit / annotate / replace, 35+ tools, web UI" \
-      org.opencontainers.image.licenses="AGPL-3.0-or-later" \
-      org.opencontainers.image.source="https://github.com/orhanenginokay/pdfconverter" \
-      org.opencontainers.image.version="1.11.0"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).status == 200 else 1)"
+ENTRYPOINT ["tini", "--"]
+CMD ["python", "-m", "adminpdf"]

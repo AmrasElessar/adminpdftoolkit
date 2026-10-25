@@ -8,10 +8,10 @@
 
 ### Supported versions
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x     | :white_check_mark: |
-| < 1.0   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| 2.x     | :white_check_mark: |
+| 1.x     | :x: (archived in `archive/`) |
 
 ### Reporting a vulnerability
 
@@ -38,44 +38,32 @@ Please include:
 ### Scope
 
 In scope:
-- Code in this repository (`app.py`, `pdf_converter.py`, `pdf_safety.py`, templates, build scripts)
+- Code in this repository (`server/`, `web/`, `scripts/`, Docker files)
 - Default deployment configuration
 
 Out of scope:
-- Vulnerabilities in third-party dependencies (please report upstream; we will track and bump)
+- Vulnerabilities in third-party dependencies (please report upstream; we track and bump them)
 - Issues that require physical access to the server
 - Social engineering
 
 ### Security features in place
 
-- Multi-layered PDF safety gate on every `/pdf/*` endpoint by default
-  (structural scan in `pdf_safety.py` for `/JavaScript`, `/Launch`,
-  `/EmbeddedFile`, …; optional ClamAV + Windows Defender)
-- SSRF guard with redirect re-validation + 50 MB response cap on
-  `/pdf/from-url`; `xhtml2pdf` link-callback restricts asset fetching to
-  `ht-font://` + `data:` schemes (no `file://` LFI)
-- Cross-origin CSRF protection on mutating admin / history endpoints
-  (Origin / Referer match required)
-- Path-traversal defense: three-layer `make_job_dir` validation
-  (separator reject → pre-mkdir resolve → post-mkdir symlink check)
-- Mobile-auth middleware with URL-fragment token bootstrap (`#key=`,
-  never reaches the server, never logs); `X-Mobile-Key` header on
-  subsequent requests; constant-time comparison
-- Bounded background-worker concurrency (`HT_MAX_INFLIGHT_JOBS=4`,
-  503 on saturation)
-- Per-job upload size limit (`MAX_UPLOAD_MB`, default 200 MB; raise via
-  `HT_MAX_UPLOAD_MB` for huge-PDF workflows)
-- Token-scoped temp directories under `_work/`, periodic cleanup
-  (TTL 30 min)
-- Baseline browser headers: `X-Content-Type-Options: nosniff`,
-  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
-  `Cross-Origin-Opener-Policy: same-origin`
-- No outbound network access during conversion
-- Self-signed HTTPS certificate (auto-rotates <30 d before expiry,
-  1-year validity) generated at startup when `HTTPS=1`
-- Independent multi-engine scanner verification per release
-  (VirusTotal, Hybrid Analysis, MetaDefender, Kaspersky)
-- 2026-05 audit report: [`SECURITY_AUDIT_2026_05_10.md`](SECURITY_AUDIT_2026_05_10.md)
+- **One security middleware for every request** — Host allow-list (DNS-rebinding defence), CSRF
+  double-submit token plus exact `Origin` match on state-changing calls, LAN pairing sessions for
+  non-local clients (key in the URL fragment, never logged, rate-limited), strict CSP
+  (`script-src 'self'`, `frame-ancestors 'none'`), `nosniff`, `no-referrer`, COOP.
+- **Process isolation** — every job runs in its own spawned process with a timeout, real
+  cancellation (process-group kill, including helper tools), and an address-space cap.
+- **Bounded inputs** — streaming uploads with the size cap enforced while writing; page, pixel, DPI,
+  regex, zip-bomb (OOXML ratio/size) and list-length limits in every tool's schema; no `str.format`
+  on user templates.
+- **Safe outputs** — Excel cells never become formulas; control characters stripped; generated file
+  names sanitised (reserved names, traversal).
+- **Real redaction** — KVKK/redact tools delete the covered text, image pixels and annotations, and
+  strip metadata.
+- **No outbound network** — no cloud APIs, no telemetry; OCR, conversion and signing run locally.
+- **Supply chain** — Dependabot (pip, npm, actions, docker), CodeQL (Python + TypeScript), CI on
+  Linux/Windows/macOS, WCAG audit.
 
 ---
 
@@ -83,10 +71,10 @@ Out of scope:
 
 ### Desteklenen sürümler
 
-| Sürüm   | Destekleniyor      |
-| ------- | ------------------ |
-| 1.x     | :white_check_mark: |
-| < 1.0   | :x:                |
+| Sürüm | Destekleniyor |
+| ----- | ------------- |
+| 2.x   | :white_check_mark: |
+| 1.x   | :x: (`archive/` klasöründe) |
 
 ### Güvenlik açığı bildirme
 
@@ -113,39 +101,26 @@ Lütfen şunları ekle:
 ### Kapsam
 
 Kapsam içi:
-- Bu repodaki kod (`app.py`, `pdf_converter.py`, `pdf_safety.py`, template'ler, build script'leri)
-- Varsayılan deployment konfigürasyonu
+- Bu repodaki kod (`server/`, `web/`, `scripts/`, Docker dosyaları)
+- Varsayılan kurulum yapılandırması
 
 Kapsam dışı:
-- Üçüncü taraf bağımlılıklarındaki açıklar (upstream'e bildirin; biz takip edip yükseltiriz)
+- Üçüncü taraf bağımlılıklarındaki açıklar (lütfen kaynağına bildirin; biz takip edip güncelleriz)
 - Sunucuya fiziksel erişim gerektiren açıklar
-- Social engineering
+- Sosyal mühendislik
 
 ### Mevcut güvenlik önlemleri
 
-- Tüm `/pdf/*` endpoint'lerinde varsayılan PDF güvenlik gate'i
-  (`pdf_safety.py` yapısal scanner + opsiyonel ClamAV + Windows Defender)
-- URL→PDF'te SSRF guard'ı her redirect'i ayrıca doğrular + 50 MB yanıt
-  cap'i; `xhtml2pdf` link-callback yalnızca `ht-font://` ve `data:`
-  şemalarını çözer (`file://` LFI engellendi)
-- Mutating admin / history endpoint'lerinde cross-origin CSRF koruması
-  (Origin / Referer eşleşmesi zorunlu)
-- Path-traversal savunması: `make_job_dir` 3 katmanlı doğrulama
-  (separator reddi → pre-mkdir resolve → post-mkdir symlink check)
-- Mobil-auth middleware URL fragment ile token bootstrap (`#key=`,
-  server'a hiç ulaşmaz, log'lara sızmaz); sonraki istekler
-  `X-Mobile-Key` header'ı kullanır; sabit zamanlı karşılaştırma
-- Bounded worker concurrency (`HT_MAX_INFLIGHT_JOBS=4`, saturasyonda 503)
-- Job başına upload boyut limiti (`MAX_UPLOAD_MB`, varsayılan 200 MB;
-  büyük PDF için `HT_MAX_UPLOAD_MB` ile arttırılır)
-- `_work/` altında token-bazlı temp dizinleri, periyodik temizlik
-  (TTL 30 dk)
-- Baseline browser header'ları: `X-Content-Type-Options: nosniff`,
-  `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
-  `Cross-Origin-Opener-Policy: same-origin`
-- Dönüştürme sırasında dışa ağ trafiği yok
-- `HTTPS=1` ile self-signed sertifika (sürelimi <30 gün kalınca otomatik
-  yenilenir, 1 yıl geçerli) başlangıçta üretilir
-- Her release için bağımsız multi-engine tarayıcı doğrulaması
-  (VirusTotal, Hybrid Analysis, MetaDefender, Kaspersky)
-- 2026-05 audit raporu: [`SECURITY_AUDIT_2026_05_10.md`](SECURITY_AUDIT_2026_05_10.md)
+- **Her isteğe tek güvenlik ara katmanı** — Host izin listesi (DNS rebinding savunması), durum
+  değiştiren çağrılarda CSRF token + birebir `Origin` kontrolü, yerel olmayan istemciler için LAN
+  eşleştirme (anahtar URL parçasında, loglanmaz, deneme sınırlı), sıkı CSP.
+- **Süreç izolasyonu** — her iş ayrı süreçte; zaman aşımı, gerçek iptal (yardımcı araçlar dahil
+  süreç grubu sonlandırma) ve bellek sınırı.
+- **Sınırlı girdiler** — yükleme boyutu yazılırken uygulanır; sayfa, piksel, DPI, düzenli ifade,
+  zip bombası ve liste uzunluğu sınırları her aracın şemasında.
+- **Güvenli çıktılar** — Excel hücreleri formüle dönüşmez; kontrol karakterleri temizlenir; dosya
+  adları güvenli hale getirilir.
+- **Gerçek karartma** — KVKK/karartma araçları metni, görsel piksellerini ve açıklamaları siler,
+  meta veriyi temizler.
+- **Dışa ağ trafiği yok** — bulut API'si ve telemetri yok.
+- **Tedarik zinciri** — Dependabot, CodeQL, çoklu platform CI, WCAG denetimi.
