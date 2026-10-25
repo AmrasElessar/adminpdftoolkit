@@ -3,10 +3,28 @@
   import { t, type Text } from "../lib/i18n.svelte";
   import { workspace } from "../lib/workspace.svelte";
 
-  let { ops, onpick }: { ops: OpInfo[]; onpick: (op: OpInfo) => void } = $props();
+  let {
+    ops,
+    onpick,
+    onopen,
+  }: { ops: OpInfo[]; onpick: (op: OpInfo) => void; onopen: (mode: "view" | "organize" | "edit") => void } = $props();
+
+  const single = $derived(workspace.selected.length === 1 && workspace.selected[0]!.file!.kind === "pdf");
 
   const CATEGORIES: Record<string, Text> = {
+    edit: { tr: "Düzenle", en: "Edit" },
     pages: { tr: "Sayfalar", en: "Pages" },
+    forms: { tr: "Formlar", en: "Forms" },
+    sign: { tr: "İmza", en: "Sign" },
+    redact: { tr: "Karartma (KVKK)", en: "Redact" },
+    ocr: { tr: "OCR — metin tanıma", en: "OCR — text recognition" },
+    compare: { tr: "Karşılaştır", en: "Compare" },
+    document: { tr: "Belge yapısı", en: "Document structure" },
+    extract: { tr: "Çıkar", en: "Extract" },
+    archive: { tr: "Arşiv", en: "Archive" },
+    security: { tr: "Güvenlik", en: "Security" },
+    inspect: { tr: "İncele", en: "Inspect" },
+    workflow: { tr: "İş akışları", en: "Workflows" },
     optimize: { tr: "Optimize et", en: "Optimise" },
     protect: { tr: "Koruma", en: "Protect" },
     stamp: { tr: "Damga ve numaralandırma", en: "Stamp & number" },
@@ -19,7 +37,7 @@
     const q = query.trim().toLocaleLowerCase();
     const out = new Map<string, OpInfo[]>();
     for (const op of ops) {
-      if (op.category === "test") continue;
+      if (op.category === "test" || op.hidden) continue;
       const hay = `${op.title.tr} ${op.title.en} ${op.description.tr} ${op.description.en}`.toLocaleLowerCase();
       if (q && !hay.includes(q)) continue;
       const list = out.get(op.category) ?? [];
@@ -32,6 +50,7 @@
   /** Why an operation can't run on the current selection, or null if it can. */
   function blocker(op: OpInfo): string | null {
     const sel = workspace.selected;
+    if (op.max_inputs === 0) return null;
     if (!sel.length) return t("Önce dosya seçin", "Select files first");
     if (sel.some((e) => !op.accepts.includes(e.file!.kind))) {
       if (op.accepts.includes("pdf")) return t("Yalnızca PDF", "PDF only");
@@ -47,6 +66,22 @@
 
 <section class="tools" aria-label={t("Araçlar", "Tools")}>
   <input class="search" type="search" placeholder={t("Araç ara…", "Search tools…")} bind:value={query} />
+  {#if !query}
+    <h3>{t("Düzenle", "Edit")}</h3>
+    <div class="grid">
+      {#each [
+        { mode: "edit" as const, tr: "PDF Düzenle", en: "Edit PDF", dtr: "Metni değiştirin, metin, görsel, şekil, imza ve not ekleyin.", den: "Change text; add text, images, shapes, signatures and notes." },
+        { mode: "organize" as const, tr: "Sayfaları Düzenle", en: "Organize Pages", dtr: "Küçük resimlerle sürükleyerek sıralayın, döndürün, silin.", den: "Drag thumbnails to reorder, rotate and delete." },
+        { mode: "view" as const, tr: "Görüntüle ve Ara", en: "View & Search", dtr: "PDF'i okuyun, içinde arayın, yazdırın.", den: "Read, search inside and print the PDF." },
+      ] as c (c.mode)}
+        <button class="card featured" class:blocked={!single} onclick={() => single && onopen(c.mode)}>
+          <strong>{t(c.tr, c.en)}</strong>
+          <span>{t(c.dtr, c.den)}</span>
+          {#if !single}<em>{t("Tek bir PDF seçin", "Select a single PDF")}</em>{/if}
+        </button>
+      {/each}
+    </div>
+  {/if}
   {#each groups as [cat, list] (cat)}
     <h3>{CATEGORIES[cat] ? t(CATEGORIES[cat]) : cat}</h3>
     <div class="grid">
@@ -113,6 +148,9 @@
     font-style: normal;
     font-size: 0.75rem;
     color: var(--warn);
+  }
+  .featured {
+    border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
   }
   .blocked strong {
     opacity: 0.75;

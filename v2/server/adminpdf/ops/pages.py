@@ -226,3 +226,77 @@ class Rotate(Operation):
                 page = doc[i]
                 page.set_rotation((page.rotation + params.angle) % 360)
             save_pdf(doc, ctx.output(f"{inp.stem}_donduruldu.pdf"))
+
+
+class PlanItem(Params):
+    page: int = Field(0, tr="Kaynak sayfa", en="Source page", ge=0, le=100_000, help_tr="0 = boş sayfa")
+    rotate: Literal[0, 90, 180, 270] = Field(0, tr="Ek döndürme", en="Extra rotation")
+    width: float = Field(0, tr="Boş sayfa genişliği", en="Blank page width", ge=0, le=14400)
+    height: float = Field(0, tr="Boş sayfa yüksekliği", en="Blank page height", ge=0, le=14400)
+
+
+class OrganizeParams(Params):
+    plan: list[PlanItem] = Field(
+        ...,
+        tr="Sayfa planı",
+        en="Page plan",
+        help_tr="Yeni belgedeki sayfalar sırayla; page=0 boş sayfa ekler.",
+        help_en="Pages of the new document in order; page=0 inserts a blank page.",
+        min_length=1,
+        max_length=100_000,
+    )
+
+
+@register
+class Organize(Operation):
+    """Apply a whole page plan (order, duplicates, deletions, rotations, blank
+    pages) in one save — what the thumbnail organiser produces."""
+
+    name = "organize"
+    category = "pages"
+    title_tr, title_en = "Sayfaları Düzenle", "Organize Pages"
+    description_tr = "Sayfaları sürükleyerek sıralayın, döndürün, silin veya boş sayfa ekleyin."
+    description_en = "Drag to reorder, rotate, delete pages or insert blank ones."
+    hidden = True
+    Params = OrganizeParams
+
+    def run(self, ctx: Context, params: OrganizeParams) -> None:
+        inp = ctx.inputs[0]
+        with open_pdf(inp.path, inp.password) as src:
+            n = src.page_count
+            for item in params.plan:
+                if item.page > n:
+                    raise UserError(
+                        f"Sayfa {item.page} aralık dışında (1–{n}).", f"Page {item.page} is out of range (1–{n})."
+                    )
+            out = pymupdf.open()
+            try:
+                for k, item in enumerate(params.plan):
+                    if item.page == 0:
+                        ref = src[0].rect if n else pymupdf.paper_rect("a4")
+                        out.new_page(width=item.width or ref.width, height=item.height or ref.height)
+                    else:
+                        out.insert_pdf(src, from_page=item.page - 1, to_page=item.page - 1, links=True, annots=True)
+                    if item.rotate:
+                        page = out[out.page_count - 1]
+                        page.set_rotation((page.rotation + item.rotate) % 360)
+                    if k % 50 == 0:
+                        ctx.progress(k / len(params.plan), "")
+                # Bookmarks pointing at kept pages survive, re-targeted to their
+                # first occurrence in the new order.
+                first_pos: dict[int, int] = {}
+                for pos, item in enumerate(params.plan, start=1):
+                    if item.page:
+                        first_pos.setdefault(item.page, pos)
+                toc = [[lvl, title, first_pos[p]] for lvl, title, p, *_ in src.get_toc(simple=True) if p in first_pos]
+                if toc:
+                    # Levels must not jump after filtering.
+                    fixed, prev = [], 0
+                    for lvl, title, p in toc:
+                        lvl = min(lvl, prev + 1)
+                        fixed.append([lvl, title, p])
+                        prev = lvl
+                    out.set_toc(fixed)
+                save_pdf(out, ctx.output(f"{inp.stem}_duzenli.pdf"))
+            finally:
+                out.close()

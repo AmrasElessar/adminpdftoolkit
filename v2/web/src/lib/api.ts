@@ -1,6 +1,6 @@
 import type { Text } from "./i18n.svelte";
 
-export type FileKind = "pdf" | "image" | "docx" | "xlsx" | "pptx" | "other";
+export type FileKind = "pdf" | "image" | "docx" | "xlsx" | "pptx" | "font" | "cert" | "other";
 
 export interface StoredFile {
   id: string;
@@ -36,8 +36,12 @@ export interface JsonSchema {
   minLength?: number;
   maxLength?: number;
   pattern?: string;
+  items?: JsonSchema;
+  anyOf?: JsonSchema[];
+  $ref?: string;
   ui?: {
-    widget?: "password" | "color" | "range";
+    widget?: "password" | "color" | "range" | "file" | "json" | "textarea";
+    accept?: FileKind[];
     step?: number;
     options?: Record<string, Text>;
     show_if?: Record<string, unknown>;
@@ -54,6 +58,8 @@ export interface OpInfo {
   accepts: FileKind[];
   min_inputs: number;
   max_inputs: number;
+  returns_data: boolean;
+  hidden: boolean;
   schema: JsonSchema;
 }
 
@@ -68,6 +74,7 @@ export interface Job {
   error: Text | null;
   outputs: StoredFile[];
   result: StoredFile | null;
+  data: Record<string, unknown> | null;
 }
 
 /** An error with a message already fit for the user. */
@@ -212,4 +219,58 @@ export function watchJob(id: string, onUpdate: (job: Job) => void): () => void {
     source?.close();
     clearTimeout(timer);
   };
+}
+
+/** Run an operation and resolve with the finished job (rejects on failure). */
+export function runAndWait(
+  name: string,
+  inputs: { id: string; password?: string }[],
+  params: Record<string, unknown>,
+  onProgress?: (job: Job) => void,
+): Promise<Job> {
+  return runOp(name, inputs, params).then(
+    (started) =>
+      new Promise<Job>((resolve, reject) => {
+        const stop = watchJob(started.id, (job) => {
+          onProgress?.(job);
+          if (job.status === "done") {
+            stop();
+            resolve(job);
+          } else if (job.status === "failed" || job.status === "cancelled") {
+            stop();
+            reject(new JobFailed(job));
+          }
+        });
+      }),
+  );
+}
+
+export class JobFailed extends Error {
+  constructor(public job: Job) {
+    super(job.error?.en ?? job.status);
+  }
+}
+
+export interface FontStyle {
+  id: string;
+  weight: number;
+  italic: boolean;
+}
+
+export interface FontFamily {
+  id: string;
+  family: string;
+  source: "bundled" | "system" | "standard";
+  styles: FontStyle[];
+  restricted: boolean;
+  monospace?: boolean;
+  serif?: boolean;
+}
+
+export async function listFonts(): Promise<FontFamily[]> {
+  try {
+    return await request<FontFamily[]>("GET", "/api/fonts");
+  } catch {
+    return [];
+  }
 }

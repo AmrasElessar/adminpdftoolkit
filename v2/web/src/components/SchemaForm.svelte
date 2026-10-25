@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { JsonSchema } from "../lib/api";
   import { t } from "../lib/i18n.svelte";
+  import { workspace } from "../lib/workspace.svelte";
 
   let {
     schema,
@@ -8,7 +9,14 @@
     errors = {},
   }: { schema: JsonSchema; values: Record<string, unknown>; errors?: Record<string, string> } = $props();
 
-  const fields = $derived(Object.entries(schema.properties ?? {}));
+  /** Pydantic emits `anyOf: [X, {type: null}]` for optionals: use X. */
+  function unwrap(f: JsonSchema): JsonSchema {
+    const inner = f.anyOf?.find((s) => s.type !== "null");
+    return inner ? { ...inner, ...f, anyOf: undefined, type: inner.type, enum: inner.enum, items: inner.items } : f;
+  }
+
+  const fields = $derived(Object.entries(schema.properties ?? {}).map(([k, f]) => [k, unwrap(f)] as const));
+  const jsonText = $state<Record<string, string>>({});
 
   function label(f: JsonSchema): string {
     return t(f.title_tr ?? f.title ?? "", f.title_en ?? f.title);
@@ -29,6 +37,9 @@
   }
 
   function kind(f: JsonSchema): string {
+    if (f.ui?.widget === "file") return "file";
+    if (f.type === "array" && f.items?.enum) return "multi";
+    if (f.ui?.widget === "json" || f.type === "array" || f.type === "object" || f.$ref) return "json";
     if (f.enum) return "enum";
     if (f.type === "boolean") return "bool";
     if (f.type === "integer" || f.type === "number") return f.ui?.widget === "range" ? "range" : "number";
@@ -40,6 +51,25 @@
     // server's validation, not a silent NaN, reports the problem.
     const n = integer ? Number.parseInt(raw, 10) : Number.parseFloat(raw);
     values[name] = raw.trim() === "" || Number.isNaN(n) ? raw : n;
+  }
+
+  function toggleMulti(name: string, v: string | number, on: boolean): void {
+    const cur = Array.isArray(values[name]) ? (values[name] as (string | number)[]) : [];
+    values[name] = on ? [...cur.filter((x) => x !== v), v] : cur.filter((x) => x !== v);
+  }
+
+  function jsonValue(name: string): string {
+    if (!(name in jsonText)) jsonText[name] = values[name] === undefined || values[name] === "" ? "" : JSON.stringify(values[name], null, 2);
+    return jsonText[name] ?? "";
+  }
+
+  function setJson(name: string, raw: string): void {
+    jsonText[name] = raw;
+    try {
+      values[name] = raw.trim() ? JSON.parse(raw) : undefined;
+    } catch {
+      values[name] = raw; // the server reports it as invalid
+    }
   }
 
   function setEnum(name: string, f: JsonSchema, raw: string): void {
@@ -60,8 +90,38 @@
             <span>{label(f)}</span>
           </label>
         {:else}
-          <label for={id}>{label(f)}</label>
-          {#if k === "enum"}
+          <label for={id} id={`${id}-label`}>{label(f)}</label>
+          {#if k === "file"}
+            {@const options = workspace.entries.filter((e) => e.file && (!f.ui?.accept?.length || f.ui.accept.includes(e.file.kind)))}
+            <select {id} value={String(values[name] ?? "")} onchange={(e) => (values[name] = e.currentTarget.value)}>
+              <option value="">{options.length ? t("— Dosya seçin —", "— Choose a file —") : t("Önce soldan uygun dosya yükleyin", "Upload a suitable file on the left first")}</option>
+              {#each options as e (e.key)}
+                <option value={e.file!.id}>{e.name}</option>
+              {/each}
+            </select>
+          {:else if k === "multi"}
+            <div class="multi" role="group" aria-labelledby={`${id}-label`}>
+              {#each f.items?.enum ?? [] as v (v)}
+                <label class="pill">
+                  <input
+                    type="checkbox"
+                    checked={Array.isArray(values[name]) && (values[name] as unknown[]).includes(v)}
+                    onchange={(e) => toggleMulti(name, v, e.currentTarget.checked)}
+                  />
+                  {optionLabel(f, v)}
+                </label>
+              {/each}
+            </div>
+          {:else if k === "json" || k === "textarea"}
+            <textarea
+              {id}
+              rows="6"
+              spellcheck="false"
+              class:mono={k === "json"}
+              value={k === "json" ? jsonValue(name) : String(values[name] ?? "")}
+              oninput={(e) => (k === "json" ? setJson(name, e.currentTarget.value) : (values[name] = e.currentTarget.value))}
+            ></textarea>
+          {:else if k === "enum"}
             <select {id} value={String(values[name])} onchange={(e) => setEnum(name, f, e.currentTarget.value)}>
               {#each f.enum ?? [] as v (v)}
                 <option value={String(v)}>{optionLabel(f, v)}</option>
@@ -145,6 +205,34 @@
   output {
     min-width: 3ch;
     font-variant-numeric: tabular-nums;
+  }
+  .multi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .pill {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    padding: 4px 10px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: inherit;
+    font: inherit;
+    resize: vertical;
+  }
+  textarea.mono {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.85rem;
   }
   .help,
   .error {

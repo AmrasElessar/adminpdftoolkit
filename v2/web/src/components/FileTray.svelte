@@ -2,7 +2,9 @@
   import { formatBytes, t } from "../lib/i18n.svelte";
   import { workspace } from "../lib/workspace.svelte";
 
-  let { maxUploadMb }: { maxUploadMb: number } = $props();
+  import type { Entry } from "../lib/workspace.svelte";
+
+  let { maxUploadMb, onopen }: { maxUploadMb: number; onopen: (e: Entry) => void } = $props();
 
   let picker: HTMLInputElement;
   let dragOver = $state(false);
@@ -101,6 +103,9 @@
             {/if}
           </div>
           <div class="actions">
+            {#if e.file?.kind === "pdf"}
+              <button class="icon" aria-label={t("Aç", "Open")} title={t("Aç / düzenle", "Open / edit")} onclick={() => onopen(e)}>👁</button>
+            {/if}
             <button class="icon" aria-label={t("Yukarı taşı", "Move up")} disabled={i === 0} onclick={() => workspace.move(i, i - 1)}>↑</button>
             <button
               class="icon"

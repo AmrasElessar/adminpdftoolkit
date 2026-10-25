@@ -4,6 +4,17 @@
   import FileTray from "./components/FileTray.svelte";
   import ToolGrid from "./components/ToolGrid.svelte";
   import ToolPanel from "./components/ToolPanel.svelte";
+  import { type Entry, workspace } from "./lib/workspace.svelte";
+
+  type ViewMode = "view" | "organize" | "edit";
+  let viewing = $state<{ entry: Entry; mode: ViewMode } | null>(null);
+  // pdf.js is ~1 MB: load the viewer only when a PDF is opened.
+  const loadViewer = () => import("./lib/viewer/Viewer.svelte").then((m) => m.default);
+
+  function openViewer(entry: Entry, mode: ViewMode = "view"): void {
+    active = null;
+    viewing = { entry, mode };
+  }
 
   let session = $state<Session | null>(null);
   let ops = $state<OpInfo[]>([]);
@@ -93,15 +104,31 @@
       </form>
     </main>
   {:else}
-    <main class="work">
-      <FileTray maxUploadMb={session.max_upload_mb} />
+    <main class="work" class:viewing={!!viewing}>
+      <FileTray maxUploadMb={session.max_upload_mb} onopen={(e) => openViewer(e)} />
       <div class="stage">
-        {#if active}
+        {#if viewing}
+          {#key viewing.entry.key}
+            {#await loadViewer()}
+              <p class="muted">{t("Görüntüleyici yükleniyor…", "Loading viewer…")}</p>
+            {:then Viewer}
+              <Viewer
+                entry={viewing.entry}
+                initialMode={viewing.mode}
+                onclose={() => (viewing = null)}
+                onresult={(file, mode) => {
+                  for (const e of workspace.entries) e.selected = false;
+                  openViewer(workspace.adopt(file), mode);
+                }}
+              />
+            {/await}
+          {/key}
+        {:else if active}
           {#key active.name}
             <ToolPanel op={active} onclose={() => (active = null)} />
           {/key}
         {:else}
-          <ToolGrid {ops} onpick={(op) => (active = op)} />
+          <ToolGrid {ops} onpick={(op) => (active = op)} onopen={(mode) => workspace.selected[0] && openViewer(workspace.selected[0], mode)} />
         {/if}
       </div>
     </main>
@@ -159,6 +186,15 @@
     gap: 20px;
     padding: 20px;
     align-items: start;
+  }
+  .stage {
+    min-width: 0;
+  }
+  .work.viewing {
+    grid-template-columns: 1fr;
+  }
+  .work.viewing :global(.tray) {
+    display: none;
   }
   .work :global(.tray) {
     position: sticky;

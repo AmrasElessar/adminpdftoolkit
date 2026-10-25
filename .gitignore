@@ -118,3 +118,4 @@ v2/server/_data/
 v2/server/adminpdf/web_dist/
 v2/web/node_modules/
 v2/web/.svelte-kit/
+v2/web/public/pdfjs/

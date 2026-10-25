@@ -3,13 +3,20 @@
   import { ApiError, cancelJob, fileUrl, type Job, type OpInfo, runOp, watchJob } from "../lib/api";
   import { formatBytes, t } from "../lib/i18n.svelte";
   import { workspace } from "../lib/workspace.svelte";
+  import DataView from "./DataView.svelte";
   import SchemaForm from "./SchemaForm.svelte";
 
   let { op, onclose }: { op: OpInfo; onclose: () => void } = $props();
 
   function defaults(o: OpInfo): Record<string, unknown> {
     const v: Record<string, unknown> = {};
-    for (const [k, f] of Object.entries(o.schema.properties ?? {})) v[k] = f.default ?? (f.type === "boolean" ? false : "");
+    for (const [k, f] of Object.entries(o.schema.properties ?? {})) {
+      if (f.default !== undefined) v[k] = f.default;
+      else if (f.type === "boolean") v[k] = false;
+      else if (f.type === "array") v[k] = [];
+      else if (f.type === "object" || f.$ref) v[k] = undefined;
+      else v[k] = "";
+    }
     return v;
   }
 
@@ -21,7 +28,7 @@
   let busy = $state(false);
   let stop: (() => void) | null = null;
 
-  const inputs = $derived(workspace.selected);
+  const inputs = $derived(op.max_inputs === 0 ? [] : workspace.selected);
   const running = $derived(job !== null && (job.status === "queued" || job.status === "running"));
 
   const problem = $derived.by(() => {
@@ -64,6 +71,16 @@
     return e.message;
   }
 
+  const dataUrl = $derived(
+    job?.data ? URL.createObjectURL(new Blob([JSON.stringify(job.data, null, 2)], { type: "application/json" })) : undefined,
+  );
+  $effect(() => {
+    const url = dataUrl;
+    return () => {
+      if (url) URL.revokeObjectURL(url);
+    };
+  });
+
   onDestroy(() => stop?.());
 </script>
 
@@ -77,11 +94,11 @@
   </header>
 
   <div class="inputs">
-    <span>{t("Girdi", "Input")}:</span>
+    {#if op.max_inputs > 0}<span>{t("Girdi", "Input")}:</span>{/if}
     {#each inputs as e (e.key)}
       <span class="chip">{e.name}</span>
     {:else}
-      <span class="muted">{t("Soldan dosya seçin", "Select files on the left")}</span>
+      {#if op.max_inputs > 0}<span class="muted">{t("Soldan dosya seçin", "Select files on the left")}</span>{/if}
     {/each}
   </div>
 
@@ -109,7 +126,19 @@
       {#if running}
         <progress max="1" value={job.status === "queued" ? undefined : job.progress}></progress>
         <span class="muted">{job.status === "queued" ? t("Sırada…", "Queued…") : `${Math.round(job.progress * 100)}%`}</span>
-      {:else if job.status === "done" && job.result}
+      {:else if job.status === "done"}
+        {#if job.data}
+          <div class="data">
+            <DataView value={job.data} />
+            <a
+              class="button ghost small"
+              download={`${op.name}.json`}
+              href={dataUrl}
+              >{t("JSON indir", "Download JSON")}</a
+            >
+          </div>
+        {/if}
+        {#if job.result}
         <div class="result">
           <div>
             <strong>{t("Hazır", "Ready")}</strong>
@@ -129,6 +158,7 @@
             }}>{t("Çalışma alanına ekle", "Add to workspace")}</button
           >
         </div>
+        {/if}
       {:else if job.status === "failed"}
         <p class="error" role="alert">{job.error ? t(job.error) : t("İşlem başarısız.", "Operation failed.")}</p>
       {:else if job.status === "cancelled"}
@@ -209,6 +239,14 @@
   .result .muted {
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .data {
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+  }
+  .data > :global(*:first-child) {
+    justify-self: stretch;
   }
   .muted {
     color: var(--muted);

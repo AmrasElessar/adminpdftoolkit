@@ -47,7 +47,7 @@ class Workspace {
   }
 
   /** Put a job result into the workspace so it can feed the next tool. */
-  adopt(file: StoredFile, select = true): void {
+  adopt(file: StoredFile, select = true): Entry {
     this.entries.push({
       key: `r${++seq}`,
       name: file.name,
@@ -58,6 +58,7 @@ class Workspace {
       selected: select,
       password: "",
     });
+    return this.entries[this.entries.length - 1]!;
   }
 
   remove(key: string): void {

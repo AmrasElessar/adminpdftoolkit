@@ -293,3 +293,21 @@ def test_info_returns_data(api: Api) -> None:
     assert job["result"] is None
     assert job["data"]["pages"] == 3
     assert job["data"]["page_sizes"] == {"595 × 842 pt": 3}
+
+
+def test_organize_plan(api: Api) -> None:
+    f = api.upload(make_pdf(3))
+    job = api.run(
+        "organize",
+        [f["id"]],
+        {"plan": [{"page": 3}, {"page": 0}, {"page": 1, "rotate": 90}, {"page": 1}]},
+    )
+    assert job["status"] == "done", job
+    with open_bytes(api.download(job["result"]["id"])) as doc:
+        assert [p.get_text().strip() for p in doc] == ["Sayfa 3", "", "Sayfa 1", "Sayfa 1"]
+        assert [p.rotation for p in doc] == [0, 0, 90, 0]
+
+
+def test_organize_rejects_out_of_range(api: Api) -> None:
+    f = api.upload(make_pdf(2))
+    assert api.run("organize", [f["id"]], {"plan": [{"page": 5}]})["status"] == "failed"

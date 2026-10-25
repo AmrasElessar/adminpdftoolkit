@@ -157,3 +157,24 @@ progress {
     transition: none !important;
   }
 }
+
+#print-root {
+  display: none;
+}
+@media print {
+  body > :not(#print-root) {
+    display: none !important;
+  }
+  #print-root {
+    display: block;
+  }
+  #print-root img {
+    display: block;
+    width: 100%;
+    height: auto;
+    break-after: page;
+  }
+  @page {
+    margin: 0;
+  }
+}
