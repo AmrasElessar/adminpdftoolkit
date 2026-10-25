@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import io
+from pathlib import Path
 
 import pymupdf
 import pytest
 from PIL import Image, ImageDraw, ImageFont
 
+import adminpdf
 from adminpdf.core import imaging
 
 from .conftest import Api
 
-FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+FONT = str(Path(adminpdf.__file__).parent / "assets" / "fonts" / "DejaVuSans.ttf")
 
 
 def text_page(w: int = 1240, h: int = 1754) -> Image.Image:

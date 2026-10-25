@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import shutil
+from pathlib import Path
 
 import pymupdf
 import pytest
+
+import adminpdf
 
 from .conftest import Api
 
 pytestmark = pytest.mark.skipif(shutil.which("tesseract") is None, reason="tesseract not installed")
 
-FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+FONT = str(Path(adminpdf.__file__).parent / "assets" / "fonts" / "DejaVuSans.ttf")
 
 
 def scanned_pdf() -> bytes:

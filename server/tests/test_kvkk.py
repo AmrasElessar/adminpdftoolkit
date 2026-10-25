@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pymupdf
 
+import adminpdf
 from adminpdf.ops.kvkk import vkn_valid
 
 from .conftest import Api
 
-FONT = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+FONT = str(Path(adminpdf.__file__).parent / "assets" / "fonts" / "DejaVuSans.ttf")
 
 
 def _tckn(nine: str) -> str:
