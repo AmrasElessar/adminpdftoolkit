@@ -266,7 +266,7 @@
       rect: span.rect,
       original: span.text,
       text: span.text,
-      font: span.matched_font ?? { family_id: "helv", weight: span.bold ? 700 : 400, italic: span.italic },
+      font: span.matched_font ?? { family_id: "standard:helvetica", weight: span.bold ? 700 : 400, italic: span.italic },
       size: Math.round(span.size * 10) / 10,
       color: span.color,
       background: "auto",

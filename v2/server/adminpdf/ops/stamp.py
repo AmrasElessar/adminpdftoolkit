@@ -284,7 +284,7 @@ class ImageStamp(Operation):
                     stream=data if not xref else None,
                     xref=xref,
                     overlay=not params.behind,
-                    rotate=-page.rotation,
+                    rotate=page.rotation,  # counter-rotate: the viewer turns the page clockwise
                 )
                 ctx.progress((k + 1) / len(targets), "")
             save_pdf(doc, ctx.output(f"{inp.stem}_damgali.pdf"))

@@ -255,6 +255,8 @@ export interface FontStyle {
   id: string;
   weight: number;
   italic: boolean;
+  restricted?: boolean;
+  file?: boolean;
 }
 
 export interface FontFamily {

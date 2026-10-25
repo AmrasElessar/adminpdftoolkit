@@ -140,7 +140,7 @@ export class EditorState {
     fill: null,
     width: 2,
     opacity: 1,
-    font: { family_id: "helv", weight: 400, italic: false },
+    font: { family_id: "standard:helvetica", weight: 400, italic: false },
     size: 12,
   });
   /** Pending image (signature or picture) to place with the next click/drag. */

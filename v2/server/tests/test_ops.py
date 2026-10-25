@@ -311,3 +311,25 @@ def test_organize_plan(api: Api) -> None:
 def test_organize_rejects_out_of_range(api: Api) -> None:
     f = api.upload(make_pdf(2))
     assert api.run("organize", [f["id"]], {"plan": [{"page": 5}]})["status"] == "failed"
+
+
+def test_image_stamp_upright_on_rotated_page(api: Api) -> None:
+    from PIL import Image
+
+    # Image: top half red, bottom half blue — orientation is checkable.
+    img = Image.new("RGB", (100, 100), (0, 0, 255))
+    img.paste((255, 0, 0), (0, 0, 100, 50))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    f = api.upload(make_pdf(1))
+    rot = api.run("rotate", [f["id"]], {"angle": 90})
+    logo = api.upload(buf.getvalue(), "o.png")
+    job = api.run("image_stamp", [rot["result"]["id"]], {"image": logo["id"], "opacity": 1.0, "scale": 0.5})
+    assert job["status"] == "done", job
+    with open_bytes(api.download(job["result"]["id"])) as doc:
+        pix = doc[0].get_pixmap(dpi=36)  # rendered as the reader sees it
+        cx = pix.width // 2
+        top = pix.pixel(cx, pix.height // 2 - pix.height // 8)
+        bottom = pix.pixel(cx, pix.height // 2 + pix.height // 8)
+        assert top[0] > top[2], top  # red on top
+        assert bottom[2] > bottom[0], bottom  # blue at the bottom
