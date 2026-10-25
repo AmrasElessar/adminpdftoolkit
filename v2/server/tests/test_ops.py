@@ -313,23 +313,31 @@ def test_organize_rejects_out_of_range(api: Api) -> None:
     assert api.run("organize", [f["id"]], {"plan": [{"page": 5}]})["status"] == "failed"
 
 
-def test_image_stamp_upright_on_rotated_page(api: Api) -> None:
+@pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+def test_image_stamp_upright_on_rotated_page(api: Api, rotation: int) -> None:
     from PIL import Image
 
-    # Image: top half red, bottom half blue — orientation is checkable.
-    img = Image.new("RGB", (100, 100), (0, 0, 255))
-    img.paste((255, 0, 0), (0, 0, 100, 50))
+    # 2x2 quadrants: red top-left, blue top-right, green bottom-left, white bottom-right.
+    img = Image.new("RGB", (2, 2))
+    img.putdata([(255, 0, 0), (0, 0, 255), (0, 255, 0), (255, 255, 255)])
     buf = io.BytesIO()
     img.save(buf, "PNG")
-    f = api.upload(make_pdf(1))
-    rot = api.run("rotate", [f["id"]], {"angle": 90})
-    logo = api.upload(buf.getvalue(), "o.png")
-    job = api.run("image_stamp", [rot["result"]["id"]], {"image": logo["id"], "opacity": 1.0, "scale": 0.5})
+    doc = pymupdf.open()
+    doc.new_page(width=400, height=600).set_rotation(rotation)
+    f = api.upload(doc.tobytes())
+    logo = api.upload(buf.getvalue(), "q.png")
+    job = api.run("image_stamp", [f["id"]], {"image": logo["id"], "opacity": 1.0, "scale": 0.5})
     assert job["status"] == "done", job
-    with open_bytes(api.download(job["result"]["id"])) as doc:
-        pix = doc[0].get_pixmap(dpi=36)  # rendered as the reader sees it
-        cx = pix.width // 2
-        top = pix.pixel(cx, pix.height // 2 - pix.height // 8)
-        bottom = pix.pixel(cx, pix.height // 2 + pix.height // 8)
-        assert top[0] > top[2], top  # red on top
-        assert bottom[2] > bottom[0], bottom  # blue at the bottom
+    with open_bytes(api.download(job["result"]["id"])) as out:
+        page = out[0]
+        pix = page.get_pixmap()  # rendered as the reader sees it
+        # Centred square stamp, half the visible width, in the reader's coordinates.
+        vw, vh = page.rect.width, page.rect.height
+        x0, y0, s = vw / 4, (vh - vw / 2) / 2, vw / 2
+
+        def at(fx: float, fy: float) -> tuple[int, ...]:
+            return tuple(pix.pixel(int(x0 + s * fx), int(y0 + s * fy)))
+
+        assert at(0.25, 0.25) == (255, 0, 0)  # red: reader's top-left
+        assert at(0.75, 0.25) == (0, 0, 255)  # blue: top-right
+        assert at(0.25, 0.75) == (0, 255, 0)  # green: bottom-left
