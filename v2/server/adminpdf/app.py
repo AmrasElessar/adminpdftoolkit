@@ -89,7 +89,7 @@ def _mount_web(app: FastAPI, dist: Path) -> None:
     """Serve the built Svelte app with an SPA fallback to ``index.html``."""
     dist = dist.resolve()
 
-    @app.get("/{path:path}", include_in_schema=False)
+    @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     def web(path: str, request: Request) -> Response:
         if path.startswith("api/"):
             return JSONResponse({"detail": "Not found"}, status_code=404)
