@@ -20,6 +20,18 @@ from .ops.base import load_all
 log = logging.getLogger("adminpdf")
 
 SWEEP_INTERVAL_SECONDS = 300
+# Types the stdlib guesses wrong or not at all on some platforms (Windows
+# registry overrides are a classic source of text/plain module scripts).
+_MEDIA_TYPES = {
+    ".js": "text/javascript",
+    ".mjs": "text/javascript",
+    ".css": "text/css",
+    ".webmanifest": "application/manifest+json",
+    ".wasm": "application/wasm",
+    ".svg": "image/svg+xml",
+    ".bcmap": "application/octet-stream",
+    ".pfb": "application/octet-stream",
+}
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -105,6 +117,7 @@ def _mount_web(app: FastAPI, dist: Path) -> None:
             immutable = candidate.parent.name == "assets"
             return FileResponse(
                 candidate,
+                media_type=_MEDIA_TYPES.get(candidate.suffix),
                 headers={"cache-control": "public, max-age=31536000, immutable" if immutable else "no-cache"},
             )
         return FileResponse(index, headers={"cache-control": "no-cache"})
