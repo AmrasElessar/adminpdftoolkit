@@ -112,3 +112,9 @@ kaspersky.txt
 # (e.g. sorun.png). Not tracked.
 sorun*.png
 debug*.png
+
+# v2
+v2/server/_data/
+v2/server/adminpdf/web_dist/
+v2/web/node_modules/
+v2/web/.svelte-kit/
