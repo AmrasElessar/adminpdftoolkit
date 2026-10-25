@@ -18,6 +18,9 @@ dependencies = [
     "pdf2docx>=0.5.8,<1.0",
     "openpyxl>=3.1,<4.0",
     "python-docx>=1.1,<2.0",
+    "pikepdf>=9.0,<11.0",
+    # MPL-2.0. v17+: in-process API, ``ocr_engine="none"`` and ``mode=`` are used.
+    "ocrmypdf>=17.0,<18.0",
 ]
 
 [project.optional-dependencies]
