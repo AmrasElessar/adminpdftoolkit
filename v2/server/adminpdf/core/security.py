@@ -67,6 +67,24 @@ def is_loopback(host: str | None) -> bool:
         return False
 
 
+def parse_networks(spec: str) -> list[ipaddress.IPv4Network | ipaddress.IPv6Network]:
+    nets = []
+    for part in spec.split(","):
+        if part.strip():
+            nets.append(ipaddress.ip_network(part.strip(), strict=False))
+    return nets
+
+
+def in_networks(host: str | None, nets: list[ipaddress.IPv4Network | ipaddress.IPv6Network]) -> bool:
+    if not host or not nets:
+        return False
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+    return any(ip in n for n in nets)
+
+
 def local_addresses() -> set[str]:
     """IP addresses of this machine, used to accept ``Host: <lan-ip>``."""
     addrs: set[str] = set()
@@ -141,8 +159,9 @@ class SecurityMiddleware:
         self.allowed_hosts = {"localhost", "127.0.0.1", "::1"} | {
             h.strip().lower() for h in settings.allowed_hosts.split(",") if h.strip()
         }
-        if settings.lan_enabled:
+        if settings.lan_enabled or settings.trusted_networks:
             self.allowed_hosts |= local_addresses()
+        self.trusted = parse_networks(settings.trusted_networks)
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "websocket":
@@ -180,7 +199,7 @@ class SecurityMiddleware:
         client = scope.get("client")
         client_host = client[0] if client else None
 
-        if not is_loopback(client_host):
+        if not is_loopback(client_host) and not in_networks(client_host, self.trusted):
             if not self.settings.lan_enabled:
                 return 403, "LAN access is disabled"
             if path not in PAIRING_PATHS and not self.sessions.valid(cookies.get(SESSION_COOKIE)):

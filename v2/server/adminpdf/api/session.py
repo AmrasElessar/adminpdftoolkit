@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, Field
 
 from ..config import VERSION, Settings
-from ..core.security import CSRF_COOKIE, SESSION_COOKIE, SessionRegistry, is_loopback
+from ..core.security import CSRF_COOKIE, SESSION_COOKIE, SessionRegistry, in_networks, is_loopback, parse_networks
 from . import deps
 
 router = APIRouter(prefix="/api/session", tags=["session"])
@@ -32,7 +32,7 @@ def get_session(
     token = request.cookies.get(CSRF_COOKIE) or secrets.token_urlsafe(32)
     response.set_cookie(CSRF_COOKIE, token, httponly=True, samesite="strict", secure=request.url.scheme == "https")
     client = request.client.host if request.client else None
-    local = is_loopback(client)
+    local = is_loopback(client) or in_networks(client, parse_networks(settings.trusted_networks))
     return {
         "version": VERSION,
         "csrf": token,

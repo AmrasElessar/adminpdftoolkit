@@ -75,3 +75,12 @@ def test_pairing_is_rate_limited(settings: Settings) -> None:
         codes = [c.post("/api/session/pair", json={"key": "nope"}).status_code for _ in range(7)]
         assert codes[:5] == [403] * 5
         assert codes[5:] == [429, 429]
+
+
+def test_trusted_network_skips_pairing(settings: Settings) -> None:
+    settings.trusted_networks = "172.16.0.0/12"
+    with TestClient(create_app(settings), base_url="http://localhost", client=("172.17.0.1", 5000)) as c:
+        assert c.get("/api/health").status_code == 200
+        assert c.get("/api/session").json()["paired"] is True
+    with TestClient(create_app(settings), base_url="http://localhost", client=REMOTE) as c:
+        assert c.get("/api/health").status_code == 403

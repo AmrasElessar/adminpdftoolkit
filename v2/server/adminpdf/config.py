@@ -30,6 +30,9 @@ class Settings(BaseSettings):
 
     # Extra Host header values to accept (comma-separated), e.g. a DNS name.
     allowed_hosts: str = ""
+    # Comma-separated CIDRs treated like this machine (no pairing), e.g. the
+    # Docker bridge "172.16.0.0/12" or a locked-down office VLAN.
+    trusted_networks: str = ""
     # When true, non-loopback clients must pair with ``pairing_key`` first.
     lan_enabled: bool = False
     pairing_key: str = ""

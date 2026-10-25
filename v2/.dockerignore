@@ -1,0 +1,8 @@
+**/node_modules
+**/__pycache__
+**/.mypy_cache
+**/.ruff_cache
+**/.pytest_cache
+server/_data
+server/adminpdf/web_dist
+web/public/pdfjs
