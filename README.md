@@ -1,55 +1,168 @@
-# Admin PDF Toolkit v2
+<div align="center">
 
-Çevrimdışı, LAN içi, ücretsiz ve açık kaynak PDF uygulaması. Dosyalar makineden çıkmaz.
-Tasarım için [ARCHITECTURE.md](ARCHITECTURE.md).
+<img src="web/public/icon.svg" width="112" alt="Admin PDF Toolkit logo" />
 
-## Neler yapabilir
+# Admin PDF Toolkit
 
-| Grup | Araçlar |
+**Çevrimdışı, LAN içi, açık kaynak PDF uygulaması — Acrobat seviyesinde düzenleme, KVKK uyumlu**
+
+*PDF düzenle · dönüştür · OCR · dijital imza · formlar · KVKK karartma · PDF/A · karşılaştırma — dosyalar makineden çıkmaz*
+*Offline, LAN-first, open-source PDF application — edit, convert, OCR, sign, forms, redact, archive. Files never leave the machine.*
+
+🌐 **TR · EN** — Bu README iki dillidir / This README is bilingual (English collapsibles below each section)
+
+</div>
+
+<div align="center">
+
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-2.0.0--dev-orange)](CHANGELOG.md)
+[![CI](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/ci.yml/badge.svg)](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/codeql.yml/badge.svg)](https://github.com/AmrasElessar/adminpdftoolkit/actions/workflows/codeql.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg?logo=python&logoColor=white)](https://www.python.org/)
+[![Svelte 5](https://img.shields.io/badge/Svelte-5-FF3E00?logo=svelte&logoColor=white)](https://svelte.dev/)
+[![PyMuPDF](https://img.shields.io/badge/PyMuPDF-EB5424)](https://pymupdf.readthedocs.io/)
+[![WCAG 2.1 AA](https://img.shields.io/badge/WCAG_2.1-AA-success)](STANDARDS.md)
+[![PDF/A · PAdES · PDF/UA](https://img.shields.io/badge/ISO-PDF%2FA_%C2%B7_PAdES_%C2%B7_PDF%2FUA-informational)](STANDARDS.md)
+[![KVKK](https://img.shields.io/badge/KVKK-uyumlu_%2F_compliant-success)](#-kvkk--personal-data)
+[![D Brand](https://img.shields.io/badge/D_Brand-family-purple)](#-d-brand-ailesi--d-brand-family)
+
+</div>
+
+## 🎬 Demo
+
+<div align="center">
+
+| | |
 |---|---|
-| **Düzenle** | Mevcut metni değiştirme (orijinal font eşleştirme, sistem fontları), metin kutusu, görsel, el yazısı / yazılı / görsel imza, dikdörtgen, elips, çizgi, ok, serbest çizim, beyazla kapatma, bağlantı, vurgulama / altı çizili / üstü çizili, yapışkan not, form alanı; taşı, boyutlandır, geri al / yinele |
-| **Görüntüle** | Küçük resimler, yakınlaştırma, Türkçe duyarlı arama, yazdırma, yer imi paneli (düzenlenebilir), şifreli PDF |
-| **Sayfalar** | Sürükle-bırak düzenleme, döndür, sil, çoğalt, boş sayfa; birleştir (yer imli), böl, çıkar, sırala |
-| **Dönüştür** | PDF ↔ Word, PDF → Excel, Word / Excel / PowerPoint → PDF, PDF ↔ JPG / PNG, PDF → metin, görsel çıkarma |
-| **OCR** | Taranmış PDF'leri aranabilir yapma (Türkçe + İngilizce), eğim düzeltme, otomatik döndürme |
-| **Formlar** | Alanları listele, doldur, düzleştir, yeni alan oluştur |
-| **İmza** | PAdES dijital imza (görünür / görünmez), imza doğrulama, imza sertifikası oluşturma |
-| **KVKK** | Kişisel veri bulma (TCKN, IBAN, telefon, e-posta, kart — sağlama doğrulamalı), kalıcı karartma, meta veri temizleme |
-| **Karşılaştır** | İki sürüm arasında eklenen / silinen sözcükler, yan yana rapor |
-| **Koruma & güvenlik** | AES-256 şifreleme ve izinler, şifre kaldırma, güvenlik taraması (JavaScript, gömülü dosya, ClamAV), güvenli temizleme |
-| **Belge** | Meta veri, yer imleri (otomatik dahil), gömülü ekler, PDF/A, onarım, sıkıştırma, filigran, üst/alt bilgi, sayfa numarası, logo |
-| **İş akışı** | Çağrı kaydı PDF'leri → birleşik Excel, mükerrer silme, filtreleme, ekiplere dağıtım |
+| <img src="docs/media/tools.png" alt="Araç listesi" width="440" /> | <img src="docs/media/editor.png" alt="PDF editörü" width="440" /> |
+| **50+ araç, tek ekranda** — üzerine gelince açıklama | **PDF editörü** — metni değiştir, vurgula, not, imza |
+| <img src="docs/media/kvkk.png" alt="KVKK modu" width="440" /> | <img src="docs/media/organizer.png" alt="Sayfa düzenleyici" width="440" /> |
+| **KVKK modu** — tara, karart / bulanıklaştır / maskele | **Sayfa düzenleyici** — sürükle-bırak, döndür, sil |
+| <img src="docs/media/viewer.png" alt="Görüntüleyici" width="440" /> | <img src="docs/media/shortcuts.png" alt="Klavye kısayolları" width="440" /> |
+| **Görüntüleyici** — arama, yer imleri, yazdırma | **Klavye kısayolları** — `?` ile her yerde |
 
-## Çalıştırma
+</div>
+
+---
+
+## 📌 Kısaca
+
+**Admin PDF Toolkit**, kurum içi ağda çalışan, **internete ihtiyaç duymayan** ve **ücretsiz** bir PDF uygulamasıdır. Bir bilgisayarda sunucu olarak çalışır; aynı ağdaki herkes tarayıcıdan veya telefondan (PWA) kullanır. Yüklenen dosyalar **makineden hiç çıkmaz**, bulut servislerine gönderilmez ve süre sonunda silinir.
+
+Adobe Acrobat'ta beklenen işlerin neredeyse tamamını yapar: **mevcut metni düzenleme** (taranmış belgelerde OCR ile bile), sayfa düzenleme, Word/Excel/PowerPoint ↔ PDF dönüşümü, **OCR**, **PAdES dijital imza**, **form oluşturma ve doldurma**, **KVKK'ya göre kişisel veri tarama ve kalıcı karartma**, **PDF/A**, belge karşılaştırma, sıkıştırma, şifreleme ve daha fazlası.
+
+<details>
+<summary>🇬🇧 At a glance (English)</summary>
+
+**Admin PDF Toolkit** is a free PDF application that runs on your own network and **needs no internet**. One computer runs the server; everyone on the LAN uses it from a browser or phone (PWA). Uploaded files **never leave the machine**, are never sent to a cloud service and expire automatically.
+
+It covers almost everything people use Adobe Acrobat for: **editing existing text** (even on scans, via OCR), page organisation, Word/Excel/PowerPoint ↔ PDF, **OCR**, **PAdES digital signatures**, **form creation and filling**, **personal-data scanning and permanent redaction (KVKK/GDPR)**, **PDF/A**, document comparison, compression, encryption and more.
+
+</details>
+
+---
+
+## ✨ Öne Çıkan Özellikler / Highlights
+
+| Grup | Neler var |
+|---|---|
+| ✎ **PDF editörü** | Mevcut metni yerinde değiştirme (orijinal font eşleştirme, sistem fontları), metin kutusu, görsel, el yazısı / yazılı / görsel imza, şekiller, kalem, beyazla kapatma, bağlantı, vurgulama / altı / üstü çizili, yapışkan not, **form alanı oluşturma**; taşı, boyutlandır, geri al / yinele |
+| 🔍 **Taranmış belgeler** | Görsel tabanlı PDF'ler algılanır, tek tıkla **OCR** (Türkçe + İngilizce) uygulanır ve metin düzenlenebilir hale gelir; eğik sayfalar otomatik düzeltilir |
+| ⬛ **KVKK modu** | Belge otomatik taranır: T.C. kimlik no, IBAN, kart, telefon, e-posta, plaka, vergi no, ad-soyad, adres, doğum bilgisi ve **özel nitelikli veri** ipuçları; her biri için **karart / bulanıklaştır / maskele / beyazla / dokunma** seçilir, kalıcı uygulanır |
+| 📑 **Sayfalar** | Küçük resimlerle sürükle-bırak düzenleme, döndür, sil, çoğalt, boş sayfa; birleştir (yer imli), böl, çıkar |
+| 🔄 **Dönüştür** | PDF ↔ Word, PDF → Excel (tablo algılama), Word / Excel / PowerPoint → PDF, PDF ↔ JPG / PNG, PDF → metin |
+| 📷 **Görselden PDF** | Telefon fotoğrafı yönü (EXIF), **otomatik eğim düzeltme**, kâğıdı bulup **perspektif düzeltme**, gölge temizleme, siyah-beyaz tarama görünümü |
+| ✒ **İmza** | PAdES dijital imza (görünür / görünmez), imza doğrulama, imza sertifikası oluşturma |
+| 🧾 **Formlar** | Alanları listele, doldur, düzleştir; editörde metin kutusu, onay kutusu, açılır liste, imza alanı çiz |
+| 🏛 **Arşiv & standartlar** | PDF/A-1b/2b/3b, **PDF/UA erişilebilirlik denetimi ve düzeltme**, meta veri, yer imleri (otomatik dahil), gömülü ekler |
+| ⚖ **Karşılaştır** | İki sürüm arasında eklenen / silinen sözcükler ve sayfalar, yan yana rapor |
+| 🛡 **Güvenlik** | AES-256 şifreleme ve izinler, güvenlik taraması (JavaScript, gömülü dosya, ClamAV), güvenli temizleme, onarım |
+| 📊 **İş akışları** | Çağrı kaydı PDF'leri → birleşik Excel, mükerrer silme, filtreleme, ekiplere dağıtım |
+| ⌨ **Kullanım** | Tam klavye desteği ve kısayollar (`?`), TR / EN, açık / koyu tema, mobil uyumlu PWA |
+
+<details>
+<summary>🇬🇧 Highlights (English)</summary>
+
+- **PDF editor** — change existing text in place (original font matching, system fonts), text boxes, images, drawn / typed / image signatures, shapes, pen, whiteout, links, highlight / underline / strikethrough, sticky notes, **form-field creation**; move, resize, undo / redo.
+- **Scanned documents** — image-only PDFs are detected and made editable with one-click **OCR** (Turkish + English); tilted pages are straightened.
+- **KVKK mode** — automatic scan for national IDs, IBANs, cards, phones, e-mails, plates, tax numbers, names, addresses, birth details and **special-category** hints; choose **black-out / blur / mask / white-out / keep** per finding and apply permanently.
+- **Pages** — drag-and-drop organiser, rotate, delete, duplicate, blank pages; merge (with bookmarks), split, extract.
+- **Convert** — PDF ↔ Word, PDF → Excel (table detection), Word / Excel / PowerPoint → PDF, PDF ↔ JPG / PNG, PDF → text.
+- **Images → PDF** — EXIF orientation, **automatic deskew**, sheet detection with **perspective correction**, shadow removal, black-and-white scan look.
+- **Signatures** — PAdES (visible / invisible), verification, self-signed certificate creation.
+- **Forms**, **PDF/A**, **PDF/UA check & fix**, metadata, bookmarks, attachments, **compare**, AES-256, security scan, sanitise, repair, call-log workflows.
+- Full keyboard support (`?`), TR / EN, light / dark, installable PWA.
+
+</details>
+
+---
+
+## 🎯 Vizyon / Vision
+
+Kamu kurumları, okullar, sağlık birimleri, hukuk büroları ve şirket BT ekipleri PDF'lerini **dışarıya göndermeden** işlemek zorundadır. Çevrimiçi PDF servisleri KVKK riski taşır, ticari masaüstü yazılımları kullanıcı başına pahalıdır. Admin PDF Toolkit bu boşluğu doldurur: **tek kurulum, tüm ağ, sıfır dış bağımlılık, açık kaynak.**
+
+<details>
+<summary>🇬🇧 Vision (English)</summary>
+
+Public bodies, schools, healthcare units, law firms and corporate IT teams must process PDFs **without sending them outside**. Online PDF services are a compliance risk and commercial desktop software is expensive per seat. Admin PDF Toolkit fills the gap: **one install, the whole network, zero external dependencies, open source.**
+
+</details>
+
+---
+
+## 📥 Kurulum / Installation
+
+### Windows (en kolay)
+
+1. [Python 3.11+](https://www.python.org/downloads/) kurun ("Add python.exe to PATH" işaretli).
+2. [Sürümler](https://github.com/AmrasElessar/adminpdftoolkit/releases) sayfasından paketi indirip açın.
+3. **`Baslat (Windows).bat`** dosyasına çift tıklayın — ilk açılışta bileşenler kurulur, tarayıcı açılır.
+
+### Docker (tüm araçlar dahil: OCR, LibreOffice, Ghostscript, ClamAV)
 
 ```bash
-# sunucu (Python 3.11+)
-cd v2/server
-pip install -e ".[dev]"
-python -m adminpdf --open           # http://127.0.0.1:8000
-python -m adminpdf --lan            # ağda, tek kullanımlık eşleştirme bağlantısıyla
-
-# arayüz (Node 20+) — bir kez derleyin, sunucu dosyaları kendisi sunar
-cd v2/web
-npm ci && npm run build             # server/adminpdf/web_dist içine
-npm run dev                         # isteğe bağlı: :5173 üzerinde canlı geliştirme
+git clone https://github.com/AmrasElessar/adminpdftoolkit.git
+cd adminpdftoolkit
+docker compose up -d --build        # http://127.0.0.1:8000
 ```
 
-Windows'ta `v2\scripts\start-windows.bat`, Linux/macOS'ta `v2/scripts/start.sh` ilk çalıştırmada
-sanal ortamı kurar ve uygulamayı açar.
-
-İsteğe bağlı sistem araçları: **Tesseract** (OCR, `tur` dil paketiyle), **Ghostscript** (PDF/A),
-**LibreOffice** (Office → PDF yüksek doğruluk), **qpdf** (onarım), **ClamAV** (virüs taraması).
-Yoksa ilgili araç açık bir hata mesajı verir; diğerleri çalışmaya devam eder.
-
-### Docker
+### Kaynaktan / From source
 
 ```bash
-cd v2
-docker compose up -d --build        # http://127.0.0.1:8000 — tüm araçlar dahil
+# sunucu / server (Python 3.11+)
+cd server && pip install -e ".[dev]"
+# arayüz / web UI (Node 20+) — bir kez derleyin / build once
+cd ../web && npm ci && npm run build
+# çalıştır / run
+cd ../server && python -m adminpdf --open
 ```
 
-## Ayarlar (`APT_*` ortam değişkenleri)
+İsteğe bağlı sistem araçları — yoksa ilgili araç açık bir uyarı verir, diğerleri çalışır:
+**Tesseract** + `tur` dil paketi (OCR), **LibreOffice** (Office → PDF yüksek doğruluk), **Ghostscript** (PDF/A), **qpdf** (onarım), **ClamAV** (virüs taraması).
+
+<details>
+<summary>🇬🇧 Installation (English)</summary>
+
+- **Windows:** install Python 3.11+, download the package from Releases, double-click `Baslat (Windows).bat`.
+- **Docker:** `docker compose up -d --build` — includes OCR, LibreOffice, Ghostscript and ClamAV.
+- **From source:** `pip install -e ".[dev]"` in `server/`, `npm ci && npm run build` in `web/`, then `python -m adminpdf --open`.
+- Optional tools: Tesseract (+`tur`), LibreOffice, Ghostscript, qpdf, ClamAV. Missing tools only disable their own features.
+
+</details>
+
+---
+
+## 🚀 İlk Adımlar / Quick Start
+
+1. Dosyaları sol panele **sürükleyin** (PDF, Word, Excel, PowerPoint, JPG, PNG…).
+2. Bir PDF seçip **PDF Düzenle**, **Sayfaları Düzenle**, **KVKK Tara ve Karart** veya listeden bir araç seçin.
+3. Sonucu indirin ya da **Çalışma alanına ekle** ile bir sonraki araca girdi yapın (ör. birleştir → sıkıştır → şifrele).
+4. `?` tuşu tüm klavye kısayollarını gösterir.
+
+**Telefondan / ağdan erişim:** `python -m adminpdf --lan` — konsoldaki eşleştirme bağlantısını telefonda açın.
+
+### Ayarlar / Configuration (`APT_*`)
 
 | Değişken | Varsayılan | Açıklama |
 |---|---|---|
@@ -64,9 +177,82 @@ docker compose up -d --build        # http://127.0.0.1:8000 — tüm araçlar da
 | `APT_TRUSTED_NETWORKS` | — | Eşleştirme istemeyen ağlar (CIDR), ör. Docker köprüsü |
 | `APT_ALLOWED_HOSTS` | — | Ek Host adları (ör. `pdf.kurum.local`) |
 
-## Kontroller
+---
 
-```bash
-cd v2/server && ruff check . && ruff format --check . && mypy adminpdf && pytest
-cd v2/web && npm run check && npm run build
-```
+## ⬛ KVKK / Personal data
+
+- Dosyalar **yalnızca sunucu bilgisayarında** işlenir; hiçbir bulut servisine gönderilmez, analitik/telemetri yoktur.
+- Yüklemeler ve sonuçlar **süre sonunda kendiliğinden silinir** (`APT_FILE_TTL_MINUTES`).
+- **KVKK modu** kişisel verileri bulur; uygulanan her işlem alttaki metni **kalıcı olarak siler** (bulanıklaştırma yalnızca görünümü korur), meta veriyi temizler.
+- Özel nitelikli veri (KVKK md. 6) ipuçları otomatik işlenmez, **insan kararına** sunulur.
+
+<details>
+<summary>🇬🇧 Personal data (English)</summary>
+
+Files are processed only on the server machine — no cloud, no telemetry; uploads expire automatically. KVKK mode finds personal data and every treatment permanently removes the underlying text (blur only keeps the look) and strips metadata. Special-category hints (KVKK art. 6) are left for a human decision.
+
+</details>
+
+---
+
+## 🛠️ Teknoloji / Tech Stack
+
+| Katman | Teknoloji |
+|---|---|
+| Sunucu | Python 3.11+ · FastAPI · PyMuPDF · pikepdf · pyHanko · OCRmyPDF/Tesseract · pdf2docx · OpenCV · LibreOffice (isteğe bağlı) |
+| Arayüz | Svelte 5 · TypeScript · Vite · pdf.js |
+| Mimari | İşlem kayıt defteri (her araç tek sınıf, form şemadan üretilir) · her iş ayrı süreçte (zaman aşımı, iptal, bellek sınırı) · güvenlik tek ara katmanda (Host izin listesi, CSRF, sıkı CSP, LAN eşleştirme) |
+| Kalite | 290+ sunucu testi · mypy --strict · ruff · svelte-check · axe-core WCAG 2.1 AA denetimi · CodeQL · Windows/macOS/Linux CI |
+
+Ayrıntılar: [ARCHITECTURE.md](ARCHITECTURE.md) · Standartlar: [STANDARDS.md](STANDARDS.md)
+
+---
+
+## 📐 Standartlar / Standards
+
+ISO 32000 (PDF) · ISO 19005 (PDF/A) · ISO 14289 (PDF/UA denetim + düzeltme) · ETSI EN 319 142 (PAdES) · ISO/IEC 40500 / WCAG 2.1 AA (arayüz) · ISO 8601 · BCP 47 · KVKK / GDPR — ayrıntılar ve sınırlar [STANDARDS.md](STANDARDS.md) içinde.
+
+---
+
+## 🗺️ Yol Haritası / Roadmap
+
+- [x] v2 mimarisi, güvenlik ara katmanı, süreç izole iş motoru
+- [x] Görüntüleyici, sayfa düzenleyici, PDF editörü (taranmış belgeler dahil)
+- [x] Dönüştürme, OCR, formlar, dijital imza, KVKK modu, PDF/A, PDF/UA, karşılaştırma
+- [x] Docker, CI, PWA, klavye kısayolları, erişilebilirlik
+- [ ] Windows kurulum paketi (installer) ve imzalı sürümler
+- [ ] PAdES zaman damgası (kurum içi TSA desteğiyle)
+- [ ] Etiketsiz belgeler için yarı otomatik PDF/UA etiketleme
+
+v1 (1.13.2) kaynak kodu [`archive/`](archive/) klasöründe ve git geçmişindedir.
+
+---
+
+## 🤝 Katkı / Contributing
+
+Katkılar memnuniyetle karşılanır — [CONTRIBUTING.md](CONTRIBUTING.md). Güvenlik açıkları için lütfen [SECURITY.md](SECURITY.md).
+
+---
+
+## 🎨 D Brand Ailesi / D Brand Family
+
+Admin PDF Toolkit, **D Brand** açık kaynak araç ailesinin bir parçasıdır.
+
+---
+
+## ❤️ Destekle / Support
+
+Proje işinize yaradıysa ⭐ vererek veya [sponsor olarak](https://github.com/sponsors/AmrasElessar) destekleyebilirsiniz.
+
+---
+
+## 📜 Lisans / License
+
+[GNU AGPL-3.0](LICENSE) — bu yazılımı değiştirip **ağ üzerinden hizmet olarak** sunarsanız, değiştirilmiş kaynak kodu kullanıcılarla paylaşmanız gerekir. Üçüncü taraf lisansları: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+<details>
+<summary>🇬🇧 License (English)</summary>
+
+GNU AGPL-3.0 — if you modify this software and offer it **as a network service**, you must share the modified source with its users. Third-party licences: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+
+</details>

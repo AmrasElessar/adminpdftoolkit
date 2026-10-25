@@ -15,7 +15,7 @@
 | **Visibility** | public |
 | **Default branch** | `main` |
 | **License (SPDX)** | `AGPL-3.0` (network-use clause nedeniyle GPL değil AGPL — self-hosted web service olduğundan) |
-| **Description** | `Open-source, offline PDF toolkit by Engin — convert (Excel/Word/JPG/OCR), edit (annotation/overlay/replace), 35+ tools, web UI + PWA + Windows service.` |
+| **Description** | `Open-source, offline, LAN-first PDF application — Acrobat-class editor, OCR, PAdES signing, forms, KVKK redaction, PDF/A, 50+ tools, web UI + PWA.` |
 | **Homepage** | `https://github.com/AmrasElessar/adminpdftoolkit/releases` |
 | **Topics (11)** | `gdpr, kvkk, ocr, offline, pdf, pdf-converter, pdf-editor, pdf-toolkit, pwa, self-hosted, stirling-pdf-alternative` |
 

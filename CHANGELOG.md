@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0-dev] — 2026-10-25 — Ground-up rewrite
+
+v2 replaces v1 entirely; v1.13.2 is preserved in `archive/admin-pdf-toolkit-v1.13.2.zip`
+and in git history.
+
+### Architecture
+- `server/` (FastAPI + PyMuPDF) with an operation registry: one class per tool, whose Pydantic
+  model drives validation and the generated UI form; modules and plugins are auto-discovered.
+- Every job runs in its own process (timeout, real cancellation incl. helper processes, memory cap).
+- One security middleware: Host allow-list, CSRF + Origin, LAN pairing, strict CSP; streaming
+  uploads with enforced size cap.
+- `web/` (Svelte 5 + TypeScript + pdf.js), installable PWA, TR/EN, light/dark.
+
+### Added
+- PDF editor: replace existing text with font matching, text boxes, images, signatures, shapes,
+  pen, whiteout, links, highlight/underline/strikethrough, notes, form fields; undo/redo.
+- Scanned-document editing via OCR; straighten scanned pages.
+- Viewer (search, bookmarks panel, print) and drag-and-drop page organiser.
+- Conversions: PDF ↔ Word, PDF → Excel, Office → PDF (LibreOffice or built-in), PDF ↔ images,
+  images → PDF with EXIF orientation, deskew, perspective correction and enhancement.
+- OCR (Tesseract tr+en), PDF/A-1b/2b/3b, PDF/UA check & fix, compare, metadata, bookmarks
+  (incl. automatic), attachments, compression, encryption, security scan, sanitise, repair.
+- PAdES signing, verification and certificate creation; form listing, filling, flattening, creation.
+- KVKK mode: automatic personal-data scan with per-finding black-out / blur / mask / white-out.
+- Call-log workflow plugin (merge to Excel, dedup, filter, team distribution).
+- Keyboard shortcuts everywhere (`?` help); WCAG 2.1 AA verified with axe-core in CI.
+- Docker image with all optional tools; CI on Linux/Windows/macOS; `STANDARDS.md`.
+
+### Fixed (compared with v1)
+- Compression no longer corrupts images; permissions in encrypted files are enforced; Excel
+  formula injection; format-string and zip-bomb denial of service; blocking work on the event loop;
+  unenforced upload limits; CSRF outside admin endpoints; service worker scope; editor replace
+  wiping nearby images and table lines.
+
 ## [1.13.2] — 2026-05-16 — Polish + CI fix + test coverage
 
 Follow-up to v1.13.1 — closes the small punch-list left after the

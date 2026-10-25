@@ -6,180 +6,107 @@
 
 ## English
 
-Thanks for taking the time to contribute! This document describes how to set up
-the development environment and the standards we follow.
+Thanks for taking the time to contribute!
 
 ### Development setup
 
 ```bash
-# 1. Fork the repo on GitHub, then clone your fork
-git clone https://github.com/<your-username>/pdfconverter.git
-cd pdfconverter
+git clone https://github.com/<your-username>/adminpdftoolkit.git
+cd adminpdftoolkit
 
-# 2. Create a virtual environment (Python 3.11+ required)
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS / Linux:
-source .venv/bin/activate
-
-# 3. Install dev dependencies
-pip install -r requirements-dev.txt
-
-# 4. Install pre-commit hooks
-pre-commit install
-
-# 5. Run the test suite
+# Server (Python 3.11+)
+cd server
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
 pytest
 
-# 6. Start the dev server
-python app.py
-# → http://127.0.0.1:8000
+# Web UI (Node 20+)
+cd ../web
+npm ci
+npm run dev        # hot reload on :5173, proxies /api to :8000
+npm run build      # writes server/adminpdf/web_dist
+
+# Run the app
+cd ../server && python -m adminpdf --open
 ```
 
-### Branching & commits
+Optional system tools for the full test suite: Tesseract (+`tur`), Ghostscript, qpdf, LibreOffice.
 
-- Work on a feature branch: `feat/<short-description>` or `fix/<short-description>`.
-- Keep commits focused; one logical change per commit.
-- Use [Conventional Commits](https://www.conventionalcommits.org/) when possible:
-  - `feat:` new feature
-  - `fix:` bug fix
-  - `docs:` documentation only
-  - `refactor:` code change without behaviour change
-  - `test:` add or fix tests
-  - `chore:` build / tooling
-  - `perf:` performance improvement
-  - `security:` security-related change
+### Adding a tool
 
-### Code style
+Every tool is one `Operation` subclass in `server/adminpdf/ops/` (organisation-specific workflows go to
+`server/adminpdf/plugins/`). Modules are discovered automatically — no router or registry edits. The
+`Params` model drives validation **and** the generated UI form; give every field Turkish and English
+labels with `Field(tr=..., en=...)`, raise `UserError(tr, en)` for user-caused failures, and bound every
+input. See [ARCHITECTURE.md](ARCHITECTURE.md).
 
-- **Formatter & linter:** [Ruff](https://docs.astral.sh/ruff/) (configured in `pyproject.toml`).
-- **Type checker:** [mypy](https://mypy.readthedocs.io/).
-- **Line length:** 100 characters.
-- **Quotes:** double.
-
-Run locally before pushing:
+### Checks (CI runs the same)
 
 ```bash
-ruff check .
-ruff format --check .
-mypy .
-pytest --cov=. --cov-report=term-missing
+cd server && ruff check . && ruff format --check . && mypy adminpdf && pytest
+cd web && npm run check && npm run build
 ```
 
-`pre-commit` will run the relevant subset on every commit.
+### Branching, commits and pull requests
 
-### Pull requests
+- Feature branches (`feat/...`, `fix/...`); [Conventional Commits](https://www.conventionalcommits.org/).
+- Add or update tests for every behaviour change.
+- Update `CHANGELOG.md` under `[Unreleased]`.
+- User-facing strings in **both** Turkish and English (`Field(tr=, en=)` on the server, `t("tr", "en")` in the UI).
+- Keep the UI keyboard-accessible; the WCAG 2.1 AA audit (`web/e2e/a11y.mjs`) runs in CI.
+- Fill in the PR template; explain the *why*.
 
-1. Make sure CI is green (linting, types, tests).
-2. Add or update tests for any behaviour change.
-3. Update `CHANGELOG.md` under the `[Unreleased]` section.
-4. Update both the Turkish and English sections of `README.md` when documentation changes.
-5. Add or update UI strings in **both** `tr` and `en` dictionaries (`templates/index.html` → `window.I18N`).
-6. Fill in the PR template; describe the *why*, not just the *what*.
-7. One reviewer approval is required before merging.
+### Licensing
 
-### Reporting bugs / requesting features
-
-Please use the GitHub issue templates:
-
-- 🐛 **Bug report** — include reproduction steps, expected vs. actual behaviour, environment.
-- ✨ **Feature request** — describe the use-case, not just the proposed solution.
-
-For **security** issues, do **not** open a public issue — see [SECURITY.md](SECURITY.md).
-
-### Code of Conduct
-
-This project adheres to the [Contributor Covenant v2.1](CODE_OF_CONDUCT.md).
-By participating you agree to uphold it.
+By contributing you agree that your contribution is licensed under AGPL-3.0. Only free / open-source
+dependencies compatible with AGPL-3.0 are accepted; no cloud APIs (the application must work offline).
 
 ---
 
 ## Türkçe
 
-Katkı sağlamak için zaman ayırdığın için teşekkürler! Bu dokümanda geliştirme
-ortamının nasıl kurulacağı ve uyduğumuz standartlar yazılı.
+Katkı için teşekkürler!
 
-### Geliştirme kurulumu
-
-```bash
-# 1. GitHub'da repoyu fork'la, sonra fork'unu clone'la
-git clone https://github.com/<kullanıcı-adın>/pdfconverter.git
-cd pdfconverter
-
-# 2. Sanal ortam oluştur (Python 3.11+ gerekli)
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# macOS / Linux:
-source .venv/bin/activate
-
-# 3. Geliştirme bağımlılıklarını kur
-pip install -r requirements-dev.txt
-
-# 4. Pre-commit hook'larını yükle
-pre-commit install
-
-# 5. Testleri çalıştır
-pytest
-
-# 6. Geliştirme sunucusunu başlat
-python app.py
-# → http://127.0.0.1:8000
-```
-
-### Branch ve commit kuralları
-
-- Feature branch'inde çalış: `feat/<kısa-açıklama>` veya `fix/<kısa-açıklama>`.
-- Commit'leri odaklı tut; commit başına tek bir mantıksal değişiklik.
-- Mümkünse [Conventional Commits](https://www.conventionalcommits.org/) kullan:
-  - `feat:` yeni özellik
-  - `fix:` hata düzeltmesi
-  - `docs:` sadece dokümantasyon
-  - `refactor:` davranış değişmeyen kod düzenleme
-  - `test:` test ekle/düzelt
-  - `chore:` build/araç
-  - `perf:` performans iyileştirmesi
-  - `security:` güvenlikle ilgili değişiklik
-
-### Kod stili
-
-- **Formatlayıcı + linter:** [Ruff](https://docs.astral.sh/ruff/) (`pyproject.toml` içinde).
-- **Tip denetleyici:** [mypy](https://mypy.readthedocs.io/).
-- **Satır uzunluğu:** 100 karakter.
-- **Tırnak:** çift.
-
-Push'lamadan önce yerelde çalıştır:
+### Geliştirme ortamı
 
 ```bash
-ruff check .
-ruff format --check .
-mypy .
-pytest --cov=. --cov-report=term-missing
+git clone https://github.com/<kullanici-adiniz>/adminpdftoolkit.git
+cd adminpdftoolkit
+
+# Sunucu (Python 3.11+)
+cd server && pip install -e ".[dev]" && pytest
+
+# Arayüz (Node 20+)
+cd ../web && npm ci && npm run dev    # :5173 üzerinde canlı geliştirme
+npm run build                          # server/adminpdf/web_dist içine
+
+# Uygulamayı çalıştır
+cd ../server && python -m adminpdf --open
 ```
 
-`pre-commit` her commit'te ilgili kontrolleri otomatik çalıştırır.
+### Yeni araç eklemek
 
-### Pull request
+Her araç `server/adminpdf/ops/` altında tek bir `Operation` sınıfıdır (kuruma özel iş akışları
+`server/adminpdf/plugins/` altına). Modüller otomatik bulunur. `Params` modeli hem doğrulamayı hem
+arayüz formunu üretir; her alana `Field(tr=..., en=...)` ile Türkçe ve İngilizce etiket verin,
+kullanıcı kaynaklı hatalarda `UserError(tr, en)` kullanın, tüm girdileri sınırlayın.
 
-1. CI'ın yeşil olduğundan emin ol (lint, tip, test).
-2. Davranış değişikliği için test ekle/güncelle.
-3. `CHANGELOG.md` içinde `[Unreleased]` başlığı altına ekle.
-4. Doküman değişikliğinde `README.md` içindeki Türkçe ve İngilizce bölümlerin ikisi de güncellensin.
-5. UI metinlerini hem `tr` hem `en` sözlüğüne ekle (`templates/index.html` → `window.I18N`).
-6. PR şablonunu doldur; *ne yaptığını* değil, *neden yaptığını* yaz.
-7. Merge için bir reviewer onayı gerekli.
+### Kontroller
 
-### Hata bildirimi / özellik isteği
+```bash
+cd server && ruff check . && ruff format --check . && mypy adminpdf && pytest
+cd web && npm run check && npm run build
+```
 
-GitHub issue şablonlarını kullan:
+### Dal, commit ve PR
 
-- 🐛 **Bug report** — adımlar, beklenen vs. gerçekleşen, ortam bilgisi.
-- ✨ **Feature request** — sadece çözümü değil, kullanım senaryosunu da anlat.
+- `feat/...`, `fix/...` dalları; Conventional Commits.
+- Her davranış değişikliğine test.
+- `CHANGELOG.md` → `[Unreleased]`.
+- Kullanıcıya görünen metinler **hem Türkçe hem İngilizce**.
+- Arayüz klavyeyle kullanılabilir kalmalı; WCAG 2.1 AA denetimi CI'da çalışır.
 
-**Güvenlik** açıkları için public issue açma — [SECURITY.md](SECURITY.md)'ye bak.
+### Lisans
 
-### Davranış Kuralları
-
-Bu proje [Contributor Covenant v2.1](CODE_OF_CONDUCT.md)'i benimser.
-Katkı sağlayarak bu kurallara uyacağını kabul etmiş olursun.
+Katkılarınız AGPL-3.0 ile lisanslanır. Yalnızca AGPL-3.0 uyumlu ücretsiz/açık kaynak bağımlılıklar
+kabul edilir; bulut API'leri kullanılmaz (uygulama çevrimdışı çalışmalıdır).
