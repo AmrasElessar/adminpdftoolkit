@@ -1,8 +1,10 @@
 name: Release
 
-# Push a tag like v2.0.0 (matching VERSION in server/adminpdf/config.py) to
-# build both packages, start each one as a smoke test, and publish a GitHub
-# release with them. On PRs and manual runs it only builds and tests them.
+# Builds both packages, starts each one as a smoke test, and publishes a GitHub
+# release v<VERSION> (VERSION from server/adminpdf/config.py) with them when
+# either a matching tag is pushed or the workflow is run by hand on main with
+# "publish" ticked (the release then creates the tag on that commit).
+# On PRs it only builds and tests the packages.
 on:
   push:
     tags: ["v*"]
@@ -10,6 +12,11 @@ on:
   pull_request:
     paths: ["scripts/**", ".github/workflows/release.yml", "server/pyproject.toml"]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish release v<VERSION> from this commit (creates the tag)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -96,17 +103,21 @@ jobs:
 
   publish:
     name: Publish release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (inputs.publish && github.ref == 'refs/heads/main')
     needs: [windows, python]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v6
-      - name: Check tag matches VERSION
+      - name: Release tag from VERSION
+        id: tag
         run: |
-          version=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' server/adminpdf/config.py)
-          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+          tag="v$(sed -n 's/^VERSION = "\(.*\)"/\1/p' server/adminpdf/config.py)"
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "$tag" ]; then
+            echo "tag $GITHUB_REF_NAME != $tag"; exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v5
         with:
           path: dist
@@ -114,10 +125,12 @@ jobs:
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.tag.outputs.tag }}
         run: |
-          python3 scripts/release_notes.py "$GITHUB_REF_NAME" > notes.md
+          python3 scripts/release_notes.py "$TAG" > notes.md
           ls -l dist
-          gh release create "$GITHUB_REF_NAME" dist/*.zip \
-            --title "$GITHUB_REF_NAME — Admin PDF Toolkit 2" \
+          gh release create "$TAG" dist/*.zip \
+            --target "$GITHUB_SHA" \
+            --title "$TAG — Admin PDF Toolkit 2" \
             --notes-file notes.md \
             --latest
