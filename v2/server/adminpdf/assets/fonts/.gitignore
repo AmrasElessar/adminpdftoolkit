@@ -1,0 +1,3 @@
+# Font binaries are fetched by scripts/fetch_fonts.py and never committed.
+*
+!.gitignore

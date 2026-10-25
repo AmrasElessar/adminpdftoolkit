@@ -71,9 +71,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.sessions = sessions
 
-    from .api import files, jobs, ops, session
+    from .api import files, fonts, jobs, ops, session
 
-    for r in (session.router, files.router, ops.router, jobs.router):
+    for r in (session.router, files.router, ops.router, jobs.router, fonts.router):
         app.include_router(r)
 
     @app.get("/api/health", tags=["session"])
