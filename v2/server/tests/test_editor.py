@@ -309,7 +309,7 @@ def test_text_spans_rects_are_pdf_user_space(api: Api) -> None:
     assert red["color"] == "#FF0000" and close_rgb(red["background"], (204, 230, 255))
     if SANS.is_file():
         assert first["Gömülü"]["embedded"] is True
-        assert first["Gömülü"]["matched_font"]["family_id"] == "system:dejavu-sans"
+        assert first["Gömülü"]["matched_font"]["family_id"] in ("bundled:dejavu-sans", "system:dejavu-sans")
 
 
 def test_text_spans_line_and_block_granularity(api: Api) -> None:

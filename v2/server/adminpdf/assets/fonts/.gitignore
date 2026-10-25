@@ -1,3 +1,9 @@
-# Font binaries are fetched by scripts/fetch_fonts.py and never committed.
+# Extra font binaries are fetched by scripts/fetch_fonts.py and not committed.
+# DejaVu Sans ships with the app so inserted text extracts correctly on every
+# OS (system Arial maps space/NBSP and hyphen/soft-hyphen to one glyph, which
+# corrupts copy/search of stamped text).
 *
 !.gitignore
+!DejaVuSans.ttf
+!DejaVuSans-Bold.ttf
+!DejaVu-LICENSE.txt

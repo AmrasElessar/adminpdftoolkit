@@ -59,3 +59,7 @@ plugins = ["pydantic.mypy"]
 module = ["pymupdf", "pymupdf.*"]
 follow_imports = "skip"
 follow_untyped_imports = false
+
+[tool.setuptools.package-data]
+# Ship the bundled fonts and the built web UI inside the wheel.
+adminpdf = ["assets/fonts/*.ttf", "assets/fonts/*.txt", "web_dist/**/*"]

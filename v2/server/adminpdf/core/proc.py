@@ -44,7 +44,10 @@ def install_sigterm_handler() -> None:
 def run(cmd: Sequence[str], *, timeout: float, cwd: Path | None = None) -> subprocess.CompletedProcess[bytes]:
     kwargs: dict[str, object] = {}
     if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW  # type: ignore[attr-defined]
+        # getattr: these constants only exist on Windows builds of Python.
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) | getattr(
+            subprocess, "CREATE_NO_WINDOW", 0
+        )
     else:
         kwargs["start_new_session"] = True
     p = subprocess.Popen(
