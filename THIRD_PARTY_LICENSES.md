@@ -38,6 +38,10 @@ Yukarıdaki kütüphanelerin kurduğu paketlerin tamamı. *Everything the librar
 pull in.* Güncellemek için / to refresh: `python scripts/python_licenses.py`.
 LGPL-3.0 paketleri (fpdf2, img2pdf) değiştirilmeden, ayrı kütüphane olarak kullanılır.
 *LGPL-3.0 packages are used unmodified as separate libraries.*
+Windows paketi bu kütüphaneleri kendi lisans dosyalarıyla (`python/Lib/site-packages/*.dist-info`)
+taşır; OpenCV'nin yalnızca video için olan FFmpeg eklentisi pakete alınmaz.
+*The Windows package ships these libraries with their own licence files; OpenCV's video-only FFmpeg
+plug-in is left out.*
 
 | Paket / Package | Sürüm | Lisans | Gelen / Pulled in by |
 |---|---|---|---|
@@ -119,7 +123,7 @@ feature is disabled.*
 | ClamAV (Cisco Talos) | GPL-2.0 | Virüs taraması | https://www.clamav.net/ |
 | pngquant / jbig2enc (isteğe bağlı) | GPL-3.0 / Apache-2.0 | OCR çıktısını küçültme | https://pngquant.org/ · https://github.com/agl/jbig2enc |
 | winget (Microsoft) | MIT | `OCR Kur (Windows).bat` içinde Tesseract kurulumu | https://github.com/microsoft/winget-cli |
-| Python | PSF-2.0 | Çalışma ortamı | https://www.python.org/ |
+| Python (Windows paketinde gömülü "embeddable" dağıtım olarak gelir) | PSF-2.0 | Çalışma ortamı | https://www.python.org/ |
 
 ## 4. Web arayüzü / Web UI
 

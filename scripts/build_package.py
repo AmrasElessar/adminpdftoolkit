@@ -1,11 +1,12 @@
 """Build the portable package (zip) from a checkout whose web UI is built.
 
     cd web && npm ci && npm run build && cd ..
-    python scripts/build_package.py            # → dist/AdminPDFToolkit-<version>.zip
+    python scripts/build_package.py   # → dist/AdminPDFToolkit-<version>-Linux-macOS.zip
 
 The zip holds the Python server with the built UI, the start scripts and the
-docs. Python packages are installed on the first start (Baslat (Windows).bat
-or scripts/start.sh). Windows scripts get CRLF line endings.
+docs; Python packages are installed on the first start (scripts/start.sh).
+It also runs on Windows with Python installed, but Windows users should take
+the self-contained package from build_windows_portable.py.
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ DOCS = (
     "LICENSE.tr.txt",
     "NOTICE.txt",
 )
-SCRIPTS = ("start.sh", "start-windows.bat", "install-ocr-windows.bat", "install-ocr-windows.ps1")
+SCRIPTS = ("start.sh", "start-windows.bat", "offer-ocr.bat", "install-ocr-windows.bat", "install-ocr-windows.ps1")
 LAUNCHERS = {
     "Baslat (Windows).bat": '@echo off\ncall "%~dp0scripts\\start-windows.bat" %*\n',
     "OCR Kur (Windows).bat": '@echo off\ncall "%~dp0scripts\\install-ocr-windows.bat"\n',
@@ -53,7 +54,7 @@ def main() -> None:
         sys.exit("Build the web UI first: cd web && npm ci && npm run build")
     top = "AdminPDFToolkit"
     DIST.mkdir(exist_ok=True)
-    out = DIST / f"AdminPDFToolkit-{ver}.zip"
+    out = DIST / f"AdminPDFToolkit-{ver}-Linux-macOS.zip"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as z:
         package = ROOT / "server" / "adminpdf"
         for path in sorted(package.rglob("*")):

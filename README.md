@@ -113,11 +113,12 @@ Public bodies, schools, healthcare units, law firms and corporate IT teams must 
 
 ## 📥 Kurulum / Installation
 
-### Windows (en kolay)
+### Windows (en kolay — kurulum gerektirmez)
 
-1. [Python 3.11+](https://www.python.org/downloads/) kurun ("Add python.exe to PATH" işaretli).
-2. [Sürümler](https://github.com/AmrasElessar/adminpdftoolkit/releases) sayfasından paketi indirip açın.
-3. **`Baslat (Windows).bat`** dosyasına çift tıklayın — ilk açılışta bileşenler kurulur, tarayıcı açılır.
+1. [Son sürüm](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) sayfasından **`AdminPDFToolkit-…-Windows.zip`** dosyasını indirin ve bir klasöre çıkarın.
+2. **`Baslat (Windows).bat`** dosyasına çift tıklayın — tarayıcı açılır.
+
+Python veya başka bir program kurmanız gerekmez; paket kendi Python'unu ve tüm kütüphaneleri içerir, internetsiz çalışır. Taranmış belgeler için OCR: **`OCR Kur (Windows).bat`** (bir kerelik).
 
 ### Docker (tüm araçlar dahil: OCR, LibreOffice, Ghostscript, ClamAV)
 
@@ -146,7 +147,7 @@ cd ../server && python -m adminpdf --open
 <details>
 <summary>🇬🇧 Installation (English)</summary>
 
-- **Windows:** install Python 3.11+, download the package from Releases, double-click `Baslat (Windows).bat`.
+- **Windows:** download **`AdminPDFToolkit-…-Windows.zip`** from the [latest release](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest), unzip, double-click `Baslat (Windows).bat`. Nothing to install — Python and all libraries are inside; works offline.
 - **Docker:** `docker compose up -d --build` — includes OCR, LibreOffice, Ghostscript and ClamAV.
 - **From source:** `pip install -e ".[dev]"` in `server/`, `npm ci && npm run build` in `web/`, then `python -m adminpdf --open`.
 - Optional tools: Tesseract (+`tur`), LibreOffice, Ghostscript, qpdf, ClamAV. Missing tools only disable their own features.

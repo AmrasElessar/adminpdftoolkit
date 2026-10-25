@@ -44,6 +44,9 @@ and in git history.
 ### Since the first preview build
 
 #### Added
+- Self-contained Windows package (`AdminPDFToolkit-<version>-Windows.zip`): embedded Python and
+  every library inside, nothing to install, works offline. Built and started on a clean Windows
+  runner by the release workflow, which publishes it with the Linux/macOS package on each `v*` tag.
 - `OCR Kur (Windows).bat` / `scripts/install-ocr-windows.ps1`: installs Tesseract with winget and
   adds the Turkish language data (per-user folder, no administrator rights needed for that step);
   the first start on Windows offers it. The app picks the per-user language folder up automatically.
@@ -62,6 +65,8 @@ and in git history.
   follows each font's fsType permission.
 
 #### Fixed
+- Windows start script: the Microsoft Store `python` stub is no longer mistaken for Python; without
+  Python it points to the self-contained Windows package.
 - OCR said "Tesseract is not installed" on Windows when Tesseract was installed in its default
   folder but not on PATH. Tesseract and Ghostscript are now found in `Program Files` (newest
   Ghostscript version first) and Homebrew folders; the error explains how to install Tesseract

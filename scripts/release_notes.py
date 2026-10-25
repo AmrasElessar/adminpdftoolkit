@@ -3,6 +3,7 @@
 python scripts/release_notes.py 2.0.0 > notes.md
 """
 
+# ruff: noqa: E501  (Markdown table rows)
 from __future__ import annotations
 
 import re
@@ -13,14 +14,18 @@ ROOT = Path(__file__).resolve().parent.parent
 
 HEADER = """## İndir ve çalıştır / Download and run
 
-**Windows:** `AdminPDFToolkit-{v}.zip` dosyasını indirip bir klasöre açın, **`Baslat (Windows).bat`**
-dosyasına çift tıklayın (Python 3.11+ gerekir; ilk açılışta gerekli paketler kurulur).
-Taranmış belgeler için OCR: **`OCR Kur (Windows).bat`**. Ayrıntılar paketteki `OKUBENI.txt` dosyasında.
+| Dosya / File | Kimin için / For |
+|---|---|
+| **`AdminPDFToolkit-{v}-Windows.zip`** | **Windows — kurulum gerektirmez.** Python ve tüm kütüphaneler içinde; internetsiz çalışır. *Self-contained, nothing to install, works offline.* |
+| `AdminPDFToolkit-{v}-Linux-macOS.zip` | Linux / macOS (Python 3.11+ gerekir) — `sh scripts/start.sh` |
+
+**Windows:** zip'i bir klasöre çıkarın, **`Baslat (Windows).bat`** dosyasına çift tıklayın. Tarayıcı
+kendiliğinden açılır. Taranmış belgeler için OCR: **`OCR Kur (Windows).bat`** (bir kerelik, internetten
+Tesseract + Türkçe dil paketini kurar). Ayrıntılar paketteki `OKUBENI.txt` dosyasında.
+
+*Windows: unzip, double-click `Baslat (Windows).bat`. OCR for scans: `OCR Kur (Windows).bat` (one-time).*
 
 **Docker:** `docker compose up -d --build` (OCR, LibreOffice, Ghostscript ve ClamAV dahil).
-
-*Windows: unzip `AdminPDFToolkit-{v}.zip`, double-click `Baslat (Windows).bat` (needs Python 3.11+).
-OCR: run `OCR Kur (Windows).bat`. Docker: `docker compose up -d --build`.*
 
 Tüm bileşenler ve lisansları / all components and licences: [THIRD_PARTY_LICENSES.md](https://github.com/AmrasElessar/adminpdftoolkit/blob/v{v}/THIRD_PARTY_LICENSES.md)
 
