@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "adminpdf"
-version = "2.0.0.dev0"
+version = "2.0.0"
 description = "Admin PDF Toolkit v2 — offline, LAN-first PDF application"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0-or-later" }

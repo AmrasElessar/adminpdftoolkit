@@ -8,7 +8,7 @@ from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-VERSION = "2.0.0-dev"
+VERSION = "2.0.0"
 
 
 class Settings(BaseSettings):

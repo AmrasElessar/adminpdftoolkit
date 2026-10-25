@@ -1,0 +1,42 @@
+Admin PDF Toolkit {version} — taşınabilir paket
+==============================================
+
+WINDOWS
+  1. Python 3.11 veya üstü kurulu olmalı: https://www.python.org/downloads/
+     (Kurulumda "Add python.exe to PATH" kutusunu işaretleyin.)
+  2. "Baslat (Windows).bat" dosyasına çift tıklayın.
+     İlk açılışta gerekli Python paketleri internetten indirilir (birkaç dakika).
+     Sonraki açılışlar hızlıdır. Tarayıcı kendiliğinden açılır: http://127.0.0.1:8000
+
+LINUX / macOS
+  sh scripts/start.sh
+
+TELEFONDAN / AĞDAN ERİŞİM
+  scripts\start-windows.bat --lan     (Windows)
+  sh scripts/start.sh --lan           (Linux/macOS)
+  Konsolda görünen eşleştirme bağlantısını telefonda açın.
+
+İSTEĞE BAĞLI ARAÇLAR (yoksa ilgili araç açık bir uyarı verir, diğerleri çalışır)
+  - OCR (taranmış PDF'i aranabilir / düzenlenebilir yapma): Tesseract
+      En kolayı: "OCR Kur (Windows).bat" dosyasına çift tıklayın. Tesseract'ı
+      ve Türkçe dil paketini internetten indirip kurar (ilk açılışta da sorulur).
+      Elle kurmak isterseniz: https://github.com/UB-Mannheim/tesseract/wiki
+      (kurulumda "Additional language data" altından "Turkish" seçin).
+      Kurduktan sonra uygulamayı kapatıp yeniden açın.
+  - Word/Excel/PowerPoint → PDF (yüksek doğruluk): LibreOffice  https://www.libreoffice.org/
+  - PDF/A: Ghostscript  https://ghostscript.com/releases/gsdnld.html
+
+YENİLER
+  - KVKK Tara ve Karart: ana ekrandaki kart veya görüntüleyicide Alt+4.
+  - Görselden PDF: yamuk/eğik fotoğrafları otomatik düzeltir.
+  - Taranmış PDF'te metin düzenleme (önce OCR önerilir).
+  - Klavye kısayolları: herhangi bir ekranda ? tuşu.
+
+Durdurmak için konsol penceresini kapatın. Yüklenen dosyalar "server\_data"
+klasöründe tutulur ve 2 saat sonra kendiliğinden silinir.
+
+LİSANS
+  Admin PDF Toolkit özgür yazılımdır (AGPL-3.0, bkz. LICENSE ve LICENSE.tr.txt).
+  Kaynak kod: https://github.com/AmrasElessar/adminpdftoolkit
+  Kullanılan tüm açık kaynak bileşenler ve lisansları: THIRD_PARTY_LICENSES.md
+  (uygulamada sağ üstteki "Lisanslar" bağlantısı).

@@ -1,0 +1,53 @@
+name: Release
+
+# Push a tag like v2.0.0 (matching VERSION in server/adminpdf/config.py) to
+# build the portable package and publish a GitHub release with it.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Check tag matches VERSION
+        run: |
+          version=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' server/adminpdf/config.py)
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != v$version"; exit 1; }
+      - name: Build web UI
+        working-directory: web
+        run: npm ci --no-audit --no-fund && npm run build
+      - name: Build package
+        run: |
+          python scripts/build_package.py
+          python scripts/release_notes.py "$GITHUB_REF_NAME" > notes.md
+          ls -l dist
+      - name: Smoke-test the package
+        run: |
+          mkdir smoke && cd smoke && unzip -q ../dist/*.zip && cd AdminPDFToolkit/server
+          python -m venv .venv && .venv/bin/pip install -q .
+          APT_DATA_DIR="$RUNNER_TEMP/apt" nohup .venv/bin/python -m adminpdf > "$RUNNER_TEMP/server.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/health && break; sleep 1; done
+          curl -sf http://127.0.0.1:8000/api/health | grep -q "\"${GITHUB_REF_NAME#v}\""
+          curl -sf -o /dev/null http://127.0.0.1:8000/
+          curl -sf -o /dev/null http://127.0.0.1:8000/licenses.txt
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.zip \
+            --title "$GITHUB_REF_NAME — Admin PDF Toolkit 2: yeniden yazıldı / ground-up rewrite" \
+            --notes-file notes.md \
+            --latest
