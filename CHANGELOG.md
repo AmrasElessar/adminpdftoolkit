@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- OCR said "Tesseract is not installed" on Windows when Tesseract was installed in its default
+  folder but not on PATH. Tesseract and Ghostscript are now found in `Program Files` (newest
+  Ghostscript version first) and Homebrew folders; the error explains how to install Tesseract
+  with the Turkish language pack.
+
 ## [2.0.0-dev] — 2026-10-25 — Ground-up rewrite
 
 v2 replaces v1 entirely; v1.13.2 is preserved in `archive/admin-pdf-toolkit-v1.13.2.zip`
