@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import os
 import sys
 import traceback
 from multiprocessing.connection import Connection
@@ -37,6 +38,11 @@ def run(
     memory_mb: int,
     files: dict[str, tuple[str, str]] | None = None,
 ) -> None:
+    if sys.platform != "win32":
+        # Own process group, so the engine can stop us and every helper
+        # process a library starts with a single killpg().
+        with contextlib.suppress(OSError):
+            os.setpgrp()
     _limit_memory(memory_mb)
     from ..core.proc import install_sigterm_handler
 

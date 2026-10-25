@@ -17,8 +17,11 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import multiprocessing as mp
+import os
 import secrets
 import shutil
+import signal
+import sys
 import threading
 import time
 import zipfile
@@ -30,6 +33,19 @@ from ..core.files import FileStore, StoredFile
 from . import worker
 
 TERMINAL = frozenset({"done", "failed", "cancelled"})
+
+
+def _stop(proc: Any, *, hard: bool = False) -> None:
+    """Stop a worker and everything it spawned (Tesseract, Ghostscript,
+    LibreOffice…). Workers lead their own process group on POSIX."""
+    if sys.platform != "win32" and proc.pid:
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(proc.pid, signal.SIGKILL if hard else signal.SIGTERM)
+            return
+    if hard:
+        proc.kill()
+    else:
+        proc.terminate()
 
 
 @dataclass
@@ -109,7 +125,7 @@ class JobEngine:
         self._cancel_requested.add(job_id)
         proc = self._procs.get(job_id)
         if proc is not None and proc.is_alive():
-            proc.terminate()
+            _stop(proc)
         return True
 
     async def wait_change(self, job: Job, seen_version: int, timeout: float) -> None:
@@ -130,7 +146,7 @@ class JobEngine:
     async def shutdown(self) -> None:
         for proc in list(self._procs.values()):
             if proc.is_alive():
-                proc.terminate()
+                _stop(proc)
         for t in list(self._tasks):
             t.cancel()
 
@@ -225,11 +241,11 @@ class JobEngine:
         try:
             outcome = await asyncio.wait_for(asyncio.shield(final), self.timeout)
         except TimeoutError:
-            proc.terminate()
+            _stop(proc)
             outcome = ("timeout", None)
         await loop.run_in_executor(None, proc.join, 5)
         if proc.is_alive():
-            proc.kill()
+            _stop(proc, hard=True)
         if job.id in self._cancel_requested:
             return ("cancelled", None)
         return outcome
