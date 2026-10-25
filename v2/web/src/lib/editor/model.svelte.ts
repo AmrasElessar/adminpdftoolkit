@@ -43,7 +43,10 @@ export type EditObject = Base &
     | { kind: "image"; rect: Rect; dataUrl: string; opacity: number }
     | { kind: "link"; rect: Rect; uri: string; targetPage: number }
     | { kind: "delete_annot"; xref: number; rect: Rect }
+    | { kind: "field"; rect: Rect; fieldType: FieldType; name: string; options: string[]; required: boolean }
   );
+
+export type FieldType = "text" | "checkbox" | "radio" | "combo" | "list" | "signature";
 
 export type Kind = EditObject["kind"];
 
@@ -63,7 +66,8 @@ export type Tool =
   | "note"
   | "image"
   | "signature"
-  | "link";
+  | "link"
+  | "field";
 
 export interface Style {
   color: string;
@@ -72,6 +76,7 @@ export interface Style {
   opacity: number;
   font: FontChoice;
   size: number;
+  fieldType: FieldType;
 }
 
 let seq = 0;
@@ -142,6 +147,7 @@ export class EditorState {
     opacity: 1,
     font: { family_id: "standard:helvetica", weight: 400, italic: false },
     size: 12,
+    fieldType: "text",
   });
   /** Pending image (signature or picture) to place with the next click/drag. */
   pendingImage = $state<string | null>(null);
@@ -279,8 +285,28 @@ export class EditorState {
         case "delete_annot":
           ops.push({ type: "delete_annot", page, xref: o.xref });
           break;
+        case "field":
+          break; // created by form_create after the edit save; see toFieldSpecs
       }
     }
     return ops;
+  }
+
+  /** New form fields, for the server `form_create` operation. */
+  toFieldSpecs(): Record<string, unknown>[] {
+    return this.objects.flatMap((o) =>
+      o.kind === "field"
+        ? [{ page: o.page, type: o.fieldType, name: o.name, rect: o.rect, options: o.options, required: o.required }]
+        : [],
+    );
+  }
+
+  /** A field name not used yet in this session, e.g. "metin_3". */
+  nextFieldName(type: FieldType): string {
+    const base = { text: "metin", checkbox: "onay", radio: "secim", combo: "acilir", list: "liste", signature: "imza" }[type];
+    const taken = new Set(this.objects.flatMap((o) => (o.kind === "field" ? [o.name] : [])));
+    let n = 1;
+    while (taken.has(`${base}_${n}`)) n++;
+    return `${base}_${n}`;
   }
 }

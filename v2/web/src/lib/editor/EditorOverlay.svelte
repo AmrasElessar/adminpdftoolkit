@@ -73,7 +73,7 @@
     | { type: "resize"; id: string; corner: number; origin: Rect };
   let gesture = $state<Gesture | null>(null);
 
-  const DRAFT_TOOLS = new Set(["whiteout", "rect", "ellipse", "line", "arrow", "highlight", "underline", "strikeout", "link", "text", "image", "signature"]);
+  const DRAFT_TOOLS = new Set(["field", "whiteout", "rect", "ellipse", "line", "arrow", "highlight", "underline", "strikeout", "link", "text", "image", "signature"]);
 
   function hitTest(p: Point): EditObject | null {
     const pdf = toPdf(p[0], p[1]);
@@ -198,6 +198,20 @@
       case "strikeout":
         await markup(tool, rect);
         break;
+      case "field": {
+        const type = s.fieldType;
+        const size = type === "checkbox" || type === "radio" ? 14 : 0;
+        const r: Rect = dragged ? rect : size ? [rect[0], rect[1] - size, rect[0] + size, rect[1]] : [rect[0], rect[1] - 20, rect[0] + 180, rect[1]];
+        let options: string[] = [];
+        if (type === "combo" || type === "list" || type === "radio") {
+          const answer = prompt(t("Seçenekler (virgülle ayırın):", "Options (comma-separated):"), t("Evet, Hayır", "Yes, No"));
+          if (answer === null) return;
+          options = answer.split(",").map((x) => x.trim()).filter(Boolean).slice(0, 500);
+          if (!options.length) return;
+        }
+        editor.add({ id, page, kind: "field", rect: r, fieldType: type, name: editor.nextFieldName(type), options, required: false });
+        break;
+      }
     }
   }
 
@@ -390,6 +404,9 @@
             <line x1={b.left} x2={b.left + b.width} y1={y} y2={y} stroke={o.color} stroke-width={Math.max(1, scale)} />
           {/if}
         {/each}
+      {:else if o.kind === "field"}
+        {@const b = box(o.rect)}
+        <rect x={b.left} y={b.top} width={b.width} height={b.height} fill="rgb(47 84 150 / 0.10)" stroke="#2f5496" stroke-width="1.2" />
       {:else if o.kind === "delete_annot"}
         {@const b = box(o.rect)}
         <rect x={b.left} y={b.top} width={b.width} height={b.height} fill="rgb(220 0 0 / 0.12)" stroke="#d22" stroke-dasharray="3 3" />
@@ -471,6 +488,18 @@
           >
         {/if}
       </div>
+    {:else if o.kind === "field"}
+      {@const b = box(o.rect)}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <span
+        class="field-label"
+        style:left={`${b.left}px`}
+        style:top={`${Math.max(0, b.top - 16)}px`}
+        ondblclick={() => {
+          const name = prompt(t("Alan adı:", "Field name:"), o.name);
+          if (name && name.trim() && !/[.\x00-\x1f]/.test(name)) editor.update(o.id, { ...o, name: name.trim().slice(0, 128) });
+        }}>{o.fieldType} · {o.name}</span
+      >
     {:else if o.kind === "image"}
       {@const b = box(o.rect)}
       <img
@@ -585,6 +614,16 @@
   .content {
     display: block;
     min-height: 1em;
+  }
+  .field-label {
+    position: absolute;
+    padding: 0 4px;
+    border-radius: 3px;
+    background: #2f5496;
+    color: #fff;
+    font: 600 10px/16px system-ui, sans-serif;
+    white-space: nowrap;
+    cursor: text;
   }
   .imgobj {
     position: absolute;

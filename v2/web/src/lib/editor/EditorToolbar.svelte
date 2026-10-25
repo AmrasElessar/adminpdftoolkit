@@ -26,7 +26,17 @@
     { id: "image", icon: "🖼", tr: "Görsel", en: "Image" },
     { id: "signature", icon: "✒", tr: "İmza", en: "Signature" },
     { id: "link", icon: "🔗", tr: "Bağlantı", en: "Link" },
+    { id: "field", icon: "☐", tr: "Form alanı", en: "Form field", key: "F" },
   ];
+
+  const FIELD_TYPES = [
+    ["text", "Metin kutusu", "Text box"],
+    ["checkbox", "Onay kutusu", "Checkbox"],
+    ["radio", "Seçenek düğmeleri", "Radio buttons"],
+    ["combo", "Açılır liste", "Dropdown"],
+    ["list", "Liste kutusu", "List box"],
+    ["signature", "İmza alanı", "Signature field"],
+  ] as const;
 
   const WEIGHTS = [
     [100, "Thin"],
@@ -108,6 +118,11 @@
   </div>
 
   <div class="style">
+    {#if editor.tool === "field"}
+      <select aria-label={t("Alan türü", "Field type")} bind:value={editor.style.fieldType}>
+        {#each FIELD_TYPES as [id, tr, en] (id)}<option value={id}>{t(tr, en)}</option>{/each}
+      </select>
+    {/if}
     {#if textual}
       <select
         aria-label={t("Font", "Font")}

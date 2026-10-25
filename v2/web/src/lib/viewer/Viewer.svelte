@@ -7,6 +7,7 @@
   import { SpanCache } from "../editor/spans";
   import { t } from "../i18n.svelte";
   import type { Entry } from "../workspace.svelte";
+  import Bookmarks from "./Bookmarks.svelte";
   import Organizer from "./Organizer.svelte";
   import PageView from "./PageView.svelte";
   import { openDocument, PasswordNeeded, type PDFDocumentProxy, type PDFPageProxy } from "./pdf";
@@ -24,7 +25,8 @@
     entry: Entry;
     initialMode?: Mode;
     onclose: () => void;
-    onresult: (file: StoredFile, mode: Mode) => void;
+    /** A new version was saved; `password` still opens it (encryption is kept). */
+    onresult: (file: StoredFile, mode: Mode, password: string) => void;
   } = $props();
 
   const file = untrack(() => entry.file!);
@@ -38,6 +40,7 @@
   let current = $state(1);
   let scroller: HTMLDivElement | undefined = $state();
   let busy = $state("");
+  let sidebar = $state<"pages" | "bookmarks">("pages");
   let notice = $state("");
 
   const editor = new EditorState();
@@ -141,7 +144,7 @@
     busy = t("Sayfalar uygulanıyor…", "Applying pages…");
     try {
       const job = await runAndWait("organize", [{ id: file.id, password: entry.password || undefined }], { plan });
-      if (job.result) onresult(job.result, "organize");
+      if (job.result) onresult(job.result, "organize", entry.password);
     } catch (e) {
       error = e instanceof JobFailed && e.job.error ? t(e.job.error) : t("Kaydedilemedi.", "Could not save.");
     } finally {
@@ -154,13 +157,22 @@
     busy = t("Düzenlemeler kaydediliyor…", "Saving edits…");
     error = "";
     try {
-      const job = await runAndWait("edit", [{ id: file.id, password: entry.password || undefined }], {
-        operations: editor.toOperations(),
-      });
-      const failed = (job.data?.failed ?? []) as { index: number; error_tr?: string; error_en?: string }[];
-      if (failed.length) notice = t(`${failed.length} düzenleme uygulanamadı.`, `${failed.length} edits could not be applied.`);
+      const operations = editor.toOperations();
+      const fields = editor.toFieldSpecs();
+      let current: StoredFile = file;
+      const password = entry.password;
+      if (operations.length) {
+        const job = await runAndWait("edit", [{ id: current.id, password: password || undefined }], { operations });
+        const failed = (job.data?.failed ?? []) as { index: number }[];
+        if (failed.length) notice = t(`${failed.length} düzenleme uygulanamadı.`, `${failed.length} edits could not be applied.`);
+        if (job.result) current = job.result; // saving keeps the encryption, so the password still applies
+      }
+      if (fields.length) {
+        const job = await runAndWait("form_create", [{ id: current.id, password: password || undefined }], { fields });
+        if (job.result) current = job.result;
+      }
       editor.clear();
-      if (job.result) onresult(job.result, "edit");
+      if (current.id !== file.id) onresult(current, "edit", password);
     } catch (e) {
       error = e instanceof JobFailed && e.job.error ? t(e.job.error) : t("Kaydedilemedi.", "Could not save.");
     } finally {
@@ -188,7 +200,7 @@
     return () => window.removeEventListener("beforeunload", guard);
   });
 
-  const HOTKEYS: Record<string, Tool> = { v: "select", e: "replace", t: "text", h: "highlight", n: "note", d: "ink", r: "rect", l: "line" };
+  const HOTKEYS: Record<string, Tool> = { v: "select", e: "replace", t: "text", h: "highlight", n: "note", d: "ink", r: "rect", l: "line", f: "field" };
 
   function keydown(e: KeyboardEvent): void {
     const target = e.target as HTMLElement;
@@ -305,16 +317,29 @@
     </div>
   {:else}
     <div class="body">
-      {#if pages.length > 1}
-        <nav class="thumbs" aria-label={t("Sayfalar", "Pages")}>
+      <nav class="thumbs" aria-label={t("Kenar çubuğu", "Sidebar")}>
+        <div class="side-tabs" role="tablist">
+          <button role="tab" aria-selected={sidebar === "pages"} class:on={sidebar === "pages"} onclick={() => (sidebar = "pages")}>{t("Sayfalar", "Pages")}</button>
+          <button role="tab" aria-selected={sidebar === "bookmarks"} class:on={sidebar === "bookmarks"} onclick={() => (sidebar = "bookmarks")}>{t("Yer imleri", "Bookmarks")}</button>
+        </div>
+        {#if sidebar === "bookmarks" && doc}
+          <Bookmarks
+            fileId={file.id}
+            password={entry.password}
+            pageCount={doc.numPages}
+            {current}
+            ongo={goTo}
+            onsaved={(f) => onresult(f, mode, entry.password)}
+          />
+        {:else}
           {#each pages as p (p.pageNumber)}
             <button class="thumb" class:on={current === p.pageNumber} onclick={() => goTo(p.pageNumber)} aria-label={`${t("Sayfa", "Page")} ${p.pageNumber}`}>
               <PageView page={p} scale={110 / p.getViewport({ scale: 1 }).width} textLayer={false} />
               <span>{p.pageNumber}</span>
             </button>
           {/each}
-        </nav>
-      {/if}
+        {/if}
+      </nav>
       <div class="pages" bind:this={scroller} onscroll={onScroll} class:editing={mode === "edit"}>
         {#each pages as p (p.pageNumber)}
           <PageView page={p} {scale} textLayer={mode === "view"} hits={pageHits(p.pageNumber)} current={currentItem(p.pageNumber)}>
@@ -414,8 +439,28 @@
     display: flex;
     gap: 10px;
   }
+  .side-tabs {
+    display: flex;
+    gap: 2px;
+    position: sticky;
+    top: -6px;
+    z-index: 1;
+    background: var(--surface);
+    padding-bottom: 4px;
+  }
+  .side-tabs button {
+    flex: 1;
+    min-height: 28px;
+    padding: 2px 4px;
+    font-size: 0.75rem;
+    border-color: transparent;
+  }
+  .side-tabs button.on {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
   .thumbs {
-    width: 150px;
+    width: 190px;
     flex: none;
     overflow-y: auto;
     display: grid;

@@ -116,9 +116,9 @@
                 entry={viewing.entry}
                 initialMode={viewing.mode}
                 onclose={() => (viewing = null)}
-                onresult={(file, mode) => {
+                onresult={(file, mode, password) => {
                   for (const e of workspace.entries) e.selected = false;
-                  openViewer(workspace.adopt(file), mode);
+                  openViewer(workspace.adopt(file, true, password), mode);
                 }}
               />
             {/await}
