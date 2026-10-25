@@ -1,0 +1,41 @@
+Admin PDF Toolkit {version} — Windows paketi (kurulum gerektirmez)
+==================================================================
+
+BAŞLATMA
+  1. Zip dosyasını bir klasöre çıkarın (ör. Belgeler\AdminPDFToolkit).
+     Zip'in içinden doğrudan çalıştırmayın.
+  2. "Baslat (Windows).bat" dosyasına çift tıklayın.
+     Tarayıcı kendiliğinden açılır: http://127.0.0.1:8000
+  Python veya başka bir program kurmanız GEREKMEZ; her şey paketin içindedir
+  ve internet bağlantısı olmadan çalışır.
+
+TELEFONDAN / AĞDAKİ DİĞER BİLGİSAYARLARDAN ERİŞİM
+  "Baslat - Ag Paylasimi (Windows).bat" ile başlatın ve pencerede görünen
+  eşleştirme bağlantısını telefonda açın. Windows güvenlik duvarı izin
+  isterse "Özel ağlar" için izin verin.
+
+TARANMIŞ BELGELER İÇİN OCR (isteğe bağlı)
+  "OCR Kur (Windows).bat" dosyasına çift tıklayın. Tesseract'ı ve Türkçe dil
+  paketini internetten indirip kurar (bir kerelik). Kurduktan sonra uygulamayı
+  kapatıp yeniden açın.
+  Elle kurmak isterseniz: https://github.com/UB-Mannheim/tesseract/wiki
+  (kurulumda "Additional language data" altından "Turkish" seçin).
+
+DİĞER İSTEĞE BAĞLI ARAÇLAR (yoksa ilgili araç açık bir uyarı verir)
+  - Word/Excel/PowerPoint → PDF (yüksek doğruluk): LibreOffice  https://www.libreoffice.org/
+  - PDF/A: Ghostscript  https://ghostscript.com/releases/gsdnld.html
+
+KULLANIM İPUÇLARI
+  - KVKK Tara ve Karart: ana ekrandaki kart veya görüntüleyicide Alt+4.
+  - Görselden PDF: yamuk/eğik fotoğrafları otomatik düzeltir.
+  - Taranmış PDF'te metin düzenleme (önce OCR önerilir).
+  - Klavye kısayolları: herhangi bir ekranda ? tuşu.
+
+Durdurmak için konsol penceresini kapatın. Yüklenen dosyalar "data" klasöründe
+tutulur ve 2 saat sonra kendiliğinden silinir.
+
+LİSANS
+  Admin PDF Toolkit özgür yazılımdır (AGPL-3.0, bkz. LICENSE ve LICENSE.tr.txt).
+  Kaynak kod: https://github.com/AmrasElessar/adminpdftoolkit
+  Pakete dahil Python (PSF lisansı) ve tüm kütüphaneler ile lisansları:
+  THIRD_PARTY_LICENSES.md (uygulamada sağ üstteki "Lisanslar" bağlantısı).

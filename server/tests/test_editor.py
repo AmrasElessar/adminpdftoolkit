@@ -801,3 +801,30 @@ def test_annotation_rects_on_rotated_page(api: Api) -> None:
     listing = api.run("annotations", [job["result"]["id"]], {})["data"]["pages"][0]
     assert listing["rotation"] == 90
     assert listing["annotations"][0]["rect"] == pytest.approx([99.5, 199.5, 150.5, 260.5], abs=1)
+
+
+@needs_dejavu
+def test_system_font_files_stay_on_this_computer(settings: Any) -> None:
+    """LAN devices get bundled font files but not the server's installed fonts."""
+    from fastapi.testclient import TestClient
+
+    from adminpdf.app import create_app
+
+    settings.trusted_networks = "10.0.0.0/8"
+    with TestClient(create_app(settings), base_url="http://localhost", client=("10.1.2.3", 5000)) as lan:
+        fams = {f["id"]: f for f in lan.get("/api/fonts").json()}
+        system = fams["system:dejavu-sans"]["styles"][0]["id"]
+        bundled = fams["bundled:dejavu-sans"]["styles"][0]["id"]
+        assert lan.get(f"/api/fonts/{system}/file").status_code == 403
+        assert lan.get(f"/api/fonts/{bundled}/file").status_code == 200
+
+
+def test_microsoft_fonts_fall_back_to_bundled_liberation(tmp_path: Path) -> None:
+    """A device without Arial/Times/Courier New still edits with metric-compatible free fonts."""
+    cat = fonts.build_catalogue(system_dirs=[tmp_path])  # empty "device"
+    for name, family in (
+        ("ABCDEF+ArialMT", "bundled:liberation-sans"),
+        ("TimesNewRomanPS-BoldMT", "bundled:liberation-serif"),
+        ("CourierNewPSMT", "bundled:liberation-mono"),
+    ):
+        assert fonts.match_pdf_font(name, catalogue=cat).family_id == family, name

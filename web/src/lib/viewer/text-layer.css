@@ -1,4 +1,6 @@
-/* Subset of pdf.js web/pdf_viewer.css needed for selectable text layers. */
+/* Subset of pdf.js web/pdf_viewer.css needed for selectable text layers.
+ * Copyright Mozilla Foundation and pdf.js contributors — Apache License 2.0
+ * (https://github.com/mozilla/pdf.js/blob/master/LICENSE). */
 .textLayer {
   position: absolute;
   text-align: initial;

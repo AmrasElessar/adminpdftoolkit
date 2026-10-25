@@ -66,7 +66,10 @@ class FontCatalogue {
       );
     }
     const fam = this.family(choice.family_id);
-    return `'${name}', ${fam?.serif ? "serif" : fam?.monospace ? "monospace" : "sans-serif"}`;
+    // LAN devices don't get the server's system font files: fall back to the
+    // same family installed on the device itself.
+    const own = fam ? `'${fam.family}', ` : "";
+    return `'${name}', ${own}${fam?.serif ? "serif" : fam?.monospace ? "monospace" : "sans-serif"}`;
   }
 }
 

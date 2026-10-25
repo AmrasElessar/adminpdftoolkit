@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.0.0-dev] — 2026-10-25 — Ground-up rewrite
+## [2.0.0] — 2026-10-25 — Ground-up rewrite
 
 v2 replaces v1 entirely; v1.13.2 is preserved in `archive/admin-pdf-toolkit-v1.13.2.zip`
 and in git history.
@@ -40,6 +40,37 @@ and in git history.
   formula injection; format-string and zip-bomb denial of service; blocking work on the event loop;
   unenforced upload limits; CSRF outside admin endpoints; service worker scope; editor replace
   wiping nearby images and table lines.
+
+### Since the first preview build
+
+#### Added
+- Self-contained Windows package (`AdminPDFToolkit-<version>-Windows.zip`): embedded Python and
+  every library inside, nothing to install, works offline. Built and started on a clean Windows
+  runner by the release workflow, which publishes it with the Linux/macOS package on each `v*` tag.
+- `OCR Kur (Windows).bat` / `scripts/install-ocr-windows.ps1`: installs Tesseract with winget and
+  adds the Turkish language data (per-user folder, no administrator rights needed for that step);
+  the first start on Windows offers it. The app picks the per-user language folder up automatically.
+- Full attribution page: every direct and transitive library, external program, font, dataset and
+  published algorithm with its licence (`THIRD_PARTY_LICENSES.md`, generated Python table via
+  `scripts/python_licenses.py`). The UI serves it at `/licenses.txt` together with the full licence
+  texts of all bundled npm packages, collected at build time; header links to the source code
+  (AGPL-3.0 §13) and the licences.
+
+#### Changed
+- Liberation Sans/Serif/Mono (SIL OFL 1.1) now ship with the app, metric-compatible with Arial,
+  Times New Roman and Courier New, so edits keep their layout on devices without Microsoft fonts.
+  All other fonts are taken from the device.
+- Fonts installed on the server computer (e.g. Microsoft fonts) are only sent to a browser on the
+  same computer; LAN devices preview with their own fonts. Embedding into PDFs is unchanged and
+  follows each font's fsType permission.
+
+#### Fixed
+- Windows start script: the Microsoft Store `python` stub is no longer mistaken for Python; without
+  Python it points to the self-contained Windows package.
+- OCR said "Tesseract is not installed" on Windows when Tesseract was installed in its default
+  folder but not on PATH. Tesseract and Ghostscript are now found in `Program Files` (newest
+  Ghostscript version first) and Homebrew folders; the error explains how to install Tesseract
+  with the Turkish language pack.
 
 ## [1.13.2] — 2026-05-16 — Polish + CI fix + test coverage
 
@@ -850,7 +881,8 @@ This release elevates the PDF analysis primitives we built for the editor's
 - PDF structural scan flags `/JavaScript`, `/Launch`, `/EmbeddedFile`,
   `/RichMedia`, `/SubmitForm`, `/GoToR`, `/URI`, `/XFA`.
 
-[Unreleased]: https://github.com/orhanenginokay/pdfconverter/compare/v1.10.0...HEAD
+[Unreleased]: https://github.com/AmrasElessar/adminpdftoolkit/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/AmrasElessar/adminpdftoolkit/compare/v1.13.2...v2.0.0
 [1.10.0]: https://github.com/orhanenginokay/pdfconverter/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/orhanenginokay/pdfconverter/compare/v1.9.0...v1.9.1
 [1.9.0]: https://github.com/orhanenginokay/pdfconverter/compare/v1.8.0...v1.9.0

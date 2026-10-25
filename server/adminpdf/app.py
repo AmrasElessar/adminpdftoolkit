@@ -31,6 +31,7 @@ _MEDIA_TYPES = {
     ".svg": "image/svg+xml",
     ".bcmap": "application/octet-stream",
     ".pfb": "application/octet-stream",
+    ".txt": "text/plain; charset=utf-8",
 }
 
 
