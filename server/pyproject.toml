@@ -25,6 +25,10 @@ dependencies = [
     "pyhanko-certvalidator>=0.26,<1.0",
     "cryptography>=42",
     "fonttools>=4.40,<5.0",
+    # Apache-2.0: document detection, perspective and skew correction.
+    "opencv-python-headless>=4.8",
+    "numpy>=1.26",
+    "Pillow>=10.0",
 ]
 
 [project.optional-dependencies]

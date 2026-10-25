@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fileUrl } from "../lib/api";
   import { formatBytes, t } from "../lib/i18n.svelte";
   import { workspace } from "../lib/workspace.svelte";
 
@@ -75,7 +76,11 @@
             disabled={e.status !== "ready"}
             bind:checked={e.selected}
           />
-          <span class="badge" data-kind={e.file?.kind ?? "other"}>{icon[e.file?.kind ?? ""] ?? "…"}</span>
+          {#if e.file?.kind === "image"}
+            <img class="thumb" src={fileUrl(e.file.id, true)} alt="" loading="lazy" />
+          {:else}
+            <span class="badge" data-kind={e.file?.kind ?? "other"}>{icon[e.file?.kind ?? ""] ?? "…"}</span>
+          {/if}
           <div class="info">
             <span class="name" title={e.name}>{e.name}</span>
             <span class="meta">
@@ -193,6 +198,14 @@
     border-radius: 6px;
     background: var(--accent-soft);
     color: var(--accent);
+  }
+  .thumb {
+    width: 34px;
+    height: 34px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #fff;
   }
   .badge[data-kind="image"] {
     background: var(--ok-soft);

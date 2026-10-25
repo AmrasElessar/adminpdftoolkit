@@ -3,8 +3,9 @@ OCR arrive in M5."""
 
 from __future__ import annotations
 
+import io
 import zipfile
-from typing import Literal
+from typing import Any, Literal
 
 import pymupdf
 
@@ -20,7 +21,7 @@ PAGE_SIZES = {"a4": (595.28, 841.89), "letter": (612, 792), "a3": (841.89, 1190.
 
 class ImagesParams(Params):
     page_size: Literal["fit", "a4", "letter", "a3"] = Field(
-        "fit",
+        "a4",
         tr="Sayfa boyutu",
         en="Page size",
         ui={
@@ -32,7 +33,73 @@ class ImagesParams(Params):
             }
         },
     )
-    margin: float = Field(0, tr="Kenar boşluğu (pt)", en="Margin (pt)", ge=0, le=144)
+    margin: float = Field(18, tr="Kenar boşluğu (pt)", en="Margin (pt)", ge=0, le=144)
+    auto_orient: bool = Field(
+        True, tr="Telefon fotoğrafı yönünü düzelt (EXIF)", en="Fix phone photo orientation (EXIF)"
+    )
+    crop_document: bool = Field(
+        False,
+        tr="Kâğıdı bul, kırp ve perspektifi düzelt",
+        en="Find the sheet, crop and flatten perspective",
+        help_tr="Masada çekilmiş belge fotoğrafları için.",
+        help_en="For photos of documents lying on a desk.",
+    )
+    deskew: bool = Field(True, tr="Eğikliği otomatik düzelt", en="Straighten automatically")
+    enhance: Literal["none", "auto", "gray", "bw"] = Field(
+        "none",
+        tr="Görüntü iyileştirme",
+        en="Enhancement",
+        ui={
+            "options": {
+                "none": {"tr": "Yok (özgün)", "en": "None (original)"},
+                "auto": {"tr": "Gölge ve arka planı temizle", "en": "Remove shadows / clean background"},
+                "gray": {"tr": "Gri tonlama", "en": "Grayscale"},
+                "bw": {"tr": "Siyah-beyaz (tarama)", "en": "Black & white (scan)"},
+            }
+        },
+    )
+    quality: int = Field(85, tr="JPEG kalitesi", en="JPEG quality", ge=30, le=100)
+
+
+def _prepare(path: Any, params: ImagesParams) -> tuple[list[tuple[bytes, int, int]], list[float]]:
+    """Clean up every frame of one image file; returns encoded frames
+    (bytes, width, height) and the skew angles that were corrected."""
+    from PIL import Image, ImageSequence, UnidentifiedImageError
+
+    from ..core import imaging
+
+    frames: list[tuple[bytes, int, int]] = []
+    angles: list[float] = []
+    try:
+        src = Image.open(path)
+    except (UnidentifiedImageError, OSError) as e:
+        raise UserError("Görsel okunamadı.", "Cannot read the image.") from e
+    with src:
+        for frame in ImageSequence.Iterator(src):
+            img = frame.copy()
+            if img.width * img.height > MAX_RENDER_PIXELS:
+                raise UserError("Görsel çok büyük (40 MP sınırı).", "The image is too large (40 MP limit).")
+            if params.auto_orient:
+                img = imaging.auto_orient(img)
+            if params.crop_document:
+                corners = imaging.find_document(img)
+                if corners is not None:
+                    img = imaging.warp_document(img, corners)
+            if params.deskew:
+                angle = imaging.detect_skew(img)
+                if abs(angle) >= 0.2:
+                    img = imaging.rotate(img, angle)
+                    angles.append(angle)
+            img = imaging.enhance(img, params.enhance)
+            buf = io.BytesIO()
+            if img.mode == "1":
+                img.save(buf, "PNG", optimize=True)  # bilevel compresses best losslessly
+            elif img.mode in ("RGBA", "LA", "P") and params.enhance == "none" and not params.deskew:
+                img.save(buf, "PNG")
+            else:
+                img.convert("L" if img.mode == "L" else "RGB").save(buf, "JPEG", quality=params.quality, optimize=True)
+            frames.append((buf.getvalue(), img.width, img.height))
+    return frames, angles
 
 
 @register
@@ -40,38 +107,44 @@ class ImagesToPdf(Operation):
     name = "images_to_pdf"
     category = "convert"
     title_tr, title_en = "Görselden PDF", "Images to PDF"
-    description_tr = "JPG, PNG, TIFF, WebP… görsellerini tek PDF'te birleştirir."
-    description_en = "Combine JPG, PNG, TIFF, WebP… images into one PDF."
+    description_tr = (
+        "JPG, PNG, TIFF, WebP… görsellerini sırasıyla tek PDF yapar; yönü ve eğikliği düzeltir, "
+        "fotoğraftaki belgeyi kırpıp düzleştirir, gölgeyi temizler."
+    )
+    description_en = (
+        "Combine JPG, PNG, TIFF, WebP… images in order into one PDF; fixes orientation and tilt, "
+        "crops and flattens photographed documents, removes shadows."
+    )
     accepts = frozenset({"image"})
     max_inputs = 500
     Params = ImagesParams
 
     def run(self, ctx: Context, params: ImagesParams) -> None:
         out = pymupdf.open()
+        straightened: list[dict[str, Any]] = []
         try:
             for k, inp in enumerate(ctx.inputs):
-                try:
-                    img = pymupdf.open(inp.path)
-                except Exception as e:
-                    raise UserError(f"Görsel okunamadı: {inp.name}", f"Cannot read image: {inp.name}") from e
-                with img:
-                    pdf_bytes = img.convert_to_pdf()
-                with pymupdf.open("pdf", pdf_bytes) as frames:  # multi-page TIFF → many
-                    for frame in frames:
-                        w, h = frame.rect.width, frame.rect.height
-                        if params.page_size == "fit":
-                            pw, ph = w + 2 * params.margin, h + 2 * params.margin
-                        else:
-                            pw, ph = PAGE_SIZES[params.page_size]
-                            if w > h:
-                                pw, ph = ph, pw
-                        page = out.new_page(width=pw, height=ph)
-                        box = pymupdf.Rect(params.margin, params.margin, pw - params.margin, ph - params.margin)
-                        page.show_pdf_page(box, frames, frame.number)
+                frames, angles = _prepare(inp.path, params)
+                if angles:
+                    straightened.append({"file": inp.name, "degrees": angles})
+                for data, w_px, h_px in frames:
+                    # 150 DPI nominal size for "fit"; scaled to the page otherwise.
+                    w, h = w_px * 72 / 150, h_px * 72 / 150
+                    if params.page_size == "fit":
+                        pw, ph = w + 2 * params.margin, h + 2 * params.margin
+                    else:
+                        pw, ph = PAGE_SIZES[params.page_size]
+                        if w > h:
+                            pw, ph = ph, pw
+                    page = out.new_page(width=pw, height=ph)
+                    box = pymupdf.Rect(params.margin, params.margin, pw - params.margin, ph - params.margin)
+                    page.insert_image(box, stream=data, keep_proportion=True)
                 ctx.progress((k + 1) / len(ctx.inputs), inp.name)
+            pages = out.page_count
             save_pdf(out, ctx.output(f"{ctx.inputs[0].stem}.pdf"))
         finally:
             out.close()
+        ctx.data = {"pages": pages, "straightened": straightened}
 
 
 class ToImagesParams(Params):
