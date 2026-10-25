@@ -44,7 +44,7 @@ WORKDIR /app
 COPY server/pyproject.toml ./
 COPY server/adminpdf ./adminpdf
 COPY --from=web /server/adminpdf/web_dist ./adminpdf/web_dist
-RUN pip install . ocrmypdf pikepdf pyhanko \
+RUN pip install . \
     && python -c "import adminpdf.app"
 
 USER app
