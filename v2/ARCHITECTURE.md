@@ -81,14 +81,21 @@ v1'de kontroller her uca tek tek ekleniyordu ve bazı uçlarda eksik kaldı. v2'
 | POST | `/api/jobs/{id}/cancel` | İptal |
 | GET | `/api/jobs/{id}/result` | Sonuç dosyası |
 
-## Yol haritası
+## Durum
 
-| Aşama | İçerik |
-|---|---|
-| **M1 — Temel** (bu adım) | Çekirdek, güvenlik, iş motoru, sayfa araçları (birleştir, böl, döndür, sil, sırala, çıkar), sıkıştır, şifrele/çöz, filigran, sayfa numarası; Svelte iskeleti |
-| M2 — Görüntüleyici | pdf.js görüntüleyici, sayfa küçük resimleri, sürükle-bırak sayfa düzeni, arama, yazdırma, şifre sorma |
-| M3 — Editör | Belge modeli + komut geçmişi (geri al/yinele), işaretleme, metin/şekil/görsel, taşı/boyutlandır, metin değiştirme |
-| M4 — Formlar & imza | Form doldurma/oluşturma, pyHanko ile PAdES dijital imza ve doğrulama |
-| M5 — Dönüştürme & OCR | OCRmyPDF/Tesseract (aranabilir PDF), PDF↔Word/Excel/Görsel, Office→PDF |
-| M6 — Profesyonel | Karartma (redaction) + KVKK maskeleme, karşılaştırma, PDF/A, yer imi/bağlantı düzenleme, güvenlik taraması (ClamAV) |
-| M7 — Eklentiler & geçiş | Çağrı kaydı / dağıtım eklentisi, paketleme (portable, installer, Docker), v1'in kaldırılması |
+| Aşama | Durum | İçerik |
+|---|---|---|
+| M1 — Temel | ✅ | Çekirdek, güvenlik ara katmanı, süreç izole iş motoru, sayfa araçları, sıkıştırma, şifreleme, damga |
+| M2 — Görüntüleyici | ✅ | pdf.js görüntüleyici, küçük resimler, sürükle-bırak sayfa düzeni, Türkçe duyarlı arama, yazdırma, şifre sorma, yer imi paneli |
+| M3 — Editör | ✅ | Belge modeli + geri al/yinele; metin değiştirme (font eşleştirme, sistem fontları), metin/şekil/görsel/imza/bağlantı, işaretleme, not, taşı/boyutlandır |
+| M4 — Formlar & imza | ✅ | Form listele/doldur/düzleştir/oluştur (editörde alan aracı), pyHanko PAdES imza, doğrulama, kendinden imzalı sertifika |
+| M5 — Dönüştürme & OCR | ✅ | OCRmyPDF/Tesseract (tr+en), PDF↔Word/Excel/Görsel, Office→PDF (LibreOffice / dahili), metin ve görsel çıkarma |
+| M6 — Profesyonel | ✅ | KVKK karartma (TCKN/IBAN/telefon/e-posta/kart doğrulamalı), karşılaştırma raporu, PDF/A, meta veri, yer imleri, ekler, güvenlik taraması + temizleme, onarım |
+| M7 — Eklentiler & dağıtım | ✅ / ⏳ | Çağrı kaydı eklentisi ✅, Docker + CI + PWA + başlatma betikleri ✅; Windows kurulum paketi ve v1'in kaldırılması ⏳ |
+
+### Bilinen sınırlamalar
+
+- Zaman damgası (TSA) ve iptal (OCSP/CRL) kontrolü yok — uygulama çevrimdışı çalışacak şekilde tasarlandı.
+- PDF/A çıktısı biçimsel olarak doğrulanmaz (veraPDF paketlenmedi); Ghostscript bazı fontlarda kopyalanan metni bozabilir, araç bunu raporlar.
+- Dahili Office motoru basit belgeler içindir; PowerPoint ve yüksek doğruluk için LibreOffice gerekir.
+- `scripts/fetch_fonts.py` font kilit dosyasının SHA-256 değerleri sürüm öncesi doldurulmalı.

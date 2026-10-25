@@ -13,6 +13,10 @@
 
 </div>
 
+> **🚀 v2 geliştiriliyor / v2 in progress** — Sıfırdan yeniden tasarlanan, Acrobat seviyesini hedefleyen sürüm
+> [`v2/`](v2/README.md) klasöründe: PDF editörü, OCR, dijital imza, formlar, KVKK karartma, karşılaştırma, PDF/A ve daha fazlası.
+> *A ground-up rewrite targeting Acrobat-level features lives in [`v2/`](v2/README.md).*
+
 ## 🎬 Demo
 
 <div align="center">
