@@ -7,7 +7,7 @@
     ops,
     onpick,
     onopen,
-  }: { ops: OpInfo[]; onpick: (op: OpInfo) => void; onopen: (mode: "view" | "organize" | "edit") => void } = $props();
+  }: { ops: OpInfo[]; onpick: (op: OpInfo) => void; onopen: (mode: "view" | "organize" | "edit" | "kvkk") => void } = $props();
 
   const CATEGORIES: { id: string; icon: string; label: Text }[] = [
     { id: "pages", icon: "📑", label: { tr: "Sayfalar", en: "Pages" } },
@@ -31,6 +31,7 @@
   const FEATURED = [
     { mode: "edit" as const, icon: "✎", tr: "PDF Düzenle", en: "Edit PDF", dtr: "Metni değiştirin; metin, görsel, şekil, imza, not ve form alanı ekleyin.", den: "Change text; add text, images, shapes, signatures, notes and form fields." },
     { mode: "organize" as const, icon: "▦", tr: "Sayfaları Düzenle", en: "Organize Pages", dtr: "Küçük resimleri sürükleyerek sıralayın, döndürün, silin, boş sayfa ekleyin.", den: "Drag thumbnails to reorder, rotate, delete or insert blank pages." },
+    { mode: "kvkk" as const, icon: "⬛", tr: "KVKK Tara ve Karart", en: "Scan & Redact Personal Data", dtr: "Belgeyi otomatik tarar; bulunan kişisel verilere karartma, bulanıklaştırma veya maskeleme uygular.", den: "Scans automatically and lets you black out, blur or mask each personal-data finding." },
     { mode: "view" as const, icon: "👁", tr: "Görüntüle ve Ara", en: "View & Search", dtr: "PDF'i okuyun, içinde arayın, yer imlerini düzenleyin, yazdırın.", den: "Read, search inside, edit bookmarks and print the PDF." },
   ];
 

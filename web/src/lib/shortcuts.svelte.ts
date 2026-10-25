@@ -24,6 +24,7 @@ export const SHORTCUTS: { title: Text; items: Shortcut[] }[] = [
       { keys: ["Alt", "1"], label: { tr: "Görüntüle modu", en: "View mode" } },
       { keys: ["Alt", "2"], label: { tr: "Sayfalar modu", en: "Pages mode" } },
       { keys: ["Alt", "3"], label: { tr: "Düzenle modu", en: "Edit mode" } },
+      { keys: ["Alt", "4"], label: { tr: "KVKK modu (tara ve uygula)", en: "Personal-data mode (scan & apply)" } },
       { keys: ["Ctrl", "F"], label: { tr: "Belgede ara", en: "Find in document" } },
       { keys: ["Enter"], label: { tr: "Sonraki eşleşme (aramada)", en: "Next match (in search)" } },
       { keys: ["Ctrl", "P"], label: { tr: "Yazdır", en: "Print" } },

@@ -8,6 +8,9 @@
   import { SpanCache } from "../editor/spans";
   import { t } from "../i18n.svelte";
   import type { Entry } from "../workspace.svelte";
+  import KvkkOverlay from "../kvkk/KvkkOverlay.svelte";
+  import KvkkPanel from "../kvkk/KvkkPanel.svelte";
+  import { KvkkState } from "../kvkk/state.svelte";
   import Bookmarks from "./Bookmarks.svelte";
   import Organizer from "./Organizer.svelte";
   import PageView from "./PageView.svelte";
@@ -15,7 +18,7 @@
   import { printDocument } from "./print";
   import { type Hit, Searcher } from "./search";
 
-  type Mode = "view" | "organize" | "edit";
+  type Mode = "view" | "organize" | "edit" | "kvkk";
 
   let {
     entry,
@@ -45,6 +48,31 @@
   let notice = $state("");
 
   const editor = new EditorState();
+  let kvkk = $state<KvkkState | null>(null);
+
+  $effect(() => {
+    if (mode !== "kvkk" || !doc || kvkk) return;
+    const k = new KvkkState(file.id, entry.password);
+    kvkk = k;
+    void k.scan();
+  });
+
+  async function applyKvkk(): Promise<void> {
+    if (!kvkk?.active.length) return;
+    busy = t("KVKK işlemleri uygulanıyor…", "Applying personal-data treatments…");
+    error = "";
+    try {
+      const job = await runAndWait("kvkk_apply", [{ id: file.id, password: entry.password || undefined }], {
+        items: kvkk.payload(),
+        remove_metadata: true,
+      });
+      if (job.result) onresult(job.result, "view", entry.password);
+    } catch (e) {
+      error = e instanceof JobFailed && e.job.error ? t(e.job.error) : t("Uygulanamadı.", "Could not apply.");
+    } finally {
+      busy = "";
+    }
+  }
   let toolbar: ReturnType<typeof EditorToolbar> | undefined = $state();
   let spans = $state<SpanCache | null>(null);
 
@@ -172,7 +200,7 @@
         },
       );
       editor.clear();
-      if (job.result) onresult(job.result, "edit", entry.password);
+      if (job.result) onresult(job.result, mode === "kvkk" ? "kvkk" : "edit", entry.password);
     } catch (e) {
       error = e instanceof JobFailed && e.job.error ? t(e.job.error) : t("OCR başarısız oldu.", "OCR failed.");
     } finally {
@@ -244,9 +272,14 @@
     if (typing(e) || ui.showShortcuts) return;
     const mod = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
-    if (e.altKey && ["1", "2", "3"].includes(e.key)) {
+    if (e.altKey && ["1", "2", "3", "4"].includes(e.key)) {
       e.preventDefault();
-      switchMode((["view", "organize", "edit"] as const)[Number(e.key) - 1]!);
+      switchMode((["view", "organize", "edit", "kvkk"] as const)[Number(e.key) - 1]!);
+      return;
+    }
+    if (mode === "kvkk" && mod && key === "s") {
+      e.preventDefault();
+      void applyKvkk();
       return;
     }
     if (mod && key === "f") {
@@ -307,6 +340,7 @@
       <button role="tab" aria-selected={mode === "view"} class:on={mode === "view"} onclick={() => switchMode("view")}>{t("Görüntüle", "View")}</button>
       <button role="tab" aria-selected={mode === "organize"} class:on={mode === "organize"} onclick={() => switchMode("organize")}>{t("Sayfalar", "Pages")}</button>
       <button role="tab" aria-selected={mode === "edit"} class:on={mode === "edit"} onclick={() => switchMode("edit")}>{t("Düzenle", "Edit")}</button>
+      <button role="tab" aria-selected={mode === "kvkk"} class:on={mode === "kvkk"} onclick={() => switchMode("kvkk")} title="Alt+4">KVKK</button>
     </div>
     {#if mode !== "organize" && doc}
       <div class="group">
@@ -384,6 +418,11 @@
     </div>
   {:else}
     <div class="body">
+      {#if mode === "kvkk" && kvkk}
+        <aside class="thumbs kvkk-side" aria-label={t("KVKK bulguları", "Personal-data findings")}>
+          <KvkkPanel {kvkk} busy={!!busy} ongo={goTo} onapply={applyKvkk} {scanned} onocr={runOcr} />
+        </aside>
+      {:else}
       <nav class="thumbs" aria-label={t("Kenar çubuğu", "Sidebar")}>
         <div class="side-tabs" role="tablist" aria-label={t("Kenar çubuğu", "Sidebar")}>
           <button role="tab" aria-selected={sidebar === "pages"} class:on={sidebar === "pages"} onclick={() => (sidebar = "pages")}>{t("Sayfalar", "Pages")}</button>
@@ -407,12 +446,15 @@
           {/each}
         {/if}
       </nav>
+      {/if}
       <div class="pages" bind:this={scroller} onscroll={onScroll} class:editing={mode === "edit"}>
         {#each pages as p (p.pageNumber)}
           <PageView page={p} {scale} textLayer={mode === "view"} hits={pageHits(p.pageNumber)} current={currentItem(p.pageNumber)}>
             {#snippet overlay(viewport)}
               {#if mode === "edit" && spans}
                 <EditorOverlay page={p.pageNumber} {viewport} {editor} {spans} onocr={runOcr} />
+              {:else if mode === "kvkk" && kvkk}
+                <KvkkOverlay page={p.pageNumber} {viewport} {kvkk} />
               {/if}
             {/snippet}
           </PageView>
@@ -513,6 +555,9 @@
     min-height: 0;
     display: flex;
     gap: 10px;
+  }
+  .thumbs.kvkk-side {
+    width: 340px;
   }
   .side-tabs {
     display: flex;

@@ -8,7 +8,7 @@
   import { typing, ui } from "./lib/shortcuts.svelte";
   import { type Entry, workspace } from "./lib/workspace.svelte";
 
-  type ViewMode = "view" | "organize" | "edit";
+  type ViewMode = "view" | "organize" | "edit" | "kvkk";
   let viewing = $state<{ entry: Entry; mode: ViewMode } | null>(null);
   // pdf.js is ~1 MB: load the viewer only when a PDF is opened.
   const loadViewer = () => import("./lib/viewer/Viewer.svelte").then((m) => m.default);
