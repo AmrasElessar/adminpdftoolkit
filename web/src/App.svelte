@@ -94,6 +94,7 @@
 <Shortcuts />
 
 <div class="app">
+  <a class="skip" href="#main">{t("İçeriğe atla", "Skip to content")}</a>
   <header class="top">
     <div class="brand">
       <img src="/icon.svg" alt="" width="28" height="28" />
@@ -130,7 +131,7 @@
       </form>
     </main>
   {:else}
-    <main class="work" class:viewing={!!viewing}>
+    <main class="work" class:viewing={!!viewing} id="main" tabindex="-1">
       <FileTray maxUploadMb={session.max_upload_mb} onopen={(e) => openViewer(e)} />
       <div class="stage">
         {#if viewing}
@@ -162,6 +163,22 @@
 </div>
 
 <style>
+  .skip {
+    position: absolute;
+    left: 8px;
+    top: -48px;
+    z-index: 100;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+  .skip:focus {
+    top: 8px;
+  }
+  main:focus {
+    outline: none;
+  }
   .app {
     min-height: 100dvh;
     display: flex;

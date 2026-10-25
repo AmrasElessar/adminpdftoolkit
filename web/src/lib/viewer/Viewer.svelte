@@ -447,7 +447,16 @@
         {/if}
       </nav>
       {/if}
-      <div class="pages" bind:this={scroller} onscroll={onScroll} class:editing={mode === "edit"}>
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex (scroll region must be keyboard-scrollable, WCAG 2.1.1) -->
+      <div
+        class="pages"
+        bind:this={scroller}
+        onscroll={onScroll}
+        class:editing={mode === "edit"}
+        tabindex="0"
+        role="region"
+        aria-label={t("Belge sayfaları", "Document pages")}
+      >
         {#each pages as p (p.pageNumber)}
           <PageView page={p} {scale} textLayer={mode === "view"} hits={pageHits(p.pageNumber)} current={currentItem(p.pageNumber)}>
             {#snippet overlay(viewport)}

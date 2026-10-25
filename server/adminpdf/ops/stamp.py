@@ -12,7 +12,7 @@ from ..core.errors import UserError
 from ..core.pdf import open_pdf, parse_page_spec, save_pdf, unicode_font, unicode_font_path
 from .base import Context, Field, FileParam, InputFile, Operation, Params, register
 
-_TOKEN_RE = re.compile(r"\{(n|total|date|file)\}")
+_TOKEN_RE = re.compile(r"\{(n|total|date|isodate|file)\}")
 
 
 def parse_color(value: str) -> tuple[float, float, float]:
@@ -26,7 +26,14 @@ def parse_color(value: str) -> tuple[float, float, float]:
 def render_template(template: str, *, n: int, total: int, inp: InputFile) -> str:
     """Substitute only known tokens. Never ``str.format`` — a user-supplied
     format spec like ``{n:>999999999}`` would allocate gigabytes."""
-    values = {"n": str(n), "total": str(total), "date": _dt.date.today().strftime("%d.%m.%Y"), "file": inp.stem}
+    today = _dt.date.today()
+    values = {
+        "n": str(n),
+        "total": str(total),
+        "date": today.strftime("%d.%m.%Y"),
+        "isodate": today.isoformat(),  # ISO 8601
+        "file": inp.stem,
+    }
     return _TOKEN_RE.sub(lambda m: values[m.group(1)], template)
 
 
@@ -87,8 +94,8 @@ class HeaderFooterParams(Params):
         "{n} / {total}",
         tr="Alt orta",
         en="Footer centre",
-        help_tr="Kullanılabilir: {n} sayfa no, {total} toplam, {date} tarih, {file} dosya adı",
-        help_en="Available: {n} page no, {total} total, {date} date, {file} file name",
+        help_tr="Kullanılabilir: {n} sayfa no, {total} toplam, {date} tarih, {isodate} ISO 8601, {file} dosya adı",
+        help_en="Available: {n} page no, {total} total, {date} date, {isodate} ISO 8601 date, {file} file name",
         max_length=200,
     )
     footer_right: str = Field("", tr="Alt sağ", en="Footer right", max_length=200)

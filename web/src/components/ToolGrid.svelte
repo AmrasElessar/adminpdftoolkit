@@ -137,7 +137,8 @@
 
   <div
     id="tool-tip"
-    role="tooltip"
+    role={tip ? "tooltip" : undefined}
+    aria-hidden={!tip}
     class="tip"
     class:visible={tip}
     class:above={tip?.above}
