@@ -7,6 +7,7 @@ from pathlib import Path
 import pymupdf
 import pytest
 
+from adminpdf.core.errors import UserError
 from adminpdf.ops.office import find_soffice, to_cell
 
 from .conftest import Api, make_docx, make_pdf, make_table_pdf, make_xlsx
@@ -153,7 +154,10 @@ def test_libreoffice_cannot_read_local_files_or_the_network(tmp_path: Path) -> N
 
         for name in ("evil.xlsx", "evil.docx"):
             out = tmp_path / f"{name}.pdf"
-            libreoffice_to_pdf(find_soffice() or "", InputFile(tmp_path / name, name), out)
+            try:
+                libreoffice_to_pdf(find_soffice() or "", InputFile(tmp_path / name, name), out)
+            except UserError:
+                continue  # some LibreOffice versions refuse such files outright: nothing leaks either
             with pymupdf.open(out) as doc:
                 text = "".join(p.get_text() for p in doc)
             assert "SIZINTI" not in text, name

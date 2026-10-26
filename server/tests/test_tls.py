@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 import ipaddress
+import sys
 from pathlib import Path
 
 import pytest
@@ -46,8 +47,9 @@ def test_server_certificate_covers_local_names_only(tmp_path: Path) -> None:
     san = leaf.extensions.get_extension_for_class(x509.SubjectAlternativeName).value
     assert "8.8.8.8" not in {str(i) for i in san.get_values_for_type(x509.IPAddress)}  # public address left out
     assert (leaf.not_valid_after_utc - leaf.not_valid_before_utc).days <= tls.SERVER_DAYS
-    assert files.key.stat().st_mode & 0o077 == 0
-    assert (tmp_path / "ca.key").stat().st_mode & 0o077 == 0
+    if sys.platform != "win32":  # Windows has ACLs, not POSIX modes
+        assert files.key.stat().st_mode & 0o077 == 0
+        assert (tmp_path / "ca.key").stat().st_mode & 0o077 == 0
 
 
 def test_ca_cannot_vouch_for_real_websites(tmp_path: Path) -> None:
@@ -102,3 +104,14 @@ def test_new_ca_when_a_host_name_is_outside_its_constraints(tmp_path: Path) -> N
     assert changed.fingerprint != first.fingerprint
     ca = x509.load_pem_x509_certificate(changed.ca.read_bytes())
     _verify(ca, _chain(changed.cert)[0], "pdf.sirket.com.tr")
+
+
+def test_long_computer_names_fit_the_certificate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """X.509 caps a common name at 64 characters; long PC names must still work."""
+    long_name = "muhasebe-departmani-ikinci-kat-ortak-bilgisayar-numara-12"
+    monkeypatch.setattr(tls, "_hostname", lambda: long_name)
+    files = tls.ensure(tmp_path)
+    ca = x509.load_pem_x509_certificate(files.ca.read_bytes())
+    leaf = _chain(files.cert)[0]
+    assert len(ca.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value) <= 64
+    _verify(ca, leaf, long_name)

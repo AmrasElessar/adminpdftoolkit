@@ -67,6 +67,12 @@ def _hostname() -> str:
     return socket.gethostname().split(".")[0].lower()
 
 
+def _cn(text: str) -> str:
+    """X.509 limits a common name to 64 characters (long PC names exceed it);
+    the names that matter for verification live in the SAN anyway."""
+    return text if len(text) <= 64 else text[:61] + "..."
+
+
 def _dns_constraints(extra: list[str]) -> list[str]:
     names = ["localhost", *LOCAL_SUFFIXES, _hostname(), *extra]
     return sorted({n.strip(".").lower() for n in names if n.strip(".")})
@@ -104,7 +110,7 @@ def _make_ca(directory: Path, dns: list[str]) -> tuple[x509.Certificate, ec.Elli
     name = x509.Name(
         [
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, "Admin PDF Toolkit"),
-            x509.NameAttribute(NameOID.COMMON_NAME, f"Admin PDF Toolkit yerel CA ({_hostname()})"),
+            x509.NameAttribute(NameOID.COMMON_NAME, _cn(f"Admin PDF Toolkit yerel CA ({_hostname()})")),
         ]
     )
     now = _now()
@@ -204,7 +210,7 @@ def _make_server(
     san += [x509.IPAddress(ipaddress.ip_address(i)) for i in ips]
     cert = (
         x509.CertificateBuilder()
-        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, _hostname())]))
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, _cn(_hostname()))]))
         .issuer_name(ca.subject)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())

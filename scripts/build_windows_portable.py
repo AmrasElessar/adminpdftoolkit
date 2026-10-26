@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -187,10 +188,29 @@ def authenticode(path: Path) -> str:
     return r.stdout.strip() or "unknown"
 
 
-def nsis_install(installer: Path, target: Path) -> None:
-    """Silent NSIS install into a scratch folder; /D must be last and unquoted."""
+def nsis_extract(installer: Path, target: Path, expect: str) -> None:
+    """Unpack an NSIS installer with 7-Zip (preinstalled on CI runners):
+    nothing is installed on the build machine and no UAC re-launch can race
+    us. Falls back to a silent install (``/S /D=``) and waits for ``expect``."""
     print(f"  signature: {authenticode(installer)}")
-    subprocess.run([str(installer), "/S", f"/D={target}"], check=True)
+    seven = shutil.which("7z") or next((str(p) for p in (Path("C:/Program Files/7-Zip/7z.exe"),) if p.is_file()), None)
+    if seven:
+        subprocess.run([seven, "x", "-y", f"-o{target}", str(installer)], check=True, stdout=subprocess.DEVNULL)
+        for junk in ("$PLUGINSDIR", "$TEMP", "uninstall.exe", "Uninstall.exe", "uninst.exe"):
+            path = target / junk
+            if path.is_dir():
+                shutil.rmtree(path, ignore_errors=True)
+            elif path.is_file():
+                path.unlink()
+    else:
+        # /D must be last and unquoted.
+        subprocess.run([str(installer), "/S", f"/D={target}"], check=True)
+    for _ in range(120):
+        if (target / expect).is_file():
+            return
+        time.sleep(1)
+    listing = "\n".join(str(p.relative_to(target)) for p in sorted(target.rglob("*"))[:80]) if target.exists() else "-"
+    sys.exit(f"{installer.name} did not produce {expect}; got:\n{listing}")
 
 
 def write_manifest(dest: Path, version: str, sources: dict[str, dict[str, str]]) -> None:
@@ -210,9 +230,7 @@ def bundle_ocr(dest: Path, spec: dict[str, Any]) -> str:
         installer = work / "tesseract-setup.exe"
         used["tesseract"] = {"url": tess["url"], "sha256": fetch(tess["url"], installer, tess["sha256"])}
         target = work / "tesseract"
-        nsis_install(installer, target)
-        if not (target / "tesseract.exe").is_file():
-            sys.exit("Tesseract installer did not produce tesseract.exe")
+        nsis_extract(installer, target, "tesseract.exe")
         dest.mkdir(parents=True)
         for item in target.iterdir():
             program = item.suffix.lower() == ".dll" or item.name.lower() in OCR_KEEP_EXE
@@ -248,9 +266,7 @@ def bundle_ghostscript(dest: Path, spec: dict[str, Any], sources_dir: Path) -> s
         installer = work / "gs-setup.exe"
         used = {"ghostscript": {"url": gs["url"], "sha256": fetch(gs["url"], installer, gs["sha256"])}}
         target = work / "gs"
-        nsis_install(installer, target)
-        if not (target / "bin" / "gswin64c.exe").is_file():
-            sys.exit("Ghostscript installer did not produce bin/gswin64c.exe")
+        nsis_extract(installer, target, "bin/gswin64c.exe")
         (dest / "bin").mkdir(parents=True)
         for item in (target / "bin").iterdir():
             if item.suffix.lower() == ".dll" or item.name.lower() == "gswin64c.exe":
