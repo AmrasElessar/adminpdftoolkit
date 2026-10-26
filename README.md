@@ -124,30 +124,33 @@ It covers almost everything people use Adobe Acrobat for: **editing existing tex
 |---|---|
 | ✎ **PDF editörü** | Mevcut metni yerinde değiştirme (orijinal font eşleştirme, sistem fontları), metin kutusu, görsel, el yazısı / yazılı / görsel imza, şekiller, kalem, beyazla kapatma, bağlantı, vurgulama / altı / üstü çizili, yapışkan not, **form alanı oluşturma**; taşı, boyutlandır, geri al / yinele |
 | 🔍 **Taranmış belgeler** | Görsel tabanlı PDF'ler algılanır, tek tıkla **OCR** (Türkçe + İngilizce) uygulanır ve metin düzenlenebilir hale gelir; eğik sayfalar otomatik düzeltilir |
-| ⬛ **KVKK modu** | Belge otomatik taranır: T.C. kimlik no, IBAN, kart, telefon, e-posta, plaka, vergi no, ad-soyad, adres, doğum bilgisi ve **özel nitelikli veri** ipuçları; her biri için **karart / bulanıklaştır / maskele / beyazla / dokunma** seçilir, kalıcı uygulanır |
+| ⬛ **KVKK modu** | Belge otomatik taranır: T.C. kimlik no, IBAN, kart, telefon, e-posta, plaka, vergi no, ad-soyad, adres, doğum bilgisi ve **özel nitelikli veri** ipuçları; her biri için **karart / bulanıklaştır / maskele / beyazla / dokunma** seçilir, kalıcı uygulanır; **Ekstra güvenli PDF** seçeneği sayfaları görüntüye çevirip yeniden PDF yapar (altta seçilebilir metin kalmaz) |
 | 📑 **Sayfalar** | Küçük resimlerle sürükle-bırak düzenleme, döndür, sil, çoğalt, boş sayfa; birleştir (yer imli), böl, çıkar |
 | 🔄 **Dönüştür** | PDF ↔ Word, PDF → Excel (tablo algılama), Word / Excel / PowerPoint → PDF, PDF ↔ JPG / PNG, PDF → metin |
-| 📷 **Görselden PDF** | Telefon fotoğrafı yönü (EXIF), **otomatik eğim düzeltme**, kâğıdı bulup **perspektif düzeltme**, gölge temizleme, siyah-beyaz tarama görünümü |
+| 📷 **Görselden PDF** | Telefon fotoğrafı yönü (EXIF), **otomatik eğim düzeltme**, kâğıdı bulup **perspektif düzeltme**, gölge temizleme, siyah-beyaz tarama görünümü; sayfa boyutu (görsel boyutu / A4 / Letter / A3) ve yerleşim (**sığdır / doldur / genişlet / özgün boyut**) |
 | ✒ **İmza** | PAdES dijital imza (görünür / görünmez), imza doğrulama, imza sertifikası oluşturma |
 | 🧾 **Formlar** | Alanları listele, doldur, düzleştir; editörde metin kutusu, onay kutusu, açılır liste, imza alanı çiz |
 | 🏛 **Arşiv & standartlar** | PDF/A-1b/2b/3b, **PDF/UA erişilebilirlik denetimi ve düzeltme**, meta veri, yer imleri (otomatik dahil), gömülü ekler |
 | ⚖ **Karşılaştır** | İki sürüm arasında eklenen / silinen sözcükler ve sayfalar, yan yana rapor |
-| 🛡 **Güvenlik** | AES-256 şifreleme ve izinler, güvenlik taraması (JavaScript, gömülü dosya, ClamAV), güvenli temizleme, onarım |
+| 🛡 **Güvenlik** | Her zaman **HTTPS** (kendi yerel sertifika yetkilisi), **yalnızca yerel ağ**, cihaz başına dosya yalıtımı; AES-256 şifreleme ve izinler, güvenlik taraması (JavaScript, gömülü dosya, ClamAV), güvenli temizleme, onarım |
 | 📊 **İş akışları** | Çağrı kaydı PDF'leri → birleşik Excel, mükerrer silme, filtreleme, ekiplere dağıtım |
-| ⌨ **Kullanım** | Tam klavye desteği ve kısayollar (`?`), TR / EN, açık / koyu tema, mobil uyumlu PWA |
+| ⌨ **Kullanım** | Seçili dosyaya uygun araçlar yeşil renkte ve öne sıralanır, **sık kullanılanlar** kullanıcı seçer; tam klavye desteği ve kısayollar (`?`), TR / EN, açık / koyu tema, telefon ve tablet için PWA (QR ile bağlanma) |
+| ℹ️ **Hakkında ve Lisanslar** | Uygulama içinde Türkçe ve İngilizce ayrı: çalıştığı sistemler, ilk açılış uyarıları, kullanılan tüm açık kaynak bileşenler ve lisansları |
 
 <details>
 <summary>🇬🇧 Highlights (English)</summary>
 
 - **PDF editor** — change existing text in place (original font matching, system fonts), text boxes, images, drawn / typed / image signatures, shapes, pen, whiteout, links, highlight / underline / strikethrough, sticky notes, **form-field creation**; move, resize, undo / redo.
 - **Scanned documents** — image-only PDFs are detected and made editable with one-click **OCR** (Turkish + English); tilted pages are straightened.
-- **KVKK mode** — automatic scan for national IDs, IBANs, cards, phones, e-mails, plates, tax numbers, names, addresses, birth details and **special-category** hints; choose **black-out / blur / mask / white-out / keep** per finding and apply permanently.
+- **KVKK mode** — automatic scan for national IDs, IBANs, cards, phones, e-mails, plates, tax numbers, names, addresses, birth details and **special-category** hints; choose **black-out / blur / mask / white-out / keep** per finding and apply permanently; the **extra-secure PDF** option turns pages into images and back into a PDF (no selectable text left underneath).
 - **Pages** — drag-and-drop organiser, rotate, delete, duplicate, blank pages; merge (with bookmarks), split, extract.
 - **Convert** — PDF ↔ Word, PDF → Excel (table detection), Word / Excel / PowerPoint → PDF, PDF ↔ JPG / PNG, PDF → text.
-- **Images → PDF** — EXIF orientation, **automatic deskew**, sheet detection with **perspective correction**, shadow removal, black-and-white scan look.
+- **Images → PDF** — EXIF orientation, **automatic deskew**, sheet detection with **perspective correction**, shadow removal, black-and-white scan look; page size (image / A4 / Letter / A3) and placement (**fit / fill / stretch / original size**).
 - **Signatures** — PAdES (visible / invisible), verification, self-signed certificate creation.
 - **Forms**, **PDF/A**, **PDF/UA check & fix**, metadata, bookmarks, attachments, **compare**, AES-256, security scan, sanitise, repair, call-log workflows.
-- Full keyboard support (`?`), TR / EN, light / dark, installable PWA.
+- **Security** — always **HTTPS** (own local certificate authority), **local network only**, per-device file isolation.
+- Tools that fit the selected file are shown green and first, **favourites** chosen by the user; full keyboard support (`?`), TR / EN, light / dark, installable PWA for phones and tablets (connect by QR).
+- **About & Licences** in the app — Turkish and English separately: supported systems, first-start warnings, every open-source component and its licence.
 
 </details>
 
@@ -216,6 +219,7 @@ cd ../server && python -m adminpdf --open
 <summary>🇬🇧 Installation (English)</summary>
 
 - **Windows:** download **`AdminPDFToolkit-…-Windows.zip`** from the [latest release](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest), unzip, double-click **`AdminPDFToolkit.exe`**. The launcher ticks off every component (Python, libraries, UI, certificate, OCR, Ghostscript, …), starts the server with no console window, says "System ready" and shows the addresses and certificate fingerprint; closing the window keeps it in the notification area. Nothing to install — Python, all libraries, Tesseract (+ Turkish/English) and Ghostscript are inside; works offline, also on networks that block downloads. Optional update check at start: a newer release is offered with its component versions and installed only if you agree and its Ed25519 signature and SHA-256 verify. Console fallbacks are in `scripts\`.
+- **macOS (Apple Silicon) / Linux x86_64:** `…-macOS-arm64.zip` (drag `AdminPDFToolkit.app` to Applications) / `…-Linux-x86_64.tar.gz` (run `AdminPDFToolkit`) — own Python, same launcher window, data in your user folder; OCR / PDF/A via `brew` / `apt` (the launcher shows the command).
 - **Docker:** `docker compose up -d --build` — includes OCR, LibreOffice, Ghostscript and ClamAV.
 - **From source:** `pip install -e ".[dev]"` in `server/`, `npm ci && npm run build` in `web/`, then `python -m adminpdf --open`.
 - Optional tools: Tesseract (+`tur`), LibreOffice, Ghostscript, qpdf, ClamAV. Missing tools only disable their own features.
@@ -232,9 +236,9 @@ cd ../server && python -m adminpdf --open
 3. Sonucu indirin ya da **Çalışma alanına ekle** ile bir sonraki araca girdi yapın (ör. birleştir → sıkıştır → şifrele).
 4. `?` tuşu tüm klavye kısayollarını gösterir.
 
-**Telefondan / tabletten erişim:** `python -m adminpdf --lan` (Windows: `Baslat - Ag Paylasimi (Windows).bat`) — sunucu bilgisayarında sağ üstteki **📱 Cihaz bağla** penceresindeki QR kodu telefonla okutun. Bağlantı her zaman **HTTPS**'tir; uyarısız kullanım için eşleştirme ekranındaki **Sertifikayı yükle** ile sunucunun sertifikasını cihaza bir kez yükleyin. **Yalnızca aynı yerel ağdaki** (özel IP) cihazlar bağlanabilir; internetten gelen her istek reddedilir.
+**Telefondan / tabletten erişim:** başlatıcıda **Ağ paylaşımı** kutusunu işaretleyin (veya `python -m adminpdf --lan`) — sunucu bilgisayarında sağ üstteki **📱 Cihaz bağla** penceresindeki QR kodu telefonla okutun. Bağlantı her zaman **HTTPS**'tir; uyarısız kullanım için eşleştirme ekranındaki **Sertifikayı yükle** ile sunucunun sertifikasını cihaza bir kez yükleyin. **Yalnızca aynı yerel ağdaki** (özel IP) cihazlar bağlanabilir; internetten gelen her istek reddedilir.
 
-*Phones/tablets: start with `--lan`, scan the QR code under **📱 Connect device** on the server PC. Always HTTPS (the server's own local CA; install it once via **Install certificate** for warning-free use). Only devices on the same local network are ever served.*
+*Phones/tablets: tick **Network sharing** in the launcher (or start with `--lan`), scan the QR code under **📱 Connect device** on the server PC. Always HTTPS (the server's own local CA; install it once via **Install certificate** for warning-free use). Only devices on the same local network are ever served.*
 
 ### Ayarlar / Configuration (`APT_*`)
 
@@ -254,6 +258,7 @@ cd ../server && python -m adminpdf --open
 | `APT_TLS_CERT_FILE` / `APT_TLS_KEY_FILE` | — | Kurumunuzun kendi sertifikası |
 | `APT_MAX_STORAGE_MB` | `10240` | Toplam depolama tavanı (aşılırsa yükleme 507) |
 | `APT_API_DOCS` | `false` | `/api/docs` geliştirici belgeleri |
+| `APT_OCR_DIR` / `APT_GS_DIR` | — | Gömülü Tesseract / Ghostscript klasörü (Windows paketi ayarlar; dosyalar `manifest.json` ile doğrulanır) |
 
 ---
 
@@ -279,8 +284,9 @@ Files are processed only on the server machine — no cloud, no telemetry; uploa
 |---|---|
 | Sunucu | Python 3.11+ · FastAPI · PyMuPDF · pikepdf · pyHanko · OCRmyPDF/Tesseract · pdf2docx · OpenCV · LibreOffice (isteğe bağlı) |
 | Arayüz | Svelte 5 · TypeScript · Vite · pdf.js |
+| Başlatıcı | Windows: C# / .NET Framework (`AdminPDFToolkit.exe`) · macOS / Linux: Python + Tk · gömülü Python (python.org embeddable / python-build-standalone) |
 | Mimari | İşlem kayıt defteri (her araç tek sınıf, form şemadan üretilir) · her iş ayrı süreçte (zaman aşımı, iptal, bellek sınırı) · güvenlik tek ara katmanda (Host izin listesi, CSRF, sıkı CSP, LAN eşleştirme) |
-| Kalite | 290+ sunucu testi · mypy --strict · ruff · svelte-check · axe-core WCAG 2.1 AA denetimi · CodeQL · Windows/macOS/Linux CI |
+| Kalite | 350+ sunucu testi · mypy --strict · ruff · svelte-check · axe-core WCAG 2.1 AA denetimi · CodeQL · Windows/macOS/Linux CI · her sürümde VirusTotal taraması ve Ed25519 imzalı `SHA256SUMS` |
 
 Ayrıntılar: [ARCHITECTURE.md](ARCHITECTURE.md) · Standartlar: [STANDARDS.md](STANDARDS.md)
 
@@ -298,7 +304,10 @@ ISO 32000 (PDF) · ISO 19005 (PDF/A) · ISO 14289 (PDF/UA denetim + düzeltme) �
 - [x] Görüntüleyici, sayfa düzenleyici, PDF editörü (taranmış belgeler dahil)
 - [x] Dönüştürme, OCR, formlar, dijital imza, KVKK modu, PDF/A, PDF/UA, karşılaştırma
 - [x] Docker, CI, PWA, klavye kısayolları, erişilebilirlik
-- [ ] Windows kurulum paketi (installer) ve imzalı sürümler
+- [x] Kurulum gerektirmeyen Windows, macOS ve Linux paketleri (OCR ve Ghostscript gömülü, başlatıcı penceresi)
+- [x] HTTPS, yalnızca yerel ağ, telefon / tablet eşleştirme (QR)
+- [x] İmzalı güncellemeler (Ed25519), her sürümde VirusTotal taraması
+- [ ] Windows kurulum sihirbazı (MSI)
 - [ ] PAdES zaman damgası (kurum içi TSA desteğiyle)
 - [ ] Etiketsiz belgeler için yarı otomatik PDF/UA etiketleme
 
@@ -314,7 +323,9 @@ Katkılar memnuniyetle karşılanır — [CONTRIBUTING.md](CONTRIBUTING.md). Gü
 
 ## 🎨 D Brand Ailesi / D Brand Family
 
-Admin PDF Toolkit, **D Brand** açık kaynak araç ailesinin bir parçasıdır.
+Admin PDF Toolkit, **D Brand** açık kaynak araç ailesinin bir parçasıdır. *Admin PDF Toolkit is part of the **D Brand** family of open-source tools:*
+
+[d-terminal](https://github.com/AmrasElessar/d-terminal) · [d-transfer](https://github.com/AmrasElessar/d-transfer) · [d-medic](https://github.com/AmrasElessar/d-medic) · [d-space](https://github.com/AmrasElessar/d-space) · [d-livewallpaper](https://github.com/AmrasElessar/d-livewallpaper)
 
 ---
 
@@ -326,11 +337,11 @@ Proje işinize yaradıysa ⭐ vererek veya [sponsor olarak](https://github.com/s
 
 ## 📜 Lisans / License
 
-[GNU AGPL-3.0](LICENSE) — bu yazılımı değiştirip **ağ üzerinden hizmet olarak** sunarsanız, değiştirilmiş kaynak kodu kullanıcılarla paylaşmanız gerekir. Üçüncü taraf lisansları: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+[GNU AGPL-3.0](LICENSE) — bu yazılımı değiştirip **ağ üzerinden hizmet olarak** sunarsanız, değiştirilmiş kaynak kodu kullanıcılarla paylaşmanız gerekir. Üçüncü taraf lisansları: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) ve uygulamada **Hakkında ve Lisanslar**.
 
 <details>
 <summary>🇬🇧 License (English)</summary>
 
-GNU AGPL-3.0 — if you modify this software and offer it **as a network service**, you must share the modified source with its users. Third-party licences: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+GNU AGPL-3.0 — if you modify this software and offer it **as a network service**, you must share the modified source with its users. Third-party licences: [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) and **About & Licences** in the app.
 
 </details>
