@@ -1,0 +1,13 @@
+{
+  "_comment": "Where the Windows package's bundled OCR comes from. Set each sha256 (lower-case hex) to pin the exact file: the build then refuses anything else. An empty sha256 is accepted once and the build prints the value to pin here.",
+  "tesseract": {
+    "version": "5.5.0.20241111",
+    "url": "https://github.com/UB-Mannheim/tesseract/releases/download/v5.5.0.20241111/tesseract-ocr-w64-setup-5.5.0.20241111.exe",
+    "sha256": ""
+  },
+  "tessdata": {
+    "tur": {"url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/tur.traineddata", "sha256": ""},
+    "eng": {"url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/eng.traineddata", "sha256": ""},
+    "osd": {"url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/osd.traineddata", "sha256": ""}
+  }
+}

@@ -8,11 +8,20 @@ this process's PATH so libraries that call it by name (OCRmyPDF) find it too.
 from __future__ import annotations
 
 import glob
+import hashlib
+import json
+import logging
 import os
 import re
 import shutil
 import sys
+from functools import lru_cache
 from pathlib import Path
+
+log = logging.getLogger("adminpdf.tools")
+
+# Set by the Windows package launcher to its bundled OCR folder.
+OCR_BUNDLE_ENV = "APT_OCR_DIR"
 
 
 def _windows_roots() -> list[str]:
@@ -63,6 +72,52 @@ def user_tessdata() -> Path:
     """Per-user Tesseract language folder filled by ``install-ocr-windows.ps1``."""
     base = os.environ.get("LOCALAPPDATA") or str(Path.home() / ".local" / "share")
     return Path(base) / "AdminPDFToolkit" / "tessdata"
+
+
+def _sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for block in iter(lambda: fh.read(1 << 20), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def verify_bundle(folder: Path) -> list[str]:
+    """Files of a bundled tool folder that are missing or differ from its
+    ``manifest.json`` (SHA-256 per file, written when the package was built).
+    Empty means intact; a missing or unreadable manifest is a problem too."""
+    try:
+        manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
+        files: dict[str, str] = manifest["files"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return ["manifest.json"]
+    bad = []
+    for rel, digest in files.items():
+        path = (folder / rel).resolve()
+        if not path.is_relative_to(folder.resolve()) or not path.is_file() or _sha256(path) != str(digest).lower():
+            bad.append(rel)
+    return bad
+
+
+@lru_cache(maxsize=1)
+def bundled_ocr() -> tuple[str | None, str | None]:
+    """``(tesseract_exe, problem)`` for the OCR engine shipped inside the
+    Windows package. Its files are checked against the package manifest
+    every time, offline; a damaged or altered bundle is never run."""
+    root = os.environ.get(OCR_BUNDLE_ENV)
+    if not root:
+        return None, None
+    folder = Path(root)
+    exe = folder / ("tesseract.exe" if sys.platform == "win32" else "tesseract")
+    if not exe.is_file():
+        return None, None
+    bad = verify_bundle(folder)
+    if bad:
+        log.error("bundled OCR failed its integrity check: %s", ", ".join(bad[:10]))
+        return None, "damaged"
+    _add_to_path(str(folder))
+    os.environ["TESSDATA_PREFIX"] = str(folder / "tessdata")
+    return str(exe), None
 
 
 def use_user_tessdata() -> None:

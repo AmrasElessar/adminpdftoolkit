@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pymupdf
 import pytest
@@ -125,3 +126,65 @@ def test_ocr_skip_keeps_existing_text(api: Api) -> None:
     text = text_of(api.download(job["result"]["id"]))
     assert "Mevcut 1" in text and "Mevcut 2" in text
     assert job["data"]["pages"] == 1
+
+
+# -- bundled OCR (Windows package) -----------------------------------------------
+def _bundle(tmp_path: Path) -> Path:
+    import hashlib
+    import json
+
+    folder = tmp_path / "ocr"
+    (folder / "tessdata").mkdir(parents=True)
+    exe = "tesseract.exe" if sys.platform == "win32" else "tesseract"
+    (folder / exe).write_bytes(b"MZ fake engine")
+    (folder / "tessdata" / "tur.traineddata").write_bytes(b"turkce")
+    files = {
+        p.relative_to(folder).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
+        for p in folder.rglob("*")
+        if p.is_file()
+    }
+    (folder / "manifest.json").write_text(json.dumps({"files": files}), encoding="utf-8")
+    return folder
+
+
+def test_bundle_integrity_check(tmp_path: Path) -> None:
+    from adminpdf.core.tools import verify_bundle
+
+    folder = _bundle(tmp_path)
+    assert verify_bundle(folder) == []
+    (folder / "tessdata" / "tur.traineddata").write_bytes(b"degistirildi")
+    assert verify_bundle(folder) == ["tessdata/tur.traineddata"]
+    (folder / "manifest.json").write_text("{not json", encoding="utf-8")
+    assert verify_bundle(folder) == ["manifest.json"]
+
+
+def test_bundle_manifest_cannot_point_outside(tmp_path: Path) -> None:
+    import json
+
+    from adminpdf.core.tools import verify_bundle
+
+    folder = _bundle(tmp_path)
+    (tmp_path / "secret").write_bytes(b"x")
+    manifest = json.loads((folder / "manifest.json").read_text())
+    manifest["files"]["../secret"] = "0" * 64
+    (folder / "manifest.json").write_text(json.dumps(manifest))
+    assert verify_bundle(folder) == ["../secret"]
+
+
+def test_damaged_bundle_is_never_used(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from adminpdf.core import tools
+
+    folder = _bundle(tmp_path)
+    monkeypatch.setenv(tools.OCR_BUNDLE_ENV, str(folder))
+    monkeypatch.delenv("TESSDATA_PREFIX", raising=False)
+    tools.bundled_ocr.cache_clear()
+    try:
+        exe, problem = tools.bundled_ocr()
+        assert exe and problem is None
+        assert os.environ["TESSDATA_PREFIX"] == str(folder / "tessdata")
+
+        (folder / Path(exe).name).write_bytes(b"MZ tampered")
+        tools.bundled_ocr.cache_clear()
+        assert tools.bundled_ocr() == (None, "damaged")
+    finally:
+        tools.bundled_ocr.cache_clear()

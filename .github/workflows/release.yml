@@ -61,6 +61,13 @@ jobs:
           Invoke-WebRequest -SkipCertificateCheck https://127.0.0.1:8000/ -UseBasicParsing | Out-Null
           $ops = Invoke-RestMethod -SkipCertificateCheck https://127.0.0.1:8000/api/ops
           if (-not (Test-Path "$app\data\tls\ca.crt")) { throw "no local CA was created" }
+          # Bundled OCR: present, intact and carrying Turkish.
+          $env:TESSDATA_PREFIX = "$app\ocr\tessdata"
+          $langs = & "$app\ocr\tesseract.exe" --list-langs 2>&1 | Out-String
+          if ($langs -notmatch "(?m)^tur\s*$") { throw "bundled OCR lacks Turkish: $langs" }
+          & "$app\python\python.exe" -c "import sys; from pathlib import Path; from adminpdf.core.tools import verify_bundle; bad = verify_bundle(Path(sys.argv[1])); print('OCR bundle intact' if not bad else bad); sys.exit(1 if bad else 0)" "$app\ocr"
+          if ($LASTEXITCODE -ne 0) { throw "bundled OCR failed its integrity check" }
+          Get-Content "$app\ocr\manifest.json" -Raw | ConvertFrom-Json | Select-Object -ExpandProperty sources | Format-List
           if ($ops.Count -lt 40) { throw "only $($ops.Count) tools loaded" }
           Stop-Process -Id $p.Id -Force
           "$($zip.Name): $([math]::Round($zip.Length / 1MB)) MB, $($ops.Count) tools"
