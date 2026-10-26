@@ -17,7 +17,7 @@ HEADER = """## İndir / Download
 | Sistem / System | Dosya / File | Aç / Open |
 |---|---|---|
 | **Windows 10 / 11** (64 bit) | **`AdminPDFToolkit-{v}-Windows.zip`** | Çıkarın → **`AdminPDFToolkit.exe`** — Python, OCR (Tesseract + Türkçe) ve PDF/A (Ghostscript) dahil |
-| **macOS 11+** (Apple Silicon M1–M4) | **`AdminPDFToolkit-{v}-macOS-arm64.zip`** | `AdminPDFToolkit.app` → Uygulamalar / Applications |
+| **macOS 11+** (Apple Silicon M1 ve sonrası / M1 and later) | **`AdminPDFToolkit-{v}-macOS-arm64.zip`** | `AdminPDFToolkit.app` → Uygulamalar / Applications |
 | **Linux x86_64** (Ubuntu 22.04+, Debian 12+, Mint 21+, Pardus 23+, Fedora 36+) | **`AdminPDFToolkit-{v}-Linux-x86_64.tar.gz`** | `AdminPDFToolkit` |
 | Intel Mac, ARM Linux… | `AdminPDFToolkit-{v}-Linux-macOS.zip` | Python 3.11+ → `sh scripts/start.sh` |
 | Docker | — | `docker compose up -d --build` |

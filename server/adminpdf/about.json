@@ -23,8 +23,8 @@
       },
       {
         "name": {
-          "tr": "macOS 11 ve üstü, Apple Silicon (M1–M4)",
-          "en": "macOS 11 or later, Apple Silicon (M1–M4)"
+          "tr": "macOS 11 ve üstü, Apple Silicon (M1 ve sonrası: M1–M5…)",
+          "en": "macOS 11 or later, Apple Silicon (M1 and later: M1–M5…)"
         },
         "how": {
           "tr": "Kurulumsuz AdminPDFToolkit.app; ilk açılışta bir kez Sistem Ayarları ▸ Gizlilik ve Güvenlik ▸ Yine de Aç. OCR ve PDF/A için: brew install tesseract tesseract-lang ghostscript.",

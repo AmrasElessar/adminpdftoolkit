@@ -1,7 +1,7 @@
 Admin PDF Toolkit {version} — Linux / macOS paketi (Python kurulumu gerekmez)
 ================================================================================
 
-macOS (Apple Silicon: M1, M2, M3, M4…)
+macOS (Apple Silicon: M1, M2, M3, M4, M5 ve sonraki tüm çipler)
   1. Zip'i açın; "AdminPDFToolkit.app"i Uygulamalar (Applications) klasörüne
      sürükleyin.
   2. Çift tıklayın. İLK AÇILIŞTA macOS "geliştirici doğrulanamadı" der; bu
