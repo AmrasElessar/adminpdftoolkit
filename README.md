@@ -118,14 +118,16 @@ Public bodies, schools, healthcare units, law firms and corporate IT teams must 
 1. [Son sürüm](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) sayfasından **`AdminPDFToolkit-…-Windows.zip`** dosyasını indirin ve bir klasöre çıkarın.
 2. **`Baslat (Windows).bat`** dosyasına çift tıklayın — tarayıcı açılır.
 
-Python veya başka bir program kurmanız gerekmez; paket kendi Python'unu ve tüm kütüphaneleri içerir, internetsiz çalışır. Taranmış belgeler için OCR: **`OCR Kur (Windows).bat`** (bir kerelik).
+Python veya başka bir program kurmanız gerekmez; paket kendi Python'unu, tüm kütüphaneleri ve **OCR motorunu (Tesseract + Türkçe/İngilizce dil verisi)** içerir, internetsiz çalışır — indirmeleri engelleyen kurum ağlarında da. OCR dosyaları her kullanımdan önce paketteki SHA-256 listesine göre doğrulanır; bozulursa **`OCR Onar (Windows).bat`** yalnızca bu özetlerle eşleşen dosyaları indirir.
+
+İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için bir kez onay ister (daha sonra **`Sertifikaya Guven (Windows).bat`** ile de yapılabilir).
 
 ### Docker (tüm araçlar dahil: OCR, LibreOffice, Ghostscript, ClamAV)
 
 ```bash
 git clone https://github.com/AmrasElessar/adminpdftoolkit.git
 cd adminpdftoolkit
-docker compose up -d --build        # http://127.0.0.1:8000
+docker compose up -d --build        # https://localhost:8000 (sertifika: docker cp ile /data/tls/ca.crt)
 ```
 
 ### Kaynaktan / From source
@@ -142,16 +144,16 @@ cd ../server && python -m adminpdf --open
 İsteğe bağlı sistem araçları — yoksa ilgili araç açık bir uyarı verir, diğerleri çalışır:
 **Tesseract** + `tur` dil paketi (OCR), **LibreOffice** (Office → PDF yüksek doğruluk), **Ghostscript** (PDF/A), **qpdf** (onarım), **ClamAV** (virüs taraması).
 
-> **Windows'ta OCR:** paketteki **`OCR Kur (Windows).bat`** dosyasını çalıştırın; Tesseract'ı ve Türkçe dil paketini kendisi kurar (ilk açılışta da sorulur). Elle kurmak isterseniz: [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) kurulumunda *Additional language data* altından **Turkish**'i işaretleyin. PATH'e eklemeniz gerekmez; uygulama `Program Files\Tesseract-OCR` ve `Program Files\gs` klasörlerini kendisi bulur. Kurulumdan sonra uygulamayı yeniden başlatın.
+> **Windows'ta OCR:** kurulum gerektirmeyen Windows paketinde OCR hazır gelir. Python paketiyle çalıştırıyorsanız **`OCR Kur (Windows).bat`** Tesseract'ı (winget, kurulum dosyası özeti doğrulanarak) ve Türkçe dil paketini kurar. Elle kurmak isterseniz: [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) kurulumunda *Additional language data* altından **Turkish**'i işaretleyin. PATH'e eklemeniz gerekmez; uygulama `Program Files\Tesseract-OCR` ve `Program Files\gs` klasörlerini kendisi bulur. Kurulumdan sonra uygulamayı yeniden başlatın.
 
 <details>
 <summary>🇬🇧 Installation (English)</summary>
 
-- **Windows:** download **`AdminPDFToolkit-…-Windows.zip`** from the [latest release](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest), unzip, double-click `Baslat (Windows).bat`. Nothing to install — Python and all libraries are inside; works offline.
+- **Windows:** download **`AdminPDFToolkit-…-Windows.zip`** from the [latest release](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest), unzip, double-click `Baslat (Windows).bat`. Nothing to install — Python, all libraries and the OCR engine (Tesseract + Turkish/English data) are inside; works offline, also on networks that block downloads. The OCR files are checked against the package's SHA-256 list before use; `OCR Onar (Windows).bat` repairs them with hash-verified downloads only. On first start Windows asks once to trust the app's local HTTPS certificate.
 - **Docker:** `docker compose up -d --build` — includes OCR, LibreOffice, Ghostscript and ClamAV.
 - **From source:** `pip install -e ".[dev]"` in `server/`, `npm ci && npm run build` in `web/`, then `python -m adminpdf --open`.
 - Optional tools: Tesseract (+`tur`), LibreOffice, Ghostscript, qpdf, ClamAV. Missing tools only disable their own features.
-- OCR on Windows: run **`OCR Kur (Windows).bat`** from the package — it installs Tesseract and the Turkish data (also offered on first start). Manually: install [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) and tick **Turkish** under *Additional language data*. No PATH change needed — the default install folders of Tesseract and Ghostscript are detected. Restart the app afterwards.
+- OCR on Windows: bundled in the self-contained package. With the Python package, **`OCR Kur (Windows).bat`** installs Tesseract (winget, installer hash checked) and the Turkish data. Manually: install [UB-Mannheim Tesseract](https://github.com/UB-Mannheim/tesseract/wiki) and tick **Turkish** under *Additional language data*. No PATH change needed — the default install folders of Tesseract and Ghostscript are detected. Restart the app afterwards.
 
 </details>
 
@@ -164,7 +166,9 @@ cd ../server && python -m adminpdf --open
 3. Sonucu indirin ya da **Çalışma alanına ekle** ile bir sonraki araca girdi yapın (ör. birleştir → sıkıştır → şifrele).
 4. `?` tuşu tüm klavye kısayollarını gösterir.
 
-**Telefondan / ağdan erişim:** `python -m adminpdf --lan` — konsoldaki eşleştirme bağlantısını telefonda açın.
+**Telefondan / tabletten erişim:** `python -m adminpdf --lan` (Windows: `Baslat - Ag Paylasimi (Windows).bat`) — sunucu bilgisayarında sağ üstteki **📱 Cihaz bağla** penceresindeki QR kodu telefonla okutun. Bağlantı her zaman **HTTPS**'tir; uyarısız kullanım için eşleştirme ekranındaki **Sertifikayı yükle** ile sunucunun sertifikasını cihaza bir kez yükleyin. **Yalnızca aynı yerel ağdaki** (özel IP) cihazlar bağlanabilir; internetten gelen her istek reddedilir.
+
+*Phones/tablets: start with `--lan`, scan the QR code under **📱 Connect device** on the server PC. Always HTTPS (the server's own local CA; install it once via **Install certificate** for warning-free use). Only devices on the same local network are ever served.*
 
 ### Ayarlar / Configuration (`APT_*`)
 
@@ -177,9 +181,13 @@ cd ../server && python -m adminpdf --open
 | `APT_MAX_WORKERS` | `2` | Eşzamanlı iş sayısı |
 | `APT_JOB_TIMEOUT_SECONDS` | `600` | İş başına zaman sınırı |
 | `APT_WORKER_MEMORY_MB` | `4096` | İş süreci bellek tavanı (POSIX) |
-| `APT_LAN_ENABLED` / `APT_PAIRING_KEY` | kapalı | Ağdaki cihazlar eşleştirme anahtarıyla bağlanır |
-| `APT_TRUSTED_NETWORKS` | — | Eşleştirme istemeyen ağlar (CIDR), ör. Docker köprüsü |
-| `APT_ALLOWED_HOSTS` | — | Ek Host adları (ör. `pdf.kurum.local`) |
+| `APT_LAN_ENABLED` / `APT_PAIRING_KEY` | kapalı | Ağdaki cihazlar eşleştirme anahtarıyla bağlanır (anahtar en az 12 karakter; `--lan` rastgele üretir) |
+| `APT_TRUSTED_NETWORKS` | — | Eşleştirme istemeyen **yerel** ağlar (CIDR) veya `gateway` (Docker ana makinesi; LAN modunda yok sayılır) |
+| `APT_ALLOWED_HOSTS` | — | Ek Host adları (ör. `pdf.kurum.local`); sertifikaya da eklenir |
+| `APT_TLS` | `true` | HTTPS (kendi yerel CA'sı, `APT_DATA_DIR/tls`). Yalnızca kendi TLS vekil sunucunuzun arkasında kapatın |
+| `APT_TLS_CERT_FILE` / `APT_TLS_KEY_FILE` | — | Kurumunuzun kendi sertifikası |
+| `APT_MAX_STORAGE_MB` | `10240` | Toplam depolama tavanı (aşılırsa yükleme 507) |
+| `APT_API_DOCS` | `false` | `/api/docs` geliştirici belgeleri |
 
 ---
 

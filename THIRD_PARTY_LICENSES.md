@@ -118,7 +118,7 @@ feature is disabled.*
 | Program | Lisans | Görev | Kaynak |
 |---|---|---|---|
 | Tesseract OCR | Apache-2.0 | Metin tanıma | https://github.com/tesseract-ocr/tesseract |
-| Tesseract Windows derlemesi (UB Mannheim) | Apache-2.0 | Windows kurulum paketi | https://github.com/UB-Mannheim/tesseract |
+| Tesseract Windows derlemesi (UB Mannheim) | Apache-2.0 | Windows paketinin `ocr/` klasöründe gömülü gelir (beraberindeki Leptonica, libpng, libjpeg-turbo, libtiff, zlib, libwebp, OpenJPEG, giflib DLL'leri izinli lisanslıdır; bkz. `ocr/NOTICE.txt`) | https://github.com/UB-Mannheim/tesseract |
 | Ghostscript (Artifex) | AGPL-3.0 | PDF/A dönüştürme | https://ghostscript.com/ |
 | qpdf (pikepdf içinde) | Apache-2.0 | Düşük seviye PDF, onarım | https://github.com/qpdf/qpdf |
 | LibreOffice | MPL-2.0 | Office → PDF | https://www.libreoffice.org/ |
@@ -162,7 +162,7 @@ pdf.js'in görüntü çözücüleri (JBIG2, OpenJPEG, QCMS) kendi lisans dosyala
 
 | Bileşen | Lisans | Not |
 |---|---|---|
-| [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) (`tur`, `eng`, `osd`) | Apache-2.0 | Paketlenmez; Tesseract kurulumuyla veya `OCR Kur (Windows).bat` ile resmi kaynaktan indirilir. |
+| [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) (`tur`, `eng`, `osd`) | Apache-2.0 | Windows paketinde `ocr/tessdata/` içinde gömülü; diğer kurulumlarda Tesseract ile veya `OCR Kur (Windows).bat` ile resmi kaynaktan (SHA-256 doğrulamalı) indirilir. |
 
 ## 7. Algoritmalar ve yöntemler / Algorithms and methods
 

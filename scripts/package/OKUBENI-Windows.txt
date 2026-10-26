@@ -6,20 +6,25 @@ BAŞLATMA
      Zip'in içinden doğrudan çalıştırmayın.
   2. "Baslat (Windows).bat" dosyasına çift tıklayın.
      Tarayıcı kendiliğinden açılır: https://localhost:8000
-  Python veya başka bir program kurmanız GEREKMEZ; her şey paketin içindedir
-  ve internet bağlantısı olmadan çalışır.
+     İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için
+     bir kez onay ister: "Evet" deyin. (Sonradan: "Sertifikaya Guven (Windows).bat")
+  Python veya başka bir program kurmanız GEREKMEZ; OCR dahil her şey paketin
+  içindedir ve internet bağlantısı olmadan çalışır.
 
 TELEFONDAN / AĞDAKİ DİĞER BİLGİSAYARLARDAN ERİŞİM
-  "Baslat - Ag Paylasimi (Windows).bat" ile başlatın ve pencerede görünen
-  eşleştirme bağlantısını telefonda açın. Windows güvenlik duvarı izin
-  isterse "Özel ağlar" için izin verin.
+  "Baslat - Ag Paylasimi (Windows).bat" ile başlatın; uygulamada sağ üstteki
+  "Cihaz bağla" penceresindeki QR kodu telefon/tablet kamerasıyla okutun.
+  Bağlantı HTTPS'tir. Uyarısız kullanım için telefondaki eşleştirme ekranında
+  "Sertifikayı yükle"ye dokunup sertifikayı bir kez yükleyin.
+  Yalnızca aynı yerel ağdaki cihazlar bağlanabilir; internetten erişilemez.
+  Windows güvenlik duvarı izin isterse YALNIZCA "Özel ağlar" için izin verin.
 
-TARANMIŞ BELGELER İÇİN OCR (isteğe bağlı)
-  "OCR Kur (Windows).bat" dosyasına çift tıklayın. Tesseract'ı ve Türkçe dil
-  paketini internetten indirip kurar (bir kerelik). Kurduktan sonra uygulamayı
-  kapatıp yeniden açın.
-  Elle kurmak isterseniz: https://github.com/UB-Mannheim/tesseract/wiki
-  (kurulumda "Additional language data" altından "Turkish" seçin).
+TARANMIŞ BELGELER İÇİN OCR (pakete dahil)
+  Tesseract ve Türkçe/İngilizce dil verisi "ocr" klasöründe hazır gelir; kurulum
+  veya internet gerekmez. Dosyalar her kullanımdan önce paket listesindeki
+  SHA-256 özetleriyle doğrulanır. "OCR dosyaları bozuk" uyarısı görürseniz
+  "OCR Onar (Windows).bat" dosyasını çalıştırın (yalnızca özetle eşleşen
+  dosyaları indirir) veya zip'i yeniden çıkarın.
 
 DİĞER İSTEĞE BAĞLI ARAÇLAR (yoksa ilgili araç açık bir uyarı verir)
   - Word/Excel/PowerPoint → PDF (yüksek doğruluk): LibreOffice  https://www.libreoffice.org/

@@ -7,6 +7,9 @@ WINDOWS
   2. "Baslat (Windows).bat" dosyasına çift tıklayın.
      İlk açılışta gerekli Python paketleri internetten indirilir (birkaç dakika).
      Sonraki açılışlar hızlıdır. Tarayıcı kendiliğinden açılır: https://localhost:8000
+     Bağlantı HTTPS'tir ve uygulamanın kendi yerel sertifikasını kullanır. macOS
+     ilk açılışta güvenmek için onay ister; Linux'ta server/_data/tls/ca.crt
+     dosyasını tarayıcıya güvenilir kök sertifika olarak bir kez ekleyin.
 
 LINUX / macOS
   sh scripts/start.sh

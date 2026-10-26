@@ -48,10 +48,24 @@ Out of scope:
 
 ### Security features in place
 
+- **HTTPS everywhere** — on by default with the server's own local CA, *name-constrained* to
+  private addresses and local names (a leaked CA key cannot impersonate a real website); the server
+  certificate follows LAN address changes; TLS 1.2+, ECDHE + AEAD only.
+- **Local network only** — requests from public addresses are always refused, whatever the
+  settings; trusted networks may only be local ranges; a loopback request carrying proxy forwarding
+  headers counts as remote.
 - **One security middleware for every request** — Host allow-list (DNS-rebinding defence), CSRF
   double-submit token plus exact `Origin` match on state-changing calls, LAN pairing sessions for
-  non-local clients (key in the URL fragment, never logged, rate-limited), strict CSP
-  (`script-src 'self'`, `frame-ancestors 'none'`), `nosniff`, `no-referrer`, COOP.
+  non-local clients (key ≥ 12 characters, in the URL fragment, never logged, per-client and global
+  rate limits; sessions expire after 30 days), strict CSP (`script-src 'self'`,
+  `frame-ancestors 'none'`), `nosniff`, `no-referrer`, COOP/CORP, API responses `no-store`.
+- **Per-device isolation** — every file and job belongs to this computer or to one paired device;
+  other devices cannot see, download, use or cancel them.
+- **Hostile documents** — LibreOffice runs with a throwaway hardened profile (no macros or active
+  content, links never updated, no network: SSRF and local-file includes are tested); the optional
+  *extra-secure PDF* rebuilds redacted output from page images only.
+- **Verified bundled tools** — the Windows package's OCR files are checked against SHA-256 hashes
+  recorded at build time before every use.
 - **Process isolation** — every job runs in its own spawned process with a timeout, real
   cancellation (process-group kill, including helper tools), and an address-space cap.
 - **Bounded inputs** — streaming uploads with the size cap enforced while writing; page, pixel, DPI,
@@ -111,9 +125,22 @@ Kapsam dışı:
 
 ### Mevcut güvenlik önlemleri
 
+- **Her yerde HTTPS** — varsayılan olarak açık; sunucunun kendi yerel CA'sı yalnızca özel
+  adresler ve yerel adlar için geçerli olacak şekilde *ad kısıtlıdır* (anahtarı sızsa bile gerçek
+  bir siteyi taklit edemez). TLS 1.2+, yalnızca ECDHE + AEAD.
+- **Yalnızca yerel ağ** — genel (internet) adreslerinden gelen istekler ayarlardan bağımsız olarak
+  her zaman reddedilir; vekil sunucu başlığı taşıyan yerel istekler uzak sayılır.
 - **Her isteğe tek güvenlik ara katmanı** — Host izin listesi (DNS rebinding savunması), durum
   değiştiren çağrılarda CSRF token + birebir `Origin` kontrolü, yerel olmayan istemciler için LAN
-  eşleştirme (anahtar URL parçasında, loglanmaz, deneme sınırlı), sıkı CSP.
+  eşleştirme (anahtar en az 12 karakter, URL parçasında, loglanmaz, istemci başına ve genel deneme
+  sınırı; oturumlar 30 günde dolar), sıkı CSP, API yanıtları önbelleğe alınmaz.
+- **Cihazlar arası yalıtım** — her dosya ve iş bu bilgisayara ya da tek bir eşleşmiş cihaza aittir;
+  diğer cihazlar göremez, indiremez, kullanamaz.
+- **Kötü niyetli belgeler** — LibreOffice makrosuz, aktif içeriksiz, bağlantı güncellemesiz ve
+  ağsız bir profille çalışır; *ekstra güvenli PDF* karartılmış çıktıyı yalnızca sayfa
+  görüntülerinden yeniden kurar.
+- **Doğrulanan paket araçları** — Windows paketindeki OCR dosyaları her kullanımdan önce derleme
+  sırasında kaydedilen SHA-256 özetleriyle karşılaştırılır.
 - **Süreç izolasyonu** — her iş ayrı süreçte; zaman aşımı, gerçek iptal (yardımcı araçlar dahil
   süreç grubu sonlandırma) ve bellek sınırı.
 - **Sınırlı girdiler** — yükleme boyutu yazılırken uygulanır; sayfa, piksel, DPI, düzenli ifade,
