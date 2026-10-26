@@ -20,8 +20,10 @@
         <h3>{t(section.title)}</h3>
         <dl>
           {#each section.items as item (item.label.en)}
-            <dt>{#each item.keys as k, i (i)}<kbd>{k}</kbd>{/each}</dt>
-            <dd>{t(item.label)}</dd>
+            <div>
+              <dt>{#each item.keys as k, i (i)}<kbd>{k}</kbd>{/each}</dt>
+              <dd>{t(item.label)}</dd>
+            </div>
           {/each}
         </dl>
       </section>
@@ -32,7 +34,7 @@
 
 <style>
   dialog {
-    width: min(920px, calc(100vw - 32px));
+    width: min(1240px, calc(100vw - 32px));
     max-height: calc(100dvh - 48px);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -52,16 +54,18 @@
     margin: 0;
     font-size: 1.15rem;
   }
+  /* Up to four columns; long sections (the editor's) flow on into the next
+     column row by row instead of forcing one tall column. */
   .cols {
-    columns: 260px;
-    column-gap: 24px;
+    columns: 4 250px;
+    column-gap: 28px;
     margin-top: 10px;
   }
   section {
-    break-inside: avoid;
     margin-bottom: 14px;
   }
   h3 {
+    break-after: avoid;
     margin: 0 0 6px;
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -69,14 +73,20 @@
     color: var(--muted);
   }
   dl {
-    display: grid;
-    grid-template-columns: max-content 1fr;
-    gap: 5px 12px;
     margin: 0;
     font-size: 0.85rem;
   }
+  dl > div {
+    display: grid;
+    grid-template-columns: 8.5em 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 2px 0;
+    break-inside: avoid;
+  }
   dt {
     display: flex;
+    flex-wrap: wrap;
     gap: 3px;
   }
   dd {

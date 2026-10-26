@@ -12,6 +12,7 @@
   --on-accent: #ffffff;
   --ok: #18794e;
   --ok-soft: #e3f4ea;
+  --ok-hover: #cdebd9;
   --warn: #9a5b00;
   --danger: #c4262e;
   --radius: 14px;
@@ -32,6 +33,7 @@
     --on-accent: #0b1220;
     --ok: #4cc38a;
     --ok-soft: #13291e;
+    --ok-hover: #1b3a2a;
     --warn: #f0b45c;
     --danger: #ff6b6b;
   }

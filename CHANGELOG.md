@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Images to PDF: **Placement** option for A4 / Letter / A3 pages — fit (keep proportions),
+  fill (crop overflow), stretch, or original size (no upscaling).
+- Tool grid: **favourites** — pin any tool with ☆; pinned tools appear in their own row at the top
+  (remembered per browser).
+
+### Changed
+- Tool grid: tools usable on the selected files are tinted pastel green, and their groups and
+  tools move to the front (left to right); the grid now flows row by row.
+- Keyboard shortcuts dialog uses up to four columns so it fits on one screen.
+
+### Fixed
+- Images to PDF stretched square images over the whole A4 page; the image rectangle is now
+  computed explicitly instead of relying on PyMuPDF's `keep_proportion`.
+
 ## [2.0.0] — 2026-10-25 — Ground-up rewrite
 
 v2 replaces v1 entirely; v1.13.2 is preserved in `archive/admin-pdf-toolkit-v1.13.2.zip`
