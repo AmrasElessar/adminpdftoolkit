@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import time
 from pathlib import Path
@@ -40,9 +41,9 @@ def test_parse_line_ignores_noise() -> None:
 
 def test_macos_path_finds_homebrew_tools(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(launcher.sys, "platform", "darwin")
-    monkeypatch.setenv("PATH", "/usr/bin:/bin")
+    monkeypatch.setenv("PATH", os.pathsep.join(["/usr/bin", "/bin"]))
     env = launcher.child_env(tmp_path)
-    assert env["PATH"].split(":")[:2] == ["/opt/homebrew/bin", "/usr/local/bin"]
+    assert env["PATH"].split(os.pathsep)[:2] == ["/opt/homebrew/bin", "/usr/local/bin"]
     assert env["APT_DATA_DIR"] == str(tmp_path)
 
 
