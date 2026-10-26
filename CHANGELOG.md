@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expired-file sweeping no longer removes inputs of running jobs. CI token read-only.
 
 ### Added
+- **Self-contained macOS (Apple Silicon) and Linux x86_64 packages** with their own Python
+  (python-build-standalone, SHA-256 verified) and the same launcher window in Tk
+  (`python -m adminpdf.launcher`): component checklist, server without a terminal, network
+  sharing, update notice; data in the user's folder. The macOS app is ad-hoc signed (no paid
+  Apple account; first start: *Open Anyway* once). Missing OCR / Ghostscript show the brew /
+  apt / dnf command.
 - Windows package: **`AdminPDFToolkit.exe` launcher** — ticks off every component one by one
   (Python, libraries, UI, certificate, OCR, Ghostscript, LibreOffice, ClamAV, port, disk, network),
   starts the server with no console window, shows "System ready" with addresses and the

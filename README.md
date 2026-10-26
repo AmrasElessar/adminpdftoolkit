@@ -124,6 +124,15 @@ Python veya başka bir program kurmanız gerekmez; paket kendi Python'unu, tüm 
 
 İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için bir kez onay ister (sonradan: başlatıcıda **Diğer ▸ Sertifikaya güven**). Konsollu yedek başlatma dosyaları `scripts\` klasöründedir.
 
+### macOS ve Linux (kurulum gerektirmez)
+
+- **macOS (Apple Silicon M1–M4):** **`AdminPDFToolkit-…-macOS-arm64.zip`** → `AdminPDFToolkit.app`'i Uygulamalar klasörüne sürükleyin, çift tıklayın. Uygulama ücretsiz ve açık kaynak olduğu için Apple'ın ücretli onayından geçirilmemiştir: **ilk açılışta bir kez** *Sistem Ayarları ▸ Gizlilik ve Güvenlik ▸ Yine de Aç* deyin, sonra normal açılır.
+- **Linux (x86_64: Ubuntu, Debian, Mint, Fedora, Pardus…):** **`AdminPDFToolkit-…-Linux-x86_64.tar.gz`** → açın, `AdminPDFToolkit`e çift tıklayın; menüye eklemek için `Uygulamalar menusune ekle.sh`.
+
+İkisi de kendi Python'unu içerir ve Windows'taki başlatıcı penceresini (bileşen listesi, "Sistem hazır", ağ paylaşımı, güncelleme bildirimi) açar; sunucu terminalsiz çalışır. Veriler kullanıcı klasöründedir (`~/Library/Application Support/AdminPDFToolkit`, `~/.local/share/AdminPDFToolkit`). OCR ve PDF/A için Tesseract ile Ghostscript sistemden kurulur (`brew install tesseract tesseract-lang ghostscript` / `sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript`); başlatıcı eksikse komutu gösterir.
+
+*macOS (Apple Silicon) and Linux x86_64 get self-contained packages too, with the same launcher window. The macOS app is ad-hoc signed but not notarised (that needs a paid Apple account): on first start use System Settings ▸ Privacy & Security ▸ Open Anyway once. OCR/PDF/A tools come from Homebrew / the distribution.*
+
 ### Docker (tüm araçlar dahil: OCR, LibreOffice, Ghostscript, ClamAV)
 
 ```bash

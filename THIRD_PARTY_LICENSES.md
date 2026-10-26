@@ -126,6 +126,7 @@ feature is disabled.*
 | pngquant / jbig2enc (isteğe bağlı) | GPL-3.0 / Apache-2.0 | OCR çıktısını küçültme | https://pngquant.org/ · https://github.com/agl/jbig2enc |
 | winget (Microsoft) | MIT | `OCR Kur (Windows).bat` içinde Tesseract kurulumu | https://github.com/microsoft/winget-cli |
 | Python (Windows paketinde gömülü "embeddable" dağıtım olarak gelir) | PSF-2.0 | Çalışma ortamı | https://www.python.org/ |
+| Python, macOS / Linux paketlerinde [python-build-standalone](https://github.com/astral-sh/python-build-standalone) derlemesi olarak gömülü (içindeki Tcl/Tk: BSD tarzı Tcl lisansı; OpenSSL: Apache-2.0; SQLite: kamu malı; diğerleri derlemenin lisans dosyalarında) | PSF-2.0 / MPL-2.0 (derleme betikleri) | Çalışma ortamı ve başlatıcı penceresi (Tk) | https://github.com/astral-sh/python-build-standalone |
 
 ## 4. Web arayüzü / Web UI
 

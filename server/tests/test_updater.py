@@ -212,3 +212,35 @@ def test_server_banner_survives_legacy_code_page(tmp_path: Path) -> None:
         out, err = p.communicate(timeout=30)
     assert b"UnicodeEncodeError" not in err, err[-800:]
     assert b"Yerel a" in out  # the banner was printed, letters it cannot show replaced
+
+
+def test_each_system_looks_for_its_own_package(monkeypatch: pytest.MonkeyPatch) -> None:
+    names = {
+        "win32": "AdminPDFToolkit-2.1.0-Windows.zip",
+        "darwin": "AdminPDFToolkit-2.1.0-macOS-arm64.zip",
+        "linux": "AdminPDFToolkit-2.1.0-Linux-x86_64.tar.gz",
+    }
+    for system, name in names.items():
+        monkeypatch.setattr(updater.sys, "platform", system)
+        pattern = updater.platform_asset()
+        assert pattern.match(name) and not any(pattern.match(n) for n in names.values() if n != name)
+
+
+def test_only_windows_installs_in_place(monkeypatch: pytest.MonkeyPatch) -> None:
+    _key, pub = _keys()
+    monkeypatch.setattr(updater, "RELEASE_PUBLIC_KEY", pub)
+    rel: dict[str, Any] = {
+        "tag": "v9.0.0",
+        "page": "https://example.invalid/r",
+        "package": "AdminPDFToolkit-9.0.0-macOS-arm64.zip",
+        "package_url": "https://example.invalid/pkg",
+        "sums_url": "https://example.invalid/sums",
+        "sig_url": "https://example.invalid/sig",
+        "components": {},
+    }
+    monkeypatch.setattr(updater, "latest_release", lambda: rel)
+    monkeypatch.setattr(updater.sys, "platform", "darwin")
+    result = updater.check("2.0.0")
+    assert result["available"] and not result["installable"]
+    monkeypatch.setattr(updater.sys, "platform", "win32")
+    assert updater.check("2.0.0")["installable"]

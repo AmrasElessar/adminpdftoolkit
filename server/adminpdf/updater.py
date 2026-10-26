@@ -36,6 +36,20 @@ REPO = "AmrasElessar/adminpdftoolkit"
 API = f"https://api.github.com/repos/{REPO}/releases/latest"
 RELEASES_PAGE = f"https://github.com/{REPO}/releases/latest"
 ASSET_RE = re.compile(r"^AdminPDFToolkit-(?P<version>[0-9][0-9A-Za-z.\-]*)-Windows\.zip$")
+# The package this system downloads: only the Windows one is replaced in
+# place by the launcher; on macOS / Linux the new release is announced.
+PLATFORM_ASSETS = {
+    "win32": ASSET_RE,
+    "darwin": re.compile(r"^AdminPDFToolkit-(?P<version>[0-9][0-9A-Za-z.\-]*)-macOS-arm64\.zip$"),
+    "linux": re.compile(r"^AdminPDFToolkit-(?P<version>[0-9][0-9A-Za-z.\-]*)-Linux-x86_64\.tar\.gz$"),
+}
+
+
+def platform_asset() -> re.Pattern[str]:
+    key = "linux" if sys.platform.startswith("linux") else sys.platform
+    return PLATFORM_ASSETS.get(key, ASSET_RE)
+
+
 # Ed25519 public key of the release workflow (base64, 32 bytes), set when
 # signing is configured (see scripts/release_signing.py). Empty = no
 # automatic installs.
@@ -89,7 +103,8 @@ def latest_release() -> dict[str, Any]:
     """The newest release's Windows package and signature files."""
     release = json.loads(_get(API))
     assets = {a["name"]: a["browser_download_url"] for a in release.get("assets", [])}
-    package = next((n for n in assets if ASSET_RE.match(n)), None)
+    pattern = platform_asset()
+    package = next((n for n in assets if pattern.match(n)), None)
     manifest: dict[str, Any] = {}
     if "release-manifest.json" in assets:
         try:
@@ -114,7 +129,9 @@ def check(current: str = VERSION) -> dict[str, Any]:
         return {"type": "update", "ok": False, "current": current, "error": str(e)[:200]}
     latest = rel["tag"].lstrip("v")
     available = bool(rel["package"]) and parse_version(latest) > parse_version(current)
-    installable = available and bool(RELEASE_PUBLIC_KEY and rel["sums_url"] and rel["sig_url"])
+    installable = (
+        available and sys.platform == "win32" and bool(RELEASE_PUBLIC_KEY and rel["sums_url"] and rel["sig_url"])
+    )
     return {
         "type": "update",
         "ok": True,

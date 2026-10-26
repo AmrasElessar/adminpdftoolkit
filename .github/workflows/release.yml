@@ -102,6 +102,73 @@ jobs:
             dist/sources/*
           if-no-files-found: error
 
+  unix:
+    name: Self-contained ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Oldest supported Ubuntu runner: the package then runs on older glibc too.
+          - os: ubuntu-22.04
+            label: Linux x86_64
+            pattern: dist/*-Linux-x86_64.tar.gz
+          - os: macos-latest
+            label: macOS (Apple Silicon)
+            pattern: dist/*-macOS-arm64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build web UI
+        working-directory: web
+        run: npm ci --no-audit --no-fund && npm run build
+      - name: Build package
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/build_unix_portable.py
+      - name: Smoke-test the unpacked package
+        run: |
+          mkdir smoke && cd smoke
+          if [ "$RUNNER_OS" = macOS ]; then
+            ditto -x -k ../dist/*-macOS-arm64.zip .
+            APP=AdminPDFToolkit/AdminPDFToolkit.app
+            codesign --verify --deep --strict "$APP"
+            plutil -lint "$APP/Contents/Info.plist"
+            test -x "$APP/Contents/MacOS/AdminPDFToolkit"
+            PY="$APP/Contents/Resources/python/bin/python3"
+          else
+            tar xzf ../dist/*-Linux-x86_64.tar.gz
+            test -x AdminPDFToolkit/AdminPDFToolkit
+            PY=AdminPDFToolkit/python/bin/python3
+          fi
+          export APT_DATA_DIR="$RUNNER_TEMP/apt"
+          # The packaged Python alone, nothing from the runner.
+          env -u PYTHONHOME -u PYTHONPATH "$PY" -c "import tkinter, adminpdf.launcher; print('tk', tkinter.TkVersion)"
+          "$PY" -m adminpdf.selfcheck | tee checks.jsonl
+          tail -1 checks.jsonl | "$PY" -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d['ready'] else 1)"
+          nohup "$PY" -m adminpdf > "$RUNNER_TEMP/server.log" 2>&1 &
+          CA="$APT_DATA_DIR/tls/ca.crt"
+          for i in $(seq 1 60); do curl -sf --cacert "$CA" https://localhost:8000/api/health && break; sleep 1; done
+          curl -sf --cacert "$CA" -o /dev/null https://localhost:8000/
+          n=$(curl -sf --cacert "$CA" https://localhost:8000/api/ops | "$PY" -c "import json,sys; print(len(json.load(sys.stdin)))")
+          echo "tools: $n"; test "$n" -ge 40
+          ls -lh ../dist
+      - name: Server log
+        if: failure()
+        run: cat "$RUNNER_TEMP/server.log" || true
+      - uses: actions/upload-artifact@v5
+        with:
+          name: unix-${{ matrix.os }}
+          path: ${{ matrix.pattern }}
+          if-no-files-found: error
+
   python:
     name: Linux / macOS package
     runs-on: ubuntu-latest
@@ -138,7 +205,7 @@ jobs:
   publish:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/v') || (inputs.publish && github.ref == 'refs/heads/main')
-    needs: [windows, python]
+    needs: [windows, unix, python]
     runs-on: ubuntu-latest
     permissions:
       contents: write

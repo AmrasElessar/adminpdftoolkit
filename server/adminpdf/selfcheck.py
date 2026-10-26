@@ -74,6 +74,23 @@ def _run_version(cmd: list[str], timeout: float = 20) -> str:
     return ""
 
 
+def _install_hint(packages: dict[str, str]) -> str:
+    """The command that installs a missing tool on this system."""
+    if sys.platform == "darwin":
+        return f" — brew install {packages['brew']}"
+    if sys.platform.startswith("linux"):
+        return f" — sudo apt install {packages['apt']} (Fedora: sudo dnf install {packages['dnf']})"
+    return ""
+
+
+_OCR_PACKAGES = {
+    "brew": "tesseract tesseract-lang",
+    "apt": "tesseract-ocr tesseract-ocr-tur",
+    "dnf": "tesseract tesseract-langpack-tur",
+}
+_GS_PACKAGES = {"brew": "ghostscript", "apt": "ghostscript", "dnf": "ghostscript"}
+
+
 def check_python(_s: Settings) -> Result:
     ok = sys.version_info >= (3, 11)
     embedded = (Path(sys.executable).parent / f"python{sys.version_info[0]}{sys.version_info[1]}._pth").exists()
@@ -143,7 +160,10 @@ def check_ocr(_s: Settings) -> Result:
         )
     exe = bundled or find_tesseract()
     if not exe:
-        return _result("ocr", title, "missing", "", _text("Kurulu değil; OCR kapalı.", "Not installed; OCR is off."))
+        hint = _install_hint(_OCR_PACKAGES)
+        return _result(
+            "ocr", title, "missing", "", _text("Kurulu değil; OCR kapalı" + hint, "Not installed; OCR is off" + hint)
+        )
     version = _run_version([exe, "--version"]).removeprefix("tesseract ").strip()
     langs = tesseract_languages()
     where = (
@@ -170,7 +190,14 @@ def check_ghostscript(_s: Settings) -> Result:
     exe = bundled or find_ghostscript()
     if not exe:
         return _result(
-            "ghostscript", title, "missing", "", _text("Kurulu değil; PDF/A kapalı.", "Not installed; PDF/A is off.")
+            "ghostscript",
+            title,
+            "missing",
+            "",
+            _text(
+                "Kurulu değil; PDF/A kapalı" + _install_hint(_GS_PACKAGES),
+                "Not installed; PDF/A is off" + _install_hint(_GS_PACKAGES),
+            ),
         )
     where = (
         _text("Pakete gömülü, doğrulandı", "Bundled, verified") if bundled else _text("Sistemde kurulu", "Installed")
