@@ -199,7 +199,14 @@ def test_server_banner_survives_legacy_code_page(tmp_path: Path) -> None:
     import sys
     import time
 
-    env = {**os.environ, "APT_DATA_DIR": str(tmp_path / "d"), "PYTHONIOENCODING": "cp1252", "APT_PORT": "8767"}
+    env = {
+        **os.environ,
+        "APT_DATA_DIR": str(tmp_path / "d"),
+        "PYTHONIOENCODING": "cp1252",
+        "APT_PORT": "8767",
+        # Unbuffered: every line is encoded (and would fail) the moment it is printed.
+        "PYTHONUNBUFFERED": "1",
+    }
     env.pop("PYTHONUTF8", None)
     p = subprocess.Popen(
         [sys.executable, "-m", "adminpdf", "--lan"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
