@@ -197,6 +197,7 @@ def test_server_banner_survives_legacy_code_page(tmp_path: Path) -> None:
     import os
     import subprocess
     import sys
+    import threading
     import time
 
     env = {
@@ -208,15 +209,32 @@ def test_server_banner_survives_legacy_code_page(tmp_path: Path) -> None:
         "PYTHONUNBUFFERED": "1",
     }
     env.pop("PYTHONUTF8", None)
-    p = subprocess.Popen(
-        [sys.executable, "-m", "adminpdf", "--lan"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
-    )
-    try:
-        time.sleep(6)
-        assert p.poll() is None, p.stderr.read()[-800:] if p.stderr else ""
-    finally:
-        p.terminate()
-        out, err = p.communicate(timeout=30)
+    log = tmp_path / "stderr.log"
+    out = bytearray()
+    with log.open("wb") as err_file:
+        p = subprocess.Popen(
+            [sys.executable, "-m", "adminpdf", "--lan"], stdout=subprocess.PIPE, stderr=err_file, env=env
+        )
+        assert p.stdout is not None
+        stdout = p.stdout
+
+        def read() -> None:
+            for line in stdout:
+                out.extend(line)
+
+        # Read in the background: start-up time varies a lot between CI machines.
+        reader = threading.Thread(target=read, daemon=True)
+        reader.start()
+        try:
+            deadline = time.monotonic() + 90
+            while b"Yerel a" not in out and p.poll() is None and time.monotonic() < deadline:
+                time.sleep(0.5)
+            assert p.poll() is None, log.read_bytes()[-800:]
+        finally:
+            p.terminate()
+            p.wait(timeout=30)
+            reader.join(timeout=10)
+    err = log.read_bytes()
     assert b"UnicodeEncodeError" not in err, err[-800:]
     assert b"Yerel a" in out  # the banner was printed, letters it cannot show replaced
 
