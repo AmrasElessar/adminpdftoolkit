@@ -190,3 +190,25 @@ def test_selfcheck_output_is_ascii(tmp_path: Path) -> None:
 
     titles = [json.loads(ln).get("title", {}).get("tr", "") for ln in lines]
     assert "Kütüphaneler" in titles
+
+
+def test_server_banner_survives_legacy_code_page(tmp_path: Path) -> None:
+    """The start-up banner is Turkish; a cp1252 console must not crash the server."""
+    import os
+    import subprocess
+    import sys
+    import time
+
+    env = {**os.environ, "APT_DATA_DIR": str(tmp_path / "d"), "PYTHONIOENCODING": "cp1252", "APT_PORT": "8767"}
+    env.pop("PYTHONUTF8", None)
+    p = subprocess.Popen(
+        [sys.executable, "-m", "adminpdf", "--lan"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env
+    )
+    try:
+        time.sleep(6)
+        assert p.poll() is None, p.stderr.read()[-800:] if p.stderr else ""
+    finally:
+        p.terminate()
+        out, err = p.communicate(timeout=30)
+    assert b"UnicodeEncodeError" not in err, err[-800:]
+    assert b"Yerel a" in out  # the banner was printed, letters it cannot show replaced

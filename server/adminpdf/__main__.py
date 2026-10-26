@@ -37,7 +37,17 @@ def _trust_once(settings: Settings, fingerprint: str) -> None:
         print("  Sertifika bu bilgisayarda güvenilir olarak eklendi. / Certificate trusted on this computer.")
 
 
+def _safe_console() -> None:
+    """Legacy Windows code pages (cp1252, cp850, …) cannot encode every
+    Turkish letter; replace what they cannot show instead of crashing."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(errors="replace")
+
+
 def main() -> None:
+    _safe_console()
     parser = argparse.ArgumentParser(prog="adminpdf", description="Admin PDF Toolkit server")
     parser.add_argument("--open", action="store_true", help="open the app in the default browser")
     parser.add_argument("--lan", action="store_true", help="listen on the local network with a one-time pairing key")
