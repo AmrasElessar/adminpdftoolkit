@@ -17,23 +17,28 @@ router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 HEARTBEAT_SECONDS = 15.0
 
 
-def _job(job_id: str, engine: JobEngine) -> Job:
-    job = engine.get(job_id)
+def _job(job_id: str, engine: JobEngine, owner: str) -> Job:
+    job = engine.get(job_id, owner=owner)
     if job is None:
         raise deps.not_found("Job not found")
     return job
 
 
 @router.get("/{job_id}")
-def status(job_id: str, engine: Annotated[JobEngine, Depends(deps.engine)]) -> dict[str, Any]:
-    return _job(job_id, engine).public()
+def status(
+    job_id: str, engine: Annotated[JobEngine, Depends(deps.engine)], owner: Annotated[str, Depends(deps.owner)]
+) -> dict[str, Any]:
+    return _job(job_id, engine, owner).public()
 
 
 @router.get("/{job_id}/events")
 async def events(
-    job_id: str, request: Request, engine: Annotated[JobEngine, Depends(deps.engine)]
+    job_id: str,
+    request: Request,
+    engine: Annotated[JobEngine, Depends(deps.engine)],
+    owner: Annotated[str, Depends(deps.owner)],
 ) -> StreamingResponse:
-    job = _job(job_id, engine)
+    job = _job(job_id, engine, owner)
 
     async def stream() -> AsyncIterator[str]:
         seen = -1
@@ -57,7 +62,9 @@ async def events(
 
 
 @router.post("/{job_id}/cancel")
-async def cancel(job_id: str, engine: Annotated[JobEngine, Depends(deps.engine)]) -> dict[str, Any]:
-    job = _job(job_id, engine)
-    await engine.cancel(job_id)
+async def cancel(
+    job_id: str, engine: Annotated[JobEngine, Depends(deps.engine)], owner: Annotated[str, Depends(deps.owner)]
+) -> dict[str, Any]:
+    job = _job(job_id, engine, owner)
+    await engine.cancel(job_id, owner=owner)
     return job.public()

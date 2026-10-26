@@ -263,6 +263,32 @@ def test_images_to_pdf_and_back(api: Api) -> None:
         assert len(zf.namelist()) == 2
 
 
+@pytest.mark.parametrize(
+    ("fit", "expected"),
+    [
+        # A square image on A4 (595 × 842) with an 18 pt margin.
+        ("contain", (559.3, 559.3)),
+        ("cover", (559.3, 805.9)),
+        ("stretch", (559.3, 805.9)),
+        ("original", (96.0, 96.0)),  # 200 px at the nominal 150 DPI
+    ],
+)
+def test_images_to_pdf_fit_modes(api: Api, fit: str, expected: tuple[float, float]) -> None:
+    img = api.upload(make_png(200, 200), "kare.png")
+    job = api.run("images_to_pdf", [img["id"]], {"page_size": "a4", "fit": fit, "deskew": False})
+    assert job["status"] == "done", job
+    with open_bytes(api.download(job["result"]["id"])) as doc:
+        info = doc[0].get_image_info()[0]
+        x0, y0, x1, y1 = info["bbox"]
+        assert (round(x1 - x0, 1), round(y1 - y0, 1)) == expected
+        # Centred on the page.
+        assert abs((x0 + x1) / 2 - doc[0].rect.width / 2) < 0.5
+        assert abs((y0 + y1) / 2 - doc[0].rect.height / 2) < 0.5
+        if fit == "cover":
+            # Cropped to the box shape, so the pixels are not distorted.
+            assert info["width"] / info["height"] == pytest.approx(559.3 / 805.9, abs=0.01)
+
+
 def test_render_pixel_budget_caps_huge_pages(api: Api) -> None:
     # 200 × 200 inch page at 600 DPI would be 14 400 MP without the cap.
     f = api.upload(make_pdf(1, size=(14400, 14400)))

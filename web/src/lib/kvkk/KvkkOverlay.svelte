@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from "../i18n.svelte";
-  import type { PageViewport } from "../viewer/pdf";
+  import { pdfRectToViewport, type PageViewport } from "../viewer/pdf";
   import type { KvkkState, Rect } from "./state.svelte";
 
   let { page, viewport, kvkk }: { page: number; viewport: PageViewport; kvkk: KvkkState } = $props();
@@ -11,8 +11,7 @@
   const items = $derived(kvkk.findings.filter((f) => f.page === page));
 
   function box(r: readonly number[]): { left: number; top: number; width: number; height: number } {
-    const [x0, y0, x1, y1] = viewport.convertToViewportRectangle([r[0]!, r[1]!, r[2]!, r[3]!]) as number[];
-    return { left: Math.min(x0!, x1!), top: Math.min(y0!, y1!), width: Math.abs(x1! - x0!), height: Math.abs(y1! - y0!) };
+    return pdfRectToViewport(viewport, r);
   }
 
   function local(e: PointerEvent): [number, number] {
@@ -61,6 +60,7 @@
         style:top={`${b.top - 1}px`}
         style:width={`${b.width + 2}px`}
         style:height={`${b.height + 2}px`}
+        style:font-size={`${Math.max(4, Math.min(16, b.height * 0.8))}px`}
         aria-label={`${f.kind}: ${f.text}`}
         onclick={() => (kvkk.focused = f.id)}
       >
@@ -93,20 +93,23 @@
     padding: 0 2px;
     border: 1.5px solid transparent;
     border-radius: 2px;
-    font: 600 10px/1 ui-monospace, monospace;
+    font-weight: 600;
+    font-family: ui-monospace, monospace;
+    line-height: 1;
     justify-content: flex-start;
     overflow: hidden;
     cursor: pointer;
   }
+  /* Opaque like the result: the preview never shows what will be removed. */
   .finding.black {
-    background: rgb(0 0 0 / 0.82);
+    background: #000;
   }
   .finding.white {
-    background: rgb(255 255 255 / 0.92);
+    background: #fff;
     border-color: #999;
   }
   .finding.mask {
-    background: rgb(255 255 255 / 0.95);
+    background: #fff;
     border-color: #2f5496;
     color: #111;
   }

@@ -100,6 +100,40 @@ def save_pdf(doc: pymupdf.Document, output: Path, **extra: Any) -> None:
     doc.save(output, **kwargs)
 
 
+# Rendered page ceiling for flattening, independent of DPI (≈ A3 at 300 DPI).
+_FLATTEN_MAX_PIXELS = 20_000_000
+
+
+def flatten_to_images(doc: pymupdf.Document, output: Path, *, dpi: int, progress: Any = None) -> None:
+    """Write ``doc`` as a new PDF whose pages are just pictures of the
+    originals ("extra-secure PDF").
+
+    Nothing of the source survives: no text layer, fonts, vector objects,
+    hidden layers, annotations, form fields, attachments, scripts or
+    metadata — only pixels. What a redaction covered cannot be recovered by
+    copying, extracting or editing, because the bytes are no longer there.
+    """
+    out = pymupdf.open()
+    try:
+        total = doc.page_count
+        for i, page in enumerate(doc):
+            zoom = dpi / 72
+            pixels = page.rect.width * zoom * page.rect.height * zoom
+            if pixels > _FLATTEN_MAX_PIXELS:
+                zoom *= (_FLATTEN_MAX_PIXELS / pixels) ** 0.5
+            # annots=False: redaction leftovers, comments and widgets are not drawn.
+            pix = page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom), alpha=False, annots=False)
+            data = pix.tobytes("jpeg", jpg_quality=88)
+            new = out.new_page(width=page.rect.width, height=page.rect.height)
+            new.insert_image(new.rect, stream=data, keep_proportion=False)
+            if progress is not None:
+                progress((i + 1) / total)
+        out.set_metadata({})
+        out.save(output, garbage=4, deflate=True)
+    finally:
+        out.close()
+
+
 def parse_page_spec(spec: str, page_count: int) -> list[int]:
     """Parse ``"1-3,5,8-"`` into 0-based indices, preserving order.
 

@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { OpInfo } from "../lib/api";
   import { t, type Text } from "../lib/i18n.svelte";
+  import { favorites, isFavorite, toggleFavorite } from "../lib/favorites.svelte";
   import { workspace } from "../lib/workspace.svelte";
 
   let {
@@ -53,8 +54,21 @@
     const extra = [...byCat.keys()]
       .filter((k) => !CATEGORIES.some((c) => c.id === k))
       .map((k) => ({ id: k, icon: "•", label: { tr: k, en: k }, ops: byCat.get(k)! }));
-    return [...known, ...extra];
+    const all = [...known, ...extra];
+    if (!workspace.selected.length) return all;
+    // With files selected, what can run on them comes first: groups with a
+    // usable tool lead the grid, and usable tools lead their group.
+    const ready = (op: OpInfo) => blocker(op) === null;
+    return all
+      .map((g) => ({ ...g, ops: [...g.ops.filter(ready), ...g.ops.filter((op) => !ready(op))] }))
+      .sort((a, b) => Number(ready(b.ops[0]!)) - Number(ready(a.ops[0]!)));
   });
+
+  const pinned = $derived(
+    favorites.names
+      .map((name) => ops.find((op) => op.name === name && !op.hidden))
+      .filter((op): op is OpInfo => op !== undefined),
+  );
 
   /** Why an operation can't run on the current selection, or null if it can. */
   function blocker(op: OpInfo): string | null {
@@ -82,7 +96,12 @@
 <section class="tools" aria-label={t("Araçlar", "Tools")}>
   <div class="head">
     <input class="search" type="search" placeholder={t("Araç ara…", "Search tools…")} bind:value={query} />
-    <span class="hint">{t("Açıklama için aracın üzerine gelin", "Hover a tool for its description")}</span>
+    <span class="hint"
+      ><span class="hover-only">{t("Açıklama için aracın üzerine gelin · ", "Hover a tool for its description · ")}</span>{t(
+        "☆ ile sık kullanılanlara ekleyin",
+        "☆ adds it to favourites",
+      )}</span
+    >
   </div>
 
   {#if !query}
@@ -91,6 +110,7 @@
         <button
           class="feature"
           class:blocked={!single}
+          class:ready={single}
           aria-describedby="tool-tip"
           onclick={() => single && onopen(c.mode)}
           onmouseenter={(e) => show(e, t(c.tr, c.en), t(c.dtr, c.den), single ? null : t("Tek bir PDF seçin", "Select a single PDF"))}
@@ -103,7 +123,47 @@
         </button>
       {/each}
     </div>
+
+    {#if pinned.length}
+      <section class="favorites" aria-labelledby="cat-favorites">
+        <h3 id="cat-favorites"><span aria-hidden="true">★</span> {t("Sık kullanılanlar", "Favourites")}</h3>
+        <ul>
+          {#each pinned as op (op.name)}
+            {@const why = blocker(op)}
+            <li>
+              {@render tool(op, why)}
+            </li>
+          {/each}
+        </ul>
+      </section>
+    {/if}
   {/if}
+
+  {#snippet tool(op: OpInfo, why: string | null)}
+    {@const fav = isFavorite(op.name)}
+    <button
+      class="tool"
+      class:blocked={why}
+      class:ready={!why}
+      aria-describedby="tool-tip"
+      onclick={() => onpick(op)}
+      onmouseenter={(e) => show(e, t(op.title), t(op.description), why)}
+      onfocus={(e) => show(e, t(op.title), t(op.description), why)}
+      onmouseleave={() => (tip = null)}
+      onblur={() => (tip = null)}
+    >
+      <span class="dot" class:ready={!why} aria-hidden="true"></span>
+      {t(op.title)}
+    </button>
+    <button
+      class="star"
+      class:on={fav}
+      aria-pressed={fav}
+      aria-label={t(`${t(op.title)}: sık kullanılanlara ekle`, `${t(op.title)}: add to favourites`)}
+      title={fav ? t("Sık kullanılanlardan çıkar", "Remove from favourites") : t("Sık kullanılanlara ekle", "Add to favourites")}
+      onclick={() => toggleFavorite(op.name)}>{fav ? "★" : "☆"}</button
+    >
+  {/snippet}
 
   <div class="columns">
     {#each groups as g (g.id)}
@@ -113,19 +173,7 @@
           {#each g.ops as op (op.name)}
             {@const why = blocker(op)}
             <li>
-              <button
-                class="tool"
-                class:blocked={why}
-                aria-describedby="tool-tip"
-                onclick={() => onpick(op)}
-                onmouseenter={(e) => show(e, t(op.title), t(op.description), why)}
-                onfocus={(e) => show(e, t(op.title), t(op.description), why)}
-                onmouseleave={() => (tip = null)}
-                onblur={() => (tip = null)}
-              >
-                <span class="dot" class:ready={!why} aria-hidden="true"></span>
-                {t(op.title)}
-              </button>
+              {@render tool(op, why)}
             </li>
           {/each}
         </ul>
@@ -190,6 +238,14 @@
     border-color: var(--accent);
     background: var(--accent-soft);
   }
+  .feature.ready {
+    border-color: color-mix(in srgb, var(--ok) 35%, var(--border));
+    background: var(--ok-soft);
+  }
+  .feature.ready:hover {
+    border-color: var(--ok);
+    background: var(--ok-hover);
+  }
   .ficon {
     display: grid;
     place-items: center;
@@ -201,16 +257,28 @@
     font-size: 1rem;
   }
   .columns {
-    columns: 210px;
-    column-gap: 14px;
+    /* Row-major, so the groups that suit the selection fill the top row
+       from the left. */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    align-items: start;
+    gap: 14px;
   }
-  .group {
-    break-inside: avoid;
-    margin-bottom: 14px;
+  .group,
+  .favorites {
     padding: 10px 10px 8px;
     border-radius: 12px;
     background: var(--surface);
     border: 1px solid var(--border);
+  }
+  .favorites ul {
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 2px 8px;
+  }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 2px;
   }
   h3 {
     margin: 0 0 6px;
@@ -228,7 +296,8 @@
     gap: 1px;
   }
   .tool {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
     min-height: 30px;
     justify-content: flex-start;
     gap: 8px;
@@ -243,6 +312,64 @@
   .tool:focus-visible {
     background: var(--accent-soft);
     color: var(--accent);
+  }
+  .tool.ready {
+    background: var(--ok-soft);
+  }
+  .tool.ready:hover,
+  .tool.ready:focus-visible {
+    background: var(--ok-hover);
+    color: var(--text);
+  }
+  .star {
+    flex: none;
+    min-height: 30px;
+    width: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.95rem;
+    opacity: 0;
+  }
+  li:hover .star,
+  .star:focus-visible,
+  .star.on {
+    opacity: 1;
+  }
+  .star.on {
+    color: var(--warn);
+  }
+  .star:hover {
+    background: var(--surface-2);
+  }
+  @media (hover: none) {
+    .star {
+      opacity: 0.6;
+    }
+    .hover-only {
+      display: none;
+    }
+  }
+  @media (pointer: coarse) {
+    .tool,
+    .star {
+      min-height: 40px;
+    }
+    .star {
+      width: 36px;
+    }
+  }
+  @media (max-width: 600px) {
+    .featured {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .feature {
+      padding: 8px 10px;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
   }
   .blocked {
     color: var(--muted);

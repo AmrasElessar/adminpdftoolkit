@@ -22,6 +22,8 @@ class Settings(BaseSettings):
 
     max_upload_mb: int = Field(default=200, ge=1)
     file_ttl_minutes: int = Field(default=120, ge=1)
+    # Everything stored at once (uploads + results); 0 disables the cap.
+    max_storage_mb: int = Field(default=10240, ge=0)
 
     max_workers: int = Field(default=2, ge=1, le=32)
     job_timeout_seconds: int = Field(default=600, ge=5)
@@ -36,6 +38,14 @@ class Settings(BaseSettings):
     # When true, non-loopback clients must pair with ``pairing_key`` first.
     lan_enabled: bool = False
     pairing_key: str = ""
+    # Interactive API docs at /api/docs (development aid; off by default).
+    api_docs: bool = False
+    # HTTPS with this server's own local certificate authority (core/tls.py).
+    # Only turn off behind a TLS reverse proxy of your own.
+    tls: bool = True
+    # Use your own certificate instead (e.g. from a company CA).
+    tls_cert_file: Path | None = None
+    tls_key_file: Path | None = None
 
     @property
     def max_upload_bytes(self) -> int:
@@ -48,6 +58,14 @@ class Settings(BaseSettings):
     @property
     def jobs_dir(self) -> Path:
         return self.data_dir / "jobs"
+
+    @property
+    def tls_dir(self) -> Path:
+        return self.data_dir / "tls"
+
+    @property
+    def scheme(self) -> str:
+        return "https" if self.tls else "http"
 
 
 @lru_cache

@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **HTTPS by default** with the server's own local certificate authority, name-constrained to
+  private addresses and local names; the server certificate follows LAN address changes; TLS 1.2+,
+  ECDHE + AEAD only. `--trust-ca`, a one-time trust prompt on Windows/macOS and a public
+  `/api/session/ca.crt` for devices. `APT_TLS`, `APT_TLS_CERT_FILE` / `APT_TLS_KEY_FILE`.
+- **Local network only**: public client addresses are always refused; `APT_TRUSTED_NETWORKS`
+  accepts only local ranges (or `gateway`, the Docker host, ignored in LAN mode); loopback
+  requests with proxy forwarding headers count as remote.
+- **Per-device isolation**: files and jobs belong to this computer or one paired device.
+- Pairing keys must be 12+ characters (`--lan` now generates 128-bit keys); global attempt limit;
+  sessions expire after 30 days and are capped.
+- LibreOffice runs with a hardened throwaway profile (no macros, active content, link updates,
+  recalculation on load or network access) — guards against SSRF and local-file disclosure.
+- pdf.js 6.4.299 (GHSA-hq66-cqwq-w95j: script execution from a crafted PDF).
+- API responses `no-store`, CORP and other headers, no `Server` header, `/api/docs` off by default
+  (`APT_API_DOCS`); storage cap `APT_MAX_STORAGE_MB` (507) and a per-device pending-job cap (429);
+  expired-file sweeping no longer removes inputs of running jobs. CI token read-only.
+
+### Added
+- **VirusTotal scan of every release** (`scripts/virustotal.py`, standard library, free API key
+  as the secret `VIRUSTOTAL_API_KEY`): the packages and the launcher exe are uploaded (or looked
+  up by SHA-256), the results go into the release notes and `virustotal.json`, which feeds the
+  README's new *Güvenlik / Security* badge row. Never blocks a release.
+- **About & Licences page** (header link): Turkish and English as separate tabs — supported
+  systems, first-start warnings, every Python package actually installed (direct and pulled-in,
+  read from their metadata), the web bundle's npm packages, the files of bundled tools with their
+  SHA-256 sources, programs, runtimes, fonts, data, build tools and methods. `/api/about`;
+  `scripts/third_party.py` writes the same data as THIRD_PARTY_LICENSES.md (Turkish part, then
+  English part).
+- **First-start warnings documented** on the README main page, the release page, the packages'
+  OKUBENI files and the app: Windows SmartScreen (*More info ▸ Run anyway* / *Unblock*), the
+  certificate prompt, the firewall (private networks only), macOS Gatekeeper (*Open Anyway*) and
+  keychain password, browser/phone certificate install, SHA256SUMS verification.
+- **Self-contained macOS (Apple Silicon) and Linux x86_64 packages** with their own Python
+  (python-build-standalone, SHA-256 verified) and the same launcher window in Tk
+  (`python -m adminpdf.launcher`): component checklist, server without a terminal, network
+  sharing, update notice; data in the user's folder. The macOS app is ad-hoc signed (no paid
+  Apple account; first start: *Open Anyway* once). Missing OCR / Ghostscript show the brew /
+  apt / dnf command.
+- Windows package: **`AdminPDFToolkit.exe` launcher** — ticks off every component one by one
+  (Python, libraries, UI, certificate, OCR, Ghostscript, LibreOffice, ClamAV, port, disk, network),
+  starts the server with no console window, shows "System ready" with addresses and the
+  certificate fingerprint, network-sharing switch, hides in the notification area. Plain .NET
+  Framework code built with the Windows `csc`; optional Authenticode signing in CI. The `.bat`
+  files move to `scripts\` as console fallbacks. `python -m adminpdf.selfcheck` does the checks.
+- **Signed updates**: optional check at start; a newer release is offered with its component
+  versions and installed only if the user agrees and its Ed25519-signed SHA-256 verifies
+  (never a downgrade); `data\` is kept. `scripts/release_signing.py`, `SHA256SUMS(.sig)` and
+  `release-manifest.json` in releases.
+- Windows package: **Ghostscript bundled** (PDF/A works offline); Tesseract and Ghostscript come
+  from their newest upstream release at build time, verified against GitHub's published SHA-256;
+  Ghostscript's source tarball is published with each release.
+- **Extra-secure PDF** option for KVKK and *Redact*: the result is rebuilt from page images only, so
+  no text, object, annotation, attachment or metadata survives.
+- **Connect a device** dialog on the server PC with a pairing QR code and the certificate
+  fingerprint; certificate install help on the pairing screen.
+- Windows package: **OCR bundled** (Tesseract + `tur`/`eng`/`osd`), checked against SHA-256 hashes
+  recorded at build time before every use; `OCR Onar (Windows).bat` repairs language data with
+  hash-verified downloads only; `Sertifikaya Guven (Windows).bat`.
+- Images to PDF: **Placement** option for A4 / Letter / A3 pages — fit (keep proportions),
+  fill (crop overflow), stretch, or original size (no upscaling).
+- Tool grid: **favourites** — pin any tool with ☆; pinned tools appear in their own row at the top
+  (remembered per browser).
+
+### Changed
+- Phones and tablets: compact header, scrollable viewer modes, KVKK findings usable on phones, no
+  keyboard hints on touch screens, larger touch targets, no iOS zoom when a field is focused.
+- KVKK preview boxes are opaque, exactly like the applied result.
+- Tool grid: tools usable on the selected files are tinted pastel green, and their groups and
+  tools move to the front (left to right); the grid now flows row by row.
+- Keyboard shortcuts dialog uses up to four columns so it fits on one screen.
+
+### Fixed
+- Images to PDF stretched square images over the whole A4 page; the image rectangle is now
+  computed explicitly instead of relying on PyMuPDF's `keep_proportion`.
+
 ## [2.0.0] — 2026-10-25 — Ground-up rewrite
 
 v2 replaces v1 entirely; v1.13.2 is preserved in `archive/admin-pdf-toolkit-v1.13.2.zip`
@@ -52,7 +128,7 @@ and in git history.
   the first start on Windows offers it. The app picks the per-user language folder up automatically.
 - Full attribution page: every direct and transitive library, external program, font, dataset and
   published algorithm with its licence (`THIRD_PARTY_LICENSES.md`, generated Python table via
-  `scripts/python_licenses.py`). The UI serves it at `/licenses.txt` together with the full licence
+  `scripts/third_party.py`). The UI serves it at `/licenses.txt` together with the full licence
   texts of all bundled npm packages, collected at build time; header links to the source code
   (AGPL-3.0 §13) and the licences.
 

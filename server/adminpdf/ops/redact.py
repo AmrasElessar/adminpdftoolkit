@@ -18,7 +18,7 @@ import pymupdf
 from pydantic import field_validator
 
 from ..core.errors import UserError
-from ..core.pdf import open_pdf, parse_page_spec, save_pdf
+from ..core.pdf import flatten_to_images, open_pdf, parse_page_spec, save_pdf
 from .base import Context, Field, Operation, Params, ProgressFn, register
 from .stamp import parse_color
 from .structure import strip_document_metadata
@@ -406,6 +406,23 @@ class RedactParams(MatchParams):
         max_length=60,
     )
     remove_metadata: bool = Field(True, tr="Meta veriyi de temizle", en="Also remove metadata")
+    flatten: bool = Field(
+        False,
+        tr="Ekstra güvenli PDF (sayfaları görsele çevir)",
+        en="Extra-secure PDF (turn pages into images)",
+        help_tr="Sonuç yalnızca sayfa görüntülerinden oluşur: metin, gizli katman veya nesne kalmaz, hiçbir araçla "
+        "geri getirilemez. Metin artık seçilemez ve aranamaz; dosya büyüyebilir.",
+        help_en="The result is page pictures only: no text, hidden layers or objects remain, nothing can be "
+        "recovered by any tool. Text can no longer be selected or searched; the file may grow.",
+    )
+    flatten_dpi: int = Field(
+        200,
+        tr="Görüntü çözünürlüğü (DPI)",
+        en="Image resolution (DPI)",
+        ge=100,
+        le=400,
+        ui={"show_if": {"flatten": True}},
+    )
 
 
 def _intersects(rect: pymupdf.Rect, boxes: list[pymupdf.Rect]) -> bool:
@@ -497,6 +514,9 @@ class Redact(Operation):
                 ctx.progress(0.5 + 0.5 * (k + 1) / len(boxes), "")
             if params.remove_metadata:
                 strip_document_metadata(doc)
-            # garbage=4 drops the now-unreferenced original streams.
-            save_pdf(doc, ctx.output(f"{inp.stem}_karartilmis.pdf"), clean=True)
+            if params.flatten:
+                flatten_to_images(doc, ctx.output(f"{inp.stem}_karartilmis_guvenli.pdf"), dpi=params.flatten_dpi)
+            else:
+                # garbage=4 drops the now-unreferenced original streams.
+                save_pdf(doc, ctx.output(f"{inp.stem}_karartilmis.pdf"), clean=True)
         ctx.data = {"redactions": total, "pages": [p + 1 for p in sorted(boxes)]}

@@ -116,6 +116,16 @@
         "Every treatment permanently removes the text underneath. Black-out is safest; blur keeps the look.",
       )}
     </p>
+    <label class="secure">
+      <input type="checkbox" bind:checked={kvkk.flatten} />
+      <span>
+        <strong>{t("Ekstra güvenli PDF", "Extra-secure PDF")}</strong>
+        {t(
+          "Sayfalar görsele çevrilip yeniden PDF yapılır: içinde metin ya da gizli nesne kalmaz, hiçbir araçla geri getirilemez. Metin artık seçilemez.",
+          "Pages are turned into images and rebuilt as a PDF: no text or hidden objects remain, nothing can be recovered. Text can no longer be selected.",
+        )}
+      </span>
+    </label>
     <button class="primary apply" disabled={busy || !kvkk.active.length} onclick={onapply} title="Ctrl+S">
       {busy ? t("Uygulanıyor…", "Applying…") : `${t("Uygula", "Apply")} (${kvkk.active.length})`}
     </button>
@@ -123,6 +133,28 @@
 </div>
 
 <style>
+  .secure {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .secure strong {
+    display: block;
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+  .secure input {
+    margin-top: 2px;
+    width: 18px;
+    height: 18px;
+  }
   .kvkk {
     display: grid;
     gap: 10px;

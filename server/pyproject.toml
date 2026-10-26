@@ -29,6 +29,8 @@ dependencies = [
     "opencv-python-headless>=4.8",
     "numpy>=1.26",
     "Pillow>=10.0",
+    # BSD-3-Clause: QR codes for pairing phones and tablets.
+    "segno>=1.6,<2.0",
 ]
 
 [project.optional-dependencies]
@@ -66,4 +68,4 @@ follow_untyped_imports = false
 
 [tool.setuptools.package-data]
 # Ship the bundled fonts and the built web UI inside the wheel.
-adminpdf = ["assets/fonts/*.ttf", "assets/fonts/*.txt", "web_dist/**/*"]
+adminpdf = ["about.json", "assets/*.png", "assets/fonts/*.ttf", "assets/fonts/*.txt", "web_dist/**/*"]

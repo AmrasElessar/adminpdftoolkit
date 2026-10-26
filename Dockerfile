@@ -25,8 +25,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     APT_HOST=0.0.0.0 \
     APT_PORT=8000 \
     APT_DATA_DIR=/data \
-    # Requests arrive from the Docker bridge, not loopback.
-    APT_TRUSTED_NETWORKS=172.16.0.0/12
+    # A browser on the Docker host reaches us via the bridge gateway, not
+    # loopback: trust exactly that address (nothing else on 172.16.0.0/12).
+    # Ignored when LAN mode is on — then every device pairs.
+    APT_TRUSTED_NETWORKS=gateway
 
 # OCR (Tesseract tr+en), PDF/A (Ghostscript), repair (qpdf), antivirus
 # (ClamAV), fonts with Turkish coverage, and optionally LibreOffice for
@@ -53,6 +55,6 @@ USER app
 VOLUME ["/data"]
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).status == 200 else 1)"
+    CMD python -c "import ssl,sys,urllib.request; c=ssl.create_default_context(cafile='/data/tls/ca.crt'); sys.exit(0 if urllib.request.urlopen('https://localhost:8000/api/health', timeout=3, context=c).status == 200 else 1)"
 ENTRYPOINT ["tini", "--"]
 CMD ["python", "-m", "adminpdf"]

@@ -1,25 +1,57 @@
 Admin PDF Toolkit {version} — Windows paketi (kurulum gerektirmez)
 ==================================================================
 
+İLK AÇILIŞTA GÖRECEĞİNİZ UYARILAR (normaldir)
+  Uygulama ücretsiz ve açık kaynak olduğu için Microsoft'un ücretli kod
+  imzalama hizmetinden geçirilmedi. Uyarılar bir hata ya da virüs bulgusu
+  değildir; bir kez onaylarsınız:
+  - "Windows bilgisayarınızı korudu" (mavi pencere): "Ek bilgi" ▸
+    "Yine de çalıştır". Zip'i açmadan önce sağ tık ▸ Özellikler ▸
+    "Engellemeyi kaldır" işaretlerseniz hiç çıkmaz.
+  - "Güvenlik Uyarısı ... sertifika yüklemek üzeresiniz": "Evet". Bu,
+    uygulamanın yerel HTTPS sertifikasıdır; yalnızca bu bilgisayar ve yerel
+    ağ adresleri için geçerlidir, hiçbir internet sitesi için geçerli değildir.
+  - Güvenlik duvarı (ağ paylaşımı açıkken): yalnızca "Özel ağlar"a izin verin.
+  İndirdiğiniz dosyayı sürüm sayfasındaki SHA256SUMS ile doğrulayabilirsiniz:
+    certutil -hashfile AdminPDFToolkit-{version}-Windows.zip SHA256
+
 BAŞLATMA
   1. Zip dosyasını bir klasöre çıkarın (ör. Belgeler\AdminPDFToolkit).
      Zip'in içinden doğrudan çalıştırmayın.
-  2. "Baslat (Windows).bat" dosyasına çift tıklayın.
-     Tarayıcı kendiliğinden açılır: http://127.0.0.1:8000
-  Python veya başka bir program kurmanız GEREKMEZ; her şey paketin içindedir
-  ve internet bağlantısı olmadan çalışır.
+  2. "AdminPDFToolkit.exe" dosyasına çift tıklayın. Bileşenler tek tek
+     denetlenir, "Sistem hazır" yazar ve tarayıcı açılır: https://localhost:8000
+     Pencereyi kapatınca uygulama sistem çubuğunda (saatin yanı) çalışmaya
+     devam eder; tamamen kapatmak için "Çıkış".
+     İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için
+     bir kez onay ister: "Evet" deyin. (Sonradan: Diğer ▸ Sertifikaya bu bilgisayarda güven)
+  Python veya başka bir program kurmanız GEREKMEZ; OCR ve PDF/A (Ghostscript)
+  dahil her şey paketin içindedir ve internet bağlantısı olmadan çalışır.
+
+GÜNCELLEMELER
+  Başlatıcı açılışta yeni sürümü denetler (kapatılabilir). Varsa sorar; kurup
+  kurmamak size kalmıştır. Yalnızca imzası ve SHA-256 özeti doğrulanan paket
+  kurulur; "data" klasörü (dosyalar, sertifika, ayarlar) korunur. Ağ izin
+  vermiyorsa uygulama normal çalışır.
 
 TELEFONDAN / AĞDAKİ DİĞER BİLGİSAYARLARDAN ERİŞİM
-  "Baslat - Ag Paylasimi (Windows).bat" ile başlatın ve pencerede görünen
-  eşleştirme bağlantısını telefonda açın. Windows güvenlik duvarı izin
-  isterse "Özel ağlar" için izin verin.
+  Başlatıcıda "Ağ paylaşımı" kutusunu işaretleyin; uygulamada sağ üstteki
+  "Cihaz bağla" penceresindeki QR kodu telefon/tablet kamerasıyla okutun.
+  Bağlantı HTTPS'tir. Uyarısız kullanım için telefondaki eşleştirme ekranında
+  "Sertifikayı yükle"ye dokunup sertifikayı bir kez yükleyin.
+  Yalnızca aynı yerel ağdaki cihazlar bağlanabilir; internetten erişilemez.
+  Windows güvenlik duvarı izin isterse YALNIZCA "Özel ağlar" için izin verin.
 
-TARANMIŞ BELGELER İÇİN OCR (isteğe bağlı)
-  "OCR Kur (Windows).bat" dosyasına çift tıklayın. Tesseract'ı ve Türkçe dil
-  paketini internetten indirip kurar (bir kerelik). Kurduktan sonra uygulamayı
-  kapatıp yeniden açın.
-  Elle kurmak isterseniz: https://github.com/UB-Mannheim/tesseract/wiki
-  (kurulumda "Additional language data" altından "Turkish" seçin).
+TARANMIŞ BELGELER İÇİN OCR (pakete dahil)
+  Tesseract ve Türkçe/İngilizce dil verisi "ocr" klasöründe hazır gelir; kurulum
+  veya internet gerekmez. Dosyalar her kullanımdan önce paket listesindeki
+  SHA-256 özetleriyle doğrulanır. "OCR dosyaları bozuk" uyarısı görürseniz
+  başlatıcıda Diğer ▸ "OCR dosyalarını denetle / onar"ı seçin (yalnızca özetle
+  eşleşen dosyaları indirir) veya zip'i yeniden çıkarın.
+
+KONSOLLU YEDEK BAŞLATMA
+  "scripts" klasöründeki .bat dosyaları (Baslat, Baslat - Ag Paylasimi,
+  Sistem Denetimi, OCR Onar, Sertifikaya Guven) başlatıcıyla aynı işi
+  konsol penceresiyle yapar.
 
 DİĞER İSTEĞE BAĞLI ARAÇLAR (yoksa ilgili araç açık bir uyarı verir)
   - Word/Excel/PowerPoint → PDF (yüksek doğruluk): LibreOffice  https://www.libreoffice.org/

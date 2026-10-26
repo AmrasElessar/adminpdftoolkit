@@ -28,7 +28,14 @@ DOCS = (
     "LICENSE.tr.txt",
     "NOTICE.txt",
 )
-SCRIPTS = ("start.sh", "start-windows.bat", "offer-ocr.bat", "install-ocr-windows.bat", "install-ocr-windows.ps1")
+SCRIPTS = (
+    "start.sh",
+    "start-windows.bat",
+    "offer-ocr.bat",
+    "install-ocr-windows.bat",
+    "install-ocr-windows.ps1",
+    "ocr/sources.json",
+)
 LAUNCHERS = {
     "Baslat (Windows).bat": '@echo off\ncall "%~dp0scripts\\start-windows.bat" %*\n',
     "OCR Kur (Windows).bat": '@echo off\ncall "%~dp0scripts\\install-ocr-windows.bat"\n',

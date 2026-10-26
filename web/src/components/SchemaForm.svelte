@@ -28,7 +28,9 @@
 
   function visible(f: JsonSchema): boolean {
     const cond = f.ui?.show_if;
-    return !cond || Object.entries(cond).every(([k, v]) => values[k] === v);
+    return !cond || Object.entries(cond).every(([k, v]) =>
+      Array.isArray(v) ? v.includes(values[k]) : values[k] === v,
+    );
   }
 
   function optionLabel(f: JsonSchema, v: string | number): string {

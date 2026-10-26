@@ -6,7 +6,9 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import AsyncIterator
+from functools import partial
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -46,6 +48,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             settings.files_dir,
             max_bytes=settings.max_upload_bytes,
             ttl_seconds=settings.file_ttl_minutes * 60,
+            max_total_bytes=settings.max_storage_mb * 1024 * 1024,
         )
         engine = JobEngine(
             store,
@@ -61,7 +64,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             while True:
                 await asyncio.sleep(SWEEP_INTERVAL_SECONDS)
                 try:
-                    await asyncio.get_running_loop().run_in_executor(None, store.sweep)
+                    keep = engine.files_in_use()
+                    await asyncio.get_running_loop().run_in_executor(None, partial(store.sweep, keep=keep))
                     engine.sweep(store.ttl_seconds)
                 except Exception:
                     log.exception("sweep failed")
@@ -77,9 +81,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="Admin PDF Toolkit",
         version=VERSION,
         lifespan=lifespan,
-        docs_url="/api/docs",
+        docs_url="/api/docs" if settings.api_docs else None,
         redoc_url=None,
-        openapi_url="/api/openapi.json",
+        openapi_url="/api/openapi.json" if settings.api_docs else None,
     )
     app.state.settings = settings
     app.state.sessions = sessions
@@ -92,6 +96,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/health", tags=["session"])
     def health() -> dict[str, str]:
         return {"status": "ok", "version": VERSION}
+
+    @app.get("/api/about", tags=["session"])
+    def about() -> dict[str, Any]:
+        """Systems, first-run notes and every component with its licence."""
+        from .about import about as collect
+
+        return collect(settings.web_dist)
 
     _mount_web(app, settings.web_dist)
     app.add_middleware(SecurityMiddleware, settings=settings, sessions=sessions)

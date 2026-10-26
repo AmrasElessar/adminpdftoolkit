@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pymupdf
+import pytest
 
 import adminpdf
 from adminpdf.ops.kvkk import vkn_valid
@@ -119,3 +120,28 @@ def test_apply_needs_something(api: Api) -> None:
     f = api.upload(kvkk_pdf())
     job = api.run("kvkk_apply", [f["id"]], {"items": [{"page": 1, "rects": [[0, 0, 10, 10]], "action": "keep"}]})
     assert job["status"] == "failed"
+
+
+@pytest.mark.parametrize("op", ["kvkk_apply", "redact"])
+def test_extra_secure_pdf_keeps_only_pixels(api: Api, op: str) -> None:
+    f = api.upload(kvkk_pdf())
+    findings = api.run("kvkk_scan", [f["id"]])["data"]["findings"]
+    tckn = next(x for x in findings if x["kind"] == "tckn")
+    if op == "kvkk_apply":
+        params = {"items": [{"page": 1, "rects": tckn["rects"], "action": "mask", "mask": "***"}], "flatten": True}
+    else:
+        params = {"terms": TCKN, "flatten": True, "flatten_dpi": 150}
+    job = api.run(op, [f["id"]], params)
+    assert job["status"] == "done", job
+    assert job["result"]["name"].endswith("_guvenli.pdf")
+    with pymupdf.open("pdf", api.download(job["result"]["id"])) as doc:
+        assert doc.page_count == 1
+        page = doc[0]
+        assert page.get_text().strip() == ""  # no text layer at all, not even the mask
+        assert page.get_fonts() == []
+        assert len(page.get_images()) == 1
+        assert not any(v for k, v in doc.metadata.items() if k != "format")
+        assert doc.embfile_count() == 0
+        assert list(page.annots()) == [] and list(page.widgets()) == []
+        # The picture still shows the rest of the page.
+        assert page.rect.width == pytest.approx(595, abs=1)

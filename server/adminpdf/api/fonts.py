@@ -10,7 +10,6 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, Response
 
 from ..core.fonts import get_catalogue, style_bytes
-from ..core.security import is_loopback
 from . import deps
 
 router = APIRouter(prefix="/api/fonts", tags=["fonts"])
@@ -43,8 +42,7 @@ def font_file(style_id: str, request: Request) -> Response:
         raise deps.not_found()
     if style.restricted:
         raise HTTPException(status_code=403, detail="Font licence does not allow redistribution")
-    client = request.client.host if request.client else None
-    if style.family_id.startswith("system:") and not is_loopback(client):
+    if style.family_id.startswith("system:") and not deps.is_loopback(request):
         raise HTTPException(status_code=403, detail="System fonts are only served to this computer")
     path = Path(style.path)
     head = b""

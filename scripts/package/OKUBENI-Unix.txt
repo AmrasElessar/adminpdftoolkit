@@ -1,0 +1,62 @@
+Admin PDF Toolkit {version} — Linux / macOS paketi (Python kurulumu gerekmez)
+================================================================================
+
+macOS (Apple Silicon: M1, M2, M3, M4…)
+  1. Zip'i açın; "AdminPDFToolkit.app"i Uygulamalar (Applications) klasörüne
+     sürükleyin.
+  2. Çift tıklayın. İLK AÇILIŞTA macOS "geliştirici doğrulanamadı" der; bu
+     normaldir: uygulama ücretsiz ve açık kaynaktır, Apple'ın ücretli
+     onay sürecinden geçirilmemiştir.
+       • "Bitti"ye basın.
+       • Sistem Ayarları ▸ Gizlilik ve Güvenlik'i açın, aşağı kaydırın.
+       • "AdminPDFToolkit.app engellendi" yanındaki "Yine de Aç"a basın,
+         parolanızı girin.
+     Bu yalnızca bir kez yapılır; sonra uygulama normal açılır.
+     (Terminal'i biliyorsanız aynı işi şu komut da yapar:
+        xattr -dr com.apple.quarantine /Applications/AdminPDFToolkit.app )
+     İndirdiğiniz zip'i sürüm sayfasındaki SHA256SUMS ile doğrulayabilirsiniz:
+        shasum -a 256 AdminPDFToolkit-{version}-macOS-arm64.zip
+  3. Başlatıcı bileşenleri tek tek denetler, "Sistem hazır" der ve tarayıcıyı
+     açar: https://localhost:8000. İlk açılışta macOS, uygulamanın yerel HTTPS
+     sertifikasına güvenmek için parolanızı isteyebilir.
+
+Linux (x86_64: Ubuntu, Debian, Mint, Fedora, Pardus…)
+  1. Arşivi açın:  tar xzf AdminPDFToolkit-{version}-Linux-x86_64.tar.gz
+  2. "AdminPDFToolkit" dosyasına çift tıklayın (veya terminalde
+     ./AdminPDFToolkit/AdminPDFToolkit).
+  3. Uygulamalar menüsüne eklemek için bir kez
+     "Uygulamalar menusune ekle.sh" dosyasını çalıştırın.
+  4. Tarayıcı ilk açılışta sertifika uyarısı verirse: başlatıcıda
+     Diğer ▸ Sertifikaya bu bilgisayarda güven yolu gösterir; o dosyayı tarayıcının
+     sertifika ayarlarından "Yetkili/Authority" olarak bir kez içe aktarın.
+
+OCR VE PDF/A (isteğe bağlı)
+  Windows paketinde gömülü gelen Tesseract (OCR) ve Ghostscript (PDF/A)
+  burada sistemden kurulur; yoksa başlatıcı tam komutu gösterir:
+    macOS:  brew install tesseract tesseract-lang ghostscript   (https://brew.sh)
+    Ubuntu/Debian/Pardus:  sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript
+    Fedora:  sudo dnf install tesseract tesseract-langpack-tur ghostscript
+  Kurduktan sonra uygulamayı yeniden açın. Diğer tüm araçlar bunlar olmadan da
+  çalışır.
+
+VERİLERİNİZ
+  Yüklenen dosyalar, sertifika ve ayarlar uygulamanın içinde değil,
+  kullanıcı klasörünüzde tutulur (güncellemede silinmez):
+    macOS:  ~/Library/Application Support/AdminPDFToolkit
+    Linux:  ~/.local/share/AdminPDFToolkit
+  Dosyalar 2 saat sonra kendiliğinden silinir.
+
+TELEFONDAN / TABLETTEN
+  Başlatıcıda "Ağ paylaşımı"nı işaretleyin; uygulamada sağ üstteki
+  "Cihaz bağla" penceresindeki QR kodu okutun. Yalnızca aynı yerel ağdaki
+  cihazlar bağlanabilir.
+
+GÜNCELLEMELER
+  Başlatıcı yeni sürümü bildirir (kapatılabilir); indirme sayfasını açar.
+  Yeni paketi indirip eskisinin yerine koymanız yeterlidir; verileriniz ayrı
+  klasörde olduğu için korunur.
+
+LİSANS
+  Admin PDF Toolkit özgür yazılımdır (AGPL-3.0, bkz. LICENSE ve LICENSE.tr.txt).
+  Kaynak kod: https://github.com/AmrasElessar/adminpdftoolkit
+  Pakete dahil Python (PSF lisansı) ve kütüphaneler: THIRD_PARTY_LICENSES.md.

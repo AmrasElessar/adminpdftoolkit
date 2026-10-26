@@ -33,6 +33,22 @@ class ImagesParams(Params):
             }
         },
     )
+    fit: Literal["contain", "cover", "stretch", "original"] = Field(
+        "contain",
+        tr="Sayfaya yerleşim",
+        en="Placement",
+        help_tr="Sayfa boyutu A4/Letter/A3 iken görselin sayfaya nasıl yerleşeceği.",
+        help_en="How the image is placed when the page size is A4 / Letter / A3.",
+        ui={
+            "options": {
+                "contain": {"tr": "Sığdır (oranı koru)", "en": "Fit (keep proportions)"},
+                "cover": {"tr": "Doldur (taşanı kırp)", "en": "Fill (crop overflow)"},
+                "stretch": {"tr": "Genişlet (sayfaya yay)", "en": "Stretch (fill the page)"},
+                "original": {"tr": "Özgün boyut (büyütme yok)", "en": "Original size (no upscaling)"},
+            },
+            "show_if": {"page_size": ["a4", "letter", "a3"]},
+        },
+    )
     margin: float = Field(18, tr="Kenar boşluğu (pt)", en="Margin (pt)", ge=0, le=144)
     auto_orient: bool = Field(
         True, tr="Telefon fotoğrafı yönünü düzelt (EXIF)", en="Fix phone photo orientation (EXIF)"
@@ -59,6 +75,47 @@ class ImagesParams(Params):
         },
     )
     quality: int = Field(85, tr="JPEG kalitesi", en="JPEG quality", ge=30, le=100)
+
+
+def _page_size(params: ImagesParams, w: float, h: float) -> tuple[float, float]:
+    """Page size in points for an image of ``w`` × ``h`` points; fixed sizes
+    turn landscape for landscape images."""
+    if params.page_size == "fit":
+        return w + 2 * params.margin, h + 2 * params.margin
+    pw, ph = PAGE_SIZES[params.page_size]
+    return (ph, pw) if w > h else (pw, ph)
+
+
+def _place_image(params: ImagesParams, w: float, h: float, pw: float, ph: float) -> pymupdf.Rect:
+    """Where an image of ``w`` × ``h`` points goes on a ``pw`` × ``ph`` page.
+
+    Computed here rather than with ``insert_image(keep_proportion=True)``,
+    which stretches square images over the whole box in some PyMuPDF builds.
+    """
+    m = params.margin
+    bw, bh = max(pw - 2 * m, 1.0), max(ph - 2 * m, 1.0)
+    # "cover" frames were already cropped to the box shape in ``_prepare``.
+    if params.page_size == "fit" or params.fit in ("stretch", "cover"):
+        return pymupdf.Rect(m, m, m + bw, m + bh)
+    scale = min(bw / w, bh / h)
+    if params.fit == "original":
+        scale = min(scale, 1.0)
+    dw, dh = w * scale, h * scale
+    x, y = m + (bw - dw) / 2, m + (bh - dh) / 2
+    return pymupdf.Rect(x, y, x + dw, y + dh)
+
+
+def _crop_to_box(img: Any, params: ImagesParams) -> Any:
+    """Centre-crop ``img`` to the aspect ratio of the page's margin box."""
+    pw, ph = _page_size(params, img.width, img.height)
+    bw, bh = max(pw - 2 * params.margin, 1.0), max(ph - 2 * params.margin, 1.0)
+    target = bw / bh
+    if img.width / img.height > target:
+        cw, ch = max(1, round(img.height * target)), img.height
+    else:
+        cw, ch = img.width, max(1, round(img.width / target))
+    left, top = (img.width - cw) // 2, (img.height - ch) // 2
+    return img.crop((left, top, left + cw, top + ch))
 
 
 def _prepare(path: Any, params: ImagesParams) -> tuple[list[tuple[bytes, int, int]], list[float]]:
@@ -91,6 +148,8 @@ def _prepare(path: Any, params: ImagesParams) -> tuple[list[tuple[bytes, int, in
                     img = imaging.rotate(img, angle)
                     angles.append(angle)
             img = imaging.enhance(img, params.enhance)
+            if params.fit == "cover" and params.page_size != "fit":
+                img = _crop_to_box(img, params)
             buf = io.BytesIO()
             if img.mode == "1":
                 img.save(buf, "PNG", optimize=True)  # bilevel compresses best losslessly
@@ -130,15 +189,9 @@ class ImagesToPdf(Operation):
                 for data, w_px, h_px in frames:
                     # 150 DPI nominal size for "fit"; scaled to the page otherwise.
                     w, h = w_px * 72 / 150, h_px * 72 / 150
-                    if params.page_size == "fit":
-                        pw, ph = w + 2 * params.margin, h + 2 * params.margin
-                    else:
-                        pw, ph = PAGE_SIZES[params.page_size]
-                        if w > h:
-                            pw, ph = ph, pw
+                    pw, ph = _page_size(params, w, h)
                     page = out.new_page(width=pw, height=ph)
-                    box = pymupdf.Rect(params.margin, params.margin, pw - params.margin, ph - params.margin)
-                    page.insert_image(box, stream=data, keep_proportion=True)
+                    page.insert_image(_place_image(params, w, h, pw, ph), stream=data, keep_proportion=False)
                 ctx.progress((k + 1) / len(ctx.inputs), inp.name)
             pages = out.page_count
             save_pdf(out, ctx.output(f"{ctx.inputs[0].stem}.pdf"))

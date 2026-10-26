@@ -7,14 +7,19 @@ services:
     image: admin-pdf-toolkit:latest
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8000:8000"   # change to "8000:8000" to expose on the LAN
+      # https://localhost:8000 — the CA to trust is /data/tls/ca.crt in the volume
+      # (docker compose cp adminpdf:/data/tls/ca.crt .). Only local-network
+      # clients are ever served. For phones/tablets on the LAN use "8000:8000"
+      # AND enable pairing below.
+      - "127.0.0.1:8000:8000"
     environment:
       APT_MAX_UPLOAD_MB: "500"
       APT_MAX_WORKERS: "2"
-      # LAN access with pairing (phones etc.):
+      # LAN access with pairing (phones etc.). The key must be 12+ characters:
+      #   python -c "import secrets; print(secrets.token_urlsafe(16))"
       # APT_LAN_ENABLED: "true"
-      # APT_PAIRING_KEY: "change-me"
-      # APT_ALLOWED_HOSTS: "pdf.example.local"
+      # APT_PAIRING_KEY: "<generated key>"
+      # APT_ALLOWED_HOSTS: "pdf.example.local"   # also added to the certificate
     volumes:
       - adminpdf-data:/data
     read_only: true

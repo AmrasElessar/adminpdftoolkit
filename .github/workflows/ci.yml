@@ -6,6 +6,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -91,7 +94,10 @@ jobs:
         working-directory: server
         run: |
           APT_DATA_DIR="$RUNNER_TEMP/apt" nohup python -m adminpdf > "$RUNNER_TEMP/server.log" 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/health && break; sleep 1; done
+          # HTTPS with the server's own CA: verify against it, do not skip checks.
+          for i in $(seq 1 30); do curl -sf --cacert "$RUNNER_TEMP/apt/tls/ca.crt" https://localhost:8000/api/health && break; sleep 1; done
+          # Plain HTTP is not served.
+          ! curl -sf -m 5 http://127.0.0.1:8000/api/health
       - name: Sample PDF
         run: |
           python - <<'PY'
@@ -105,10 +111,29 @@ jobs:
         working-directory: web
         run: |
           npx playwright install --with-deps chromium
-          npm run e2e:a11y -- ../sample.pdf
+          APT_URL=https://localhost:8000 npm run e2e:a11y -- ../sample.pdf
       - name: Server log
         if: failure()
         run: cat "$RUNNER_TEMP/server.log"
+
+  launcher:
+    name: Windows launcher (csc, C# 5)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Compile AdminPDFToolkit.exe
+        shell: pwsh
+        run: |
+          $csc = Get-ChildItem "$env:WINDIR\Microsoft.NET\Framework64\v4*\csc.exe" | Sort-Object FullName | Select-Object -Last 1
+          (Get-Content scripts/launcher/AssemblyInfo.cs.in -Raw).Replace("{version}", "0.0.0") | Set-Content "$env:RUNNER_TEMP\AssemblyInfo.cs"
+          # Windows paths: csc reads a forward slash as the start of an option.
+          $src = (Resolve-Path scripts\launcher).Path
+          & $csc.FullName /nologo /warnaserror /target:winexe "/out:$env:RUNNER_TEMP\AdminPDFToolkit.exe" `
+            "/win32icon:$src\app.ico" "/win32manifest:$src\app.manifest" `
+            /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll `
+            "$src\Launcher.cs" "$env:RUNNER_TEMP\AssemblyInfo.cs"
+          if ($LASTEXITCODE -ne 0) { throw "csc failed" }
+          (Get-Item "$env:RUNNER_TEMP\AdminPDFToolkit.exe").VersionInfo | Format-List ProductName, FileVersion
 
   docker:
     name: Docker image

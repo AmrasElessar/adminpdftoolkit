@@ -42,6 +42,13 @@ jobs:
         working-directory: web
         run: npm ci --no-audit --no-fund && npm run build
       - name: Build package
+        env:
+          # Newest Tesseract / Ghostscript releases without the anonymous API limit.
+          GITHUB_TOKEN: ${{ github.token }}
+          # Optional Authenticode signing of AdminPDFToolkit.exe (code-signing
+          # certificate as base64 .pfx); unsigned when not set.
+          WINDOWS_SIGN_PFX: ${{ secrets.WINDOWS_SIGN_PFX }}
+          WINDOWS_SIGN_PASSWORD: ${{ secrets.WINDOWS_SIGN_PASSWORD }}
         run: python scripts/build_windows_portable.py
       - name: Smoke-test the unzipped package (no system Python on PATH)
         shell: pwsh
@@ -51,22 +58,115 @@ jobs:
           $app = Resolve-Path smoke/AdminPDFToolkit
           $env:PATH = "C:\Windows\System32;C:\Windows"
           $env:APT_DATA_DIR = "$app\data"
+          $env:APT_OCR_DIR = "$app\ocr"
+          $env:APT_GS_DIR = "$app\gs"
+          # Launcher: built, with version info; every component check passes.
+          $exe = Get-Item "$app\AdminPDFToolkit.exe"
+          $exe.VersionInfo | Format-List ProductName, FileVersion, CompanyName
+          if ($exe.VersionInfo.ProductName -ne "Admin PDF Toolkit") { throw "launcher lacks version info" }
+          (Get-AuthenticodeSignature $exe.FullName).Status
+          $checks = & "$app\python\python.exe" -m adminpdf.selfcheck | Where-Object { $_ -like '{*' } | ForEach-Object { $_ | ConvertFrom-Json }
+          $checks | Where-Object type -eq check | Format-Table id, status, version -AutoSize
+          if (-not ($checks | Where-Object type -eq done).ready) { throw "self-check: not ready" }
+          foreach ($id in "ocr", "ghostscript") {
+            $c = $checks | Where-Object id -eq $id
+            if ($c.status -ne "ok") { throw "bundled $id is not ok: $($c | ConvertTo-Json -Compress)" }
+          }
           $p = Start-Process -FilePath "$app\python\python.exe" -ArgumentList "-m", "adminpdf" -PassThru -NoNewWindow
           $ok = $false
           foreach ($i in 1..60) {
-            try { $h = Invoke-RestMethod http://127.0.0.1:8000/api/health; $ok = $true; break } catch { Start-Sleep 1 }
+            try { $h = Invoke-RestMethod -SkipCertificateCheck https://127.0.0.1:8000/api/health; $ok = $true; break } catch { Start-Sleep 1 }
           }
           if (-not $ok) { throw "server did not start" }
           $h | Format-List
-          Invoke-WebRequest http://127.0.0.1:8000/ -UseBasicParsing | Out-Null
-          $ops = Invoke-RestMethod http://127.0.0.1:8000/api/ops
+          Invoke-WebRequest -SkipCertificateCheck https://127.0.0.1:8000/ -UseBasicParsing | Out-Null
+          $ops = Invoke-RestMethod -SkipCertificateCheck https://127.0.0.1:8000/api/ops
+          if (-not (Test-Path "$app\data\tls\ca.crt")) { throw "no local CA was created" }
+          # Bundled OCR: present, intact and carrying Turkish.
+          $env:TESSDATA_PREFIX = "$app\ocr\tessdata"
+          $langs = & "$app\ocr\tesseract.exe" --list-langs 2>&1 | Out-String
+          if ($langs -notmatch "(?m)^tur\s*$") { throw "bundled OCR lacks Turkish: $langs" }
+          foreach ($bundle in "ocr", "gs") {
+            & "$app\python\python.exe" -c "import sys; from pathlib import Path; from adminpdf.core.tools import verify_bundle; bad = verify_bundle(Path(sys.argv[1])); print(sys.argv[1], 'intact' if not bad else bad); sys.exit(1 if bad else 0)" "$app\$bundle"
+            if ($LASTEXITCODE -ne 0) { throw "bundled $bundle failed its integrity check" }
+          }
+          Get-Content "$app\ocr\manifest.json" -Raw | ConvertFrom-Json | Select-Object -ExpandProperty sources | Format-List
           if ($ops.Count -lt 40) { throw "only $($ops.Count) tools loaded" }
           Stop-Process -Id $p.Id -Force
           "$($zip.Name): $([math]::Round($zip.Length / 1MB)) MB, $($ops.Count) tools"
       - uses: actions/upload-artifact@v5
         with:
           name: windows
-          path: dist/*-Windows.zip
+          path: |
+            dist/*-Windows.zip
+            dist/sources/*
+          if-no-files-found: error
+
+  unix:
+    name: Self-contained ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Oldest supported Ubuntu runner: the package then runs on older glibc too.
+          - os: ubuntu-22.04
+            label: Linux x86_64
+            pattern: dist/*-Linux-x86_64.tar.gz
+          - os: macos-latest
+            label: macOS (Apple Silicon)
+            pattern: dist/*-macOS-arm64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build web UI
+        working-directory: web
+        run: npm ci --no-audit --no-fund && npm run build
+      - name: Build package
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python scripts/build_unix_portable.py
+      - name: Smoke-test the unpacked package
+        run: |
+          mkdir smoke && cd smoke
+          if [ "$RUNNER_OS" = macOS ]; then
+            ditto -x -k ../dist/*-macOS-arm64.zip .
+            APP=AdminPDFToolkit/AdminPDFToolkit.app
+            codesign --verify --deep --strict "$APP"
+            plutil -lint "$APP/Contents/Info.plist"
+            test -x "$APP/Contents/MacOS/AdminPDFToolkit"
+            PY="$APP/Contents/Resources/python/bin/python3"
+          else
+            tar xzf ../dist/*-Linux-x86_64.tar.gz
+            test -x AdminPDFToolkit/AdminPDFToolkit
+            PY=AdminPDFToolkit/python/bin/python3
+          fi
+          export APT_DATA_DIR="$RUNNER_TEMP/apt"
+          # The packaged Python alone, nothing from the runner.
+          env -u PYTHONHOME -u PYTHONPATH "$PY" -c "import tkinter, adminpdf.launcher; print('tk', tkinter.TkVersion)"
+          "$PY" -m adminpdf.selfcheck | tee checks.jsonl
+          tail -1 checks.jsonl | "$PY" -c "import json,sys; d=json.load(sys.stdin); sys.exit(0 if d['ready'] else 1)"
+          nohup "$PY" -m adminpdf > "$RUNNER_TEMP/server.log" 2>&1 &
+          CA="$APT_DATA_DIR/tls/ca.crt"
+          for i in $(seq 1 60); do curl -sf --cacert "$CA" https://localhost:8000/api/health && break; sleep 1; done
+          curl -sf --cacert "$CA" -o /dev/null https://localhost:8000/
+          n=$(curl -sf --cacert "$CA" https://localhost:8000/api/ops | "$PY" -c "import json,sys; print(len(json.load(sys.stdin)))")
+          echo "tools: $n"; test "$n" -ge 40
+          ls -lh ../dist
+      - name: Server log
+        if: failure()
+        run: cat "$RUNNER_TEMP/server.log" || true
+      - uses: actions/upload-artifact@v5
+        with:
+          name: unix-${{ matrix.os }}
+          path: ${{ matrix.pattern }}
           if-no-files-found: error
 
   python:
@@ -92,19 +192,49 @@ jobs:
           mkdir smoke && cd smoke && unzip -q ../dist/*.zip && cd AdminPDFToolkit/server
           python -m venv .venv && .venv/bin/pip install -q .
           APT_DATA_DIR="$RUNNER_TEMP/apt" nohup .venv/bin/python -m adminpdf > "$RUNNER_TEMP/server.log" 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/health && break; sleep 1; done
-          curl -sf -o /dev/null http://127.0.0.1:8000/
-          curl -sf -o /dev/null http://127.0.0.1:8000/licenses.txt
+          CA="$RUNNER_TEMP/apt/tls/ca.crt"
+          for i in $(seq 1 30); do curl -sf --cacert "$CA" https://localhost:8000/api/health && break; sleep 1; done
+          curl -sf --cacert "$CA" -o /dev/null https://localhost:8000/
+          curl -sf --cacert "$CA" -o /dev/null https://localhost:8000/licenses.txt
       - uses: actions/upload-artifact@v5
         with:
           name: python
           path: dist/*-Linux-macOS.zip
           if-no-files-found: error
 
+  virustotal:
+    name: VirusTotal scan
+    # Never blocks the release: no key, a VirusTotal outage or a false
+    # positive only shows up in the report.
+    needs: [windows, unix, python]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Scan the packages and the launcher exe
+        env:
+          # API key of a free VirusTotal account; the scan is skipped without it.
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          unzip -j dist/*-Windows.zip AdminPDFToolkit/AdminPDFToolkit.exe -d exe
+          python3 scripts/virustotal.py virustotal.md exe/AdminPDFToolkit.exe \
+            dist/*-Windows.zip dist/*-macOS-arm64.zip dist/*-Linux-x86_64.tar.gz dist/*-Linux-macOS.zip
+          if [ -f virustotal.md ]; then cat virustotal.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@v5
+        with:
+          name: virustotal
+          path: virustotal.*
+          if-no-files-found: ignore
+
   publish:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/v') || (inputs.publish && github.ref == 'refs/heads/main')
-    needs: [windows, python]
+    needs: [windows, unix, python, virustotal]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -122,14 +252,31 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: Checksums, signature and manifest
+        env:
+          # Ed25519 key (scripts/release_signing.py keygen); without it the
+          # release is unsigned and the app only announces it.
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          # Source tarballs (Ghostscript, AGPL-3.0) are published with the binaries.
+          # The VirusTotal report goes into the notes; virustotal.json (the
+          # README badges) is published with the release.
+          if [ -f dist/virustotal.md ]; then mv dist/virustotal.md virustotal.md; fi
+          if [ -d dist/sources ]; then mv dist/sources/* dist/ && rmdir dist/sources; fi
+          unzip -p dist/*-Windows.zip AdminPDFToolkit/package.json > dist/release-manifest.json
+          cat dist/release-manifest.json
+          pip install -q cryptography
+          python3 scripts/release_signing.py sums dist
+          python3 scripts/release_signing.py sign dist/SHA256SUMS
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           python3 scripts/release_notes.py "$TAG" > notes.md
+          if [ -f virustotal.md ]; then printf '\n' >> notes.md && cat virustotal.md >> notes.md; fi
           ls -l dist
-          gh release create "$TAG" dist/*.zip \
+          gh release create "$TAG" dist/* \
             --target "$GITHUB_SHA" \
             --title "$TAG — Admin PDF Toolkit 2" \
             --notes-file notes.md \

@@ -15,7 +15,7 @@ from typing import Any, Literal
 from ..core import proc
 from ..core.errors import UserError
 from ..core.pdf import open_pdf, parse_page_spec
-from ..core.tools import find_tool, use_user_tessdata
+from ..core.tools import bundled_ocr, find_tool, use_user_tessdata
 from ._ocrmypdf import find_ghostscript, plain_input, run_ocrmypdf
 from .base import Context, Field, Operation, Params, register
 
@@ -26,6 +26,11 @@ TESSERACT_URL = "https://github.com/UB-Mannheim/tesseract/wiki"
 
 
 def find_tesseract() -> str | None:
+    # The Windows package's own, verified copy comes first: it works offline
+    # and is known to carry the Turkish data.
+    exe, _problem = bundled_ocr()
+    if exe:
+        return exe
     use_user_tessdata()
     return find_tool(
         ("tesseract",),
@@ -123,6 +128,13 @@ class Ocr(Operation):
 
     def run(self, ctx: Context, params: OcrParams) -> None:
         if find_tesseract() is None:
+            if bundled_ocr()[1] == "damaged":
+                raise UserError(
+                    "Paketteki OCR dosyaları bozuk ya da değiştirilmiş; güvenlik için kullanılmadı. "
+                    "Uygulama klasöründeki 'OCR Onar (Windows).bat' dosyasını çalıştırın veya paketi yeniden çıkarın.",
+                    "The bundled OCR files are damaged or were altered, so they were not used. Run "
+                    "'OCR Onar (Windows).bat' in the app folder or extract the package again.",
+                )
             raise UserError(
                 "OCR motoru (Tesseract) bulunamadı. Windows'ta uygulama klasöründeki 'OCR Kur (Windows).bat' "
                 f"dosyasını çalıştırın ya da {TESSERACT_URL} adresinden kurup 'Additional language data' "

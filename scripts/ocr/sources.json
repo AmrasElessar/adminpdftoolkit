@@ -1,0 +1,31 @@
+{
+  "_comment": "Bundled tools of the Windows package. With \"url\" empty the newest GitHub release is used at build time and checked against the SHA-256 GitHub publishes for the asset; set \"url\" + \"sha256\" to pin an exact file instead. The hash of every bundled file ends up in the package manifest. Tesseract is pinned to its newest release (v5.4.0.20240606, signed by Universitaet Mannheim); clear url/sha256 to follow new releases.",
+  "tesseract": {
+    "github": "UB-Mannheim/tesseract",
+    "asset": "^tesseract-ocr-w64-setup-[0-9.]+\\.exe$",
+    "url": "https://github.com/UB-Mannheim/tesseract/releases/download/v5.4.0.20240606/tesseract-ocr-w64-setup-5.4.0.20240606.exe",
+    "sha256": "c885fff6998e0608ba4bb8ab51436e1c6775c2bafc2559a19b423e18678b60c9",
+    "version": "v5.4.0.20240606"
+  },
+  "ghostscript": {
+    "github": "ArtifexSoftware/ghostpdl-downloads",
+    "asset": "^gs[0-9]+w64\\.exe$",
+    "source_asset": "^ghostscript-[0-9.]+\\.tar\\.gz$",
+    "url": "",
+    "sha256": ""
+  },
+  "tessdata": {
+    "tur": {
+      "url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/tur.traineddata",
+      "sha256": "7393381111e1152420fc4092cb44eef4237580d21b92bf30d7d221aad192c6b7"
+    },
+    "eng": {
+      "url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/eng.traineddata",
+      "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
+    },
+    "osd": {
+      "url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/osd.traineddata",
+      "sha256": "9cf5d576fcc47564f11265841e5ca839001e7e6f38ff7f7aacf46d15a96b00ff"
+    }
+  }
+}
