@@ -4,7 +4,9 @@ Checks, in order:
 
 1. Host allow-list — defeats DNS rebinding (a hostile page resolving its own
    name to 127.0.0.1 and reading our API same-origin).
-2. Client access — loopback is always allowed; other clients need LAN mode
+2. Client access — only this machine and devices on the local network
+   (private and link-local addresses) are ever served; anything from a
+   public address is refused, whatever the settings. Loopback is always allowed; other clients need LAN mode
    enabled and a session cookie obtained by pairing. A loopback request that
    carries proxy forwarding headers came through a reverse proxy, so it is
    treated as remote: a local nginx must not make the whole LAN "local".
@@ -57,9 +59,44 @@ FORWARDING_HEADERS = (b"forwarded", b"x-forwarded-for", b"x-real-ip", b"x-forwar
 
 log = logging.getLogger("adminpdf.security")
 
+# The only addresses ever served: this machine and the local network.
+PRIVATE_NETWORKS: tuple[ipaddress.IPv4Network | ipaddress.IPv6Network, ...] = tuple(
+    ipaddress.ip_network(n)
+    for n in (
+        "127.0.0.0/8",
+        "10.0.0.0/8",
+        "172.16.0.0/12",
+        "192.168.0.0/16",
+        "169.254.0.0/16",
+        "::1/128",
+        "fc00::/7",
+        "fe80::/10",
+    )
+)
+
+
+def _ip(host: str | None) -> ipaddress.IPv4Address | ipaddress.IPv6Address | None:
+    if not host:
+        return None
+    try:
+        ip = ipaddress.ip_address(host.split("%", 1)[0])
+    except ValueError:
+        return None
+    if isinstance(ip, ipaddress.IPv6Address) and ip.ipv4_mapped is not None:
+        return ip.ipv4_mapped
+    return ip
+
+
+def is_private(host: str | None) -> bool:
+    """A loopback, private (RFC 1918 / ULA) or link-local address."""
+    ip = _ip(host)
+    return ip is not None and any(ip in net for net in PRIVATE_NETWORKS)
+
+
 SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # Paths a non-paired LAN client may reach (the pairing flow itself).
-PAIRING_PATHS = frozenset({"/api/session", "/api/session/pair"})
+# The CA certificate is public: a phone must be able to fetch it before pairing.
+PAIRING_PATHS = frozenset({"/api/session", "/api/session/pair", "/api/session/ca.crt"})
 
 SECURITY_HEADERS: list[tuple[bytes, bytes]] = [
     (b"x-content-type-options", b"nosniff"),
@@ -84,10 +121,8 @@ def is_loopback(host: str | None) -> bool:
         return False
     if host == "localhost":
         return True
-    try:
-        return ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        return False
+    ip = _ip(host)
+    return ip is not None and ip.is_loopback
 
 
 def default_gateway() -> str | None:
@@ -117,16 +152,16 @@ def parse_networks(spec: str, *, lan_enabled: bool = False) -> list[ipaddress.IP
             if gw:
                 nets.append(ipaddress.ip_network(f"{gw}/32"))
             continue
-        nets.append(ipaddress.ip_network(part, strict=False))
+        net = ipaddress.ip_network(part, strict=False)
+        if not any(net.version == p.version and net.subnet_of(p) for p in PRIVATE_NETWORKS):  # type: ignore[arg-type]
+            raise ValueError(f"APT_TRUSTED_NETWORKS may only list local-network ranges, not {part}")
+        nets.append(net)
     return nets
 
 
 def in_networks(host: str | None, nets: list[ipaddress.IPv4Network | ipaddress.IPv6Network]) -> bool:
-    if not host or not nets:
-        return False
-    try:
-        ip = ipaddress.ip_address(host)
-    except ValueError:
+    ip = _ip(host)
+    if ip is None or not nets:
         return False
     return any(ip in n for n in nets)
 
@@ -148,6 +183,12 @@ def local_addresses() -> set[str]:
         except OSError:
             pass
     return addrs
+
+
+def lan_urls(settings: Settings) -> list[str]:
+    """Pairing links for every local-network IPv4 address of this machine."""
+    ips = sorted(a for a in local_addresses() if "." in a and not a.startswith("127.") and is_private(a))
+    return [f"{settings.scheme}://{ip}:{settings.port}/#pair={settings.pairing_key}" for ip in ips]
 
 
 def split_host(host_header: str) -> str:
@@ -291,6 +332,7 @@ class SecurityMiddleware:
             return
 
         api = str(scope.get("path", "")).startswith("/api/")
+        hsts = scope.get("scheme") == "https" and _hsts_host(_header(scope, b"host") or "")
 
         async def send_with_headers(message: Message) -> None:
             if message["type"] == "http.response.start":
@@ -300,6 +342,8 @@ class SecurityMiddleware:
                 if api and b"cache-control" not in present:
                     # Documents and job results must not linger in browser caches.
                     headers.append((b"cache-control", b"no-store"))
+                if hsts:
+                    headers.append((b"strict-transport-security", b"max-age=31536000"))
                 message["headers"] = headers
             await send(message)
 
@@ -315,6 +359,10 @@ class SecurityMiddleware:
         cookies = _cookies(scope)
         client = scope.get("client")
         client_host = client[0] if client else None
+        if not is_private(client_host):
+            # Never served outside the local network, whatever the settings.
+            self._report(client_host, False, "not on the local network")
+            return 403, "Only devices on the local network are served"
 
         proxied = any(_header(scope, h) is not None for h in FORWARDING_HEADERS)
         loopback = is_loopback(client_host) and not proxied
@@ -346,7 +394,7 @@ class SecurityMiddleware:
                 return 403, "CSRF token missing or invalid"
         return None
 
-    def _report(self, client_host: str | None, proxied: bool) -> None:
+    def _report(self, client_host: str | None, proxied: bool, reason: str = "LAN access is disabled") -> None:
         """Log each refused address once, so a misconfigured Docker or proxy
         setup is easy to diagnose."""
         key = f"{client_host}:{proxied}"
@@ -354,10 +402,18 @@ class SecurityMiddleware:
             return
         self._reported.add(key)
         log.warning(
-            "refused %s client %s: LAN access is disabled (APT_LAN_ENABLED / APT_TRUSTED_NETWORKS)",
+            "refused %s client %s: %s (see APT_LAN_ENABLED / APT_TRUSTED_NETWORKS)",
             "proxied" if proxied else "non-local",
             client_host,
+            reason,
         )
+
+
+def _hsts_host(host_header: str) -> bool:
+    """HSTS only for real DNS names: browsers ignore it on IPs, and on
+    ``localhost`` it would break every other local web app on this PC."""
+    host = split_host(host_header)
+    return bool(host) and host != "localhost" and _ip(host) is None
 
 
 async def _send_error(send: Send, status: int, detail: str) -> None:

@@ -55,6 +55,6 @@ USER app
 VOLUME ["/data"]
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=3).status == 200 else 1)"
+    CMD python -c "import ssl,sys,urllib.request; c=ssl.create_default_context(cafile='/data/tls/ca.crt'); sys.exit(0 if urllib.request.urlopen('https://localhost:8000/api/health', timeout=3, context=c).status == 200 else 1)"
 ENTRYPOINT ["tini", "--"]
 CMD ["python", "-m", "adminpdf"]

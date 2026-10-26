@@ -4,6 +4,7 @@
   import FileTray from "./components/FileTray.svelte";
   import ToolGrid from "./components/ToolGrid.svelte";
   import Shortcuts from "./components/Shortcuts.svelte";
+  import Devices from "./components/Devices.svelte";
   import ToolPanel from "./components/ToolPanel.svelte";
   import { typing, ui } from "./lib/shortcuts.svelte";
   import { type Entry, workspace } from "./lib/workspace.svelte";
@@ -24,6 +25,7 @@
   let fatal = $state("");
   let pairKey = $state("");
   let pairError = $state("");
+  let showDevices = $state(false);
 
   async function boot(): Promise<void> {
     fatal = "";
@@ -92,6 +94,7 @@
 
 <svelte:window onkeydown={keydown} />
 <Shortcuts />
+<Devices bind:open={showDevices} />
 
 <div class="app">
   <a class="skip" href="#main">{t("İçeriğe atla", "Skip to content")}</a>
@@ -104,7 +107,10 @@
       <a class="source" href="https://github.com/AmrasElessar/adminpdftoolkit" target="_blank" rel="noopener noreferrer" title={t("Özgür yazılım (AGPL-3.0) — kaynak kodu ve lisans", "Free software (AGPL-3.0) — source code and licence")}>AGPL-3.0 · {t("Kaynak kod", "Source")}</a>
       <a class="source" href="/licenses.txt" target="_blank" rel="noopener" title={t("Kullanılan açık kaynak bileşenler ve lisansları", "Open-source components used and their licences")}>{t("Lisanslar", "Licences")}</a>
     </div>
-    <button class="ghost small kb" onclick={() => (ui.showShortcuts = true)} title={t("Klavye kısayolları (?)", "Keyboard shortcuts (?)")} aria-keyshortcuts="?">⌨ <span>{t("Kısayollar", "Shortcuts")}</span></button>
+    {#if session?.local}
+      <button class="ghost small dev" onclick={() => (showDevices = true)} title={t("Telefon / tablet bağla", "Connect a phone / tablet")}>📱 <span>{t("Cihaz bağla", "Connect device")}</span></button>
+    {/if}
+    <button class="ghost small kb" class:after-dev={session?.local} onclick={() => (ui.showShortcuts = true)} title={t("Klavye kısayolları (?)", "Keyboard shortcuts (?)")} aria-keyshortcuts="?">⌨ <span>{t("Kısayollar", "Shortcuts")}</span></button>
     <div class="lang" role="group" aria-label={t("Dil", "Language")}>
       <button class:on={i18n.lang === "tr"} aria-pressed={i18n.lang === "tr"} onclick={() => setLang("tr")}>TR</button>
       <button class:on={i18n.lang === "en"} aria-pressed={i18n.lang === "en"} onclick={() => setLang("en")}>EN</button>
@@ -131,6 +137,22 @@
         <input type="password" autocomplete="off" aria-label={t("Eşleştirme anahtarı", "Pairing key")} bind:value={pairKey} required />
         {#if pairError}<p class="error" role="alert">{pairError}</p>{/if}
         <button class="primary" type="submit">{t("Eşleştir", "Pair")}</button>
+        {#if session.tls}
+          <details class="cert">
+            <summary>{t("Güvenli bağlantı: sertifikayı yükle", "Secure connection: install the certificate")}</summary>
+            <p>
+              {t(
+                "Bu sunucu kendi sertifikasını kullanır. Bir kez yüklerseniz tarayıcı uyarı göstermez ve uygulama ana ekrana eklenebilir. Yüklerken parmak izini sunucu bilgisayarındaki “Cihaz bağla” penceresiyle karşılaştırın.",
+                "This server uses its own certificate. Install it once and the browser stops warning; the app can then be added to the home screen. While installing, compare the fingerprint with the “Connect device” window on the server computer.",
+              )}
+            </p>
+            <a class="button" href="/api/session/ca.crt" download="AdminPDFToolkit-CA.crt">{t("Sertifikayı yükle", "Install certificate")}</a>
+            <ul class="muted">
+              <li>{t("Android: Ayarlar → Güvenlik → Şifreleme ve kimlik bilgileri → Sertifika yükle → CA sertifikası.", "Android: Settings → Security → Encryption & credentials → Install a certificate → CA certificate.")}</li>
+              <li>{t("iPhone / iPad: indirilen profili Ayarlar'da yükleyin, sonra Ayarlar → Genel → Hakkında → Sertifika Güven Ayarları'ndan açın.", "iPhone / iPad: install the downloaded profile in Settings, then enable it under Settings → General → About → Certificate Trust Settings.")}</li>
+            </ul>
+          </details>
+        {/if}
       </form>
     </main>
   {:else}
@@ -216,16 +238,70 @@
     font-weight: 450;
     color: var(--muted);
   }
-  .kb {
+  .kb,
+  .dev {
     margin-left: auto;
     margin-right: 10px;
   }
+  .kb.after-dev {
+    margin-left: 0;
+  }
   @media (max-width: 600px) {
-    .kb span {
+    .kb span,
+    .dev span {
       display: none;
     }
   }
+  @media (max-width: 600px) {
+    .top {
+      gap: 6px;
+      padding: 8px 12px;
+    }
+    .brand {
+      flex: 1 1 auto;
+      flex-wrap: wrap;
+      gap: 2px 8px;
+      min-width: 0;
+      font-size: 0.95rem;
+    }
+    .brand > span {
+      line-height: 1.15;
+    }
+    .brand small {
+      display: none;
+    }
+    .source {
+      font-size: 0.7rem;
+    }
+    .dev,
+    .kb {
+      margin-right: 0;
+    }
+  }
+  /* Phones and tablets: no keyboard to show shortcuts for. */
+  @media (hover: none) and (pointer: coarse) {
+    .kb {
+      display: none;
+    }
+  }
+  .cert {
+    font-size: 0.85rem;
+  }
+  .cert summary {
+    cursor: pointer;
+    color: var(--accent);
+  }
+  .cert p {
+    margin: 8px 0;
+  }
+  .cert ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 4px;
+  }
   .lang {
+    flex: none;
     display: flex;
     border: 1px solid var(--border);
     border-radius: 8px;

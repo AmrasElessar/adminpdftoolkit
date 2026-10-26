@@ -330,6 +330,13 @@
     font: 600 0.55rem/1 ui-monospace, monospace;
     color: var(--muted);
   }
+  /* Touch screens: key hints and arrow-key tips do not apply. */
+  @media (hover: none) and (pointer: coarse) {
+    kbd,
+    .status {
+      display: none;
+    }
+  }
   .status kbd {
     position: static;
     padding: 1px 5px;

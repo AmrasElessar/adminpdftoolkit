@@ -96,7 +96,12 @@
 <section class="tools" aria-label={t("Araçlar", "Tools")}>
   <div class="head">
     <input class="search" type="search" placeholder={t("Araç ara…", "Search tools…")} bind:value={query} />
-    <span class="hint">{t("Açıklama için aracın üzerine gelin · ☆ ile sık kullanılanlara ekleyin", "Hover a tool for its description · ☆ adds it to favourites")}</span>
+    <span class="hint"
+      ><span class="hover-only">{t("Açıklama için aracın üzerine gelin · ", "Hover a tool for its description · ")}</span>{t(
+        "☆ ile sık kullanılanlara ekleyin",
+        "☆ adds it to favourites",
+      )}</span
+    >
   </div>
 
   {#if !query}
@@ -342,6 +347,28 @@
   @media (hover: none) {
     .star {
       opacity: 0.6;
+    }
+    .hover-only {
+      display: none;
+    }
+  }
+  @media (pointer: coarse) {
+    .tool,
+    .star {
+      min-height: 40px;
+    }
+    .star {
+      width: 36px;
+    }
+  }
+  @media (max-width: 600px) {
+    .featured {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .feature {
+      padding: 8px 10px;
+      gap: 8px;
+      font-size: 0.9rem;
     }
   }
   .blocked {

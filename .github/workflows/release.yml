@@ -54,12 +54,13 @@ jobs:
           $p = Start-Process -FilePath "$app\python\python.exe" -ArgumentList "-m", "adminpdf" -PassThru -NoNewWindow
           $ok = $false
           foreach ($i in 1..60) {
-            try { $h = Invoke-RestMethod http://127.0.0.1:8000/api/health; $ok = $true; break } catch { Start-Sleep 1 }
+            try { $h = Invoke-RestMethod -SkipCertificateCheck https://127.0.0.1:8000/api/health; $ok = $true; break } catch { Start-Sleep 1 }
           }
           if (-not $ok) { throw "server did not start" }
           $h | Format-List
-          Invoke-WebRequest http://127.0.0.1:8000/ -UseBasicParsing | Out-Null
-          $ops = Invoke-RestMethod http://127.0.0.1:8000/api/ops
+          Invoke-WebRequest -SkipCertificateCheck https://127.0.0.1:8000/ -UseBasicParsing | Out-Null
+          $ops = Invoke-RestMethod -SkipCertificateCheck https://127.0.0.1:8000/api/ops
+          if (-not (Test-Path "$app\data\tls\ca.crt")) { throw "no local CA was created" }
           if ($ops.Count -lt 40) { throw "only $($ops.Count) tools loaded" }
           Stop-Process -Id $p.Id -Force
           "$($zip.Name): $([math]::Round($zip.Length / 1MB)) MB, $($ops.Count) tools"
@@ -92,9 +93,10 @@ jobs:
           mkdir smoke && cd smoke && unzip -q ../dist/*.zip && cd AdminPDFToolkit/server
           python -m venv .venv && .venv/bin/pip install -q .
           APT_DATA_DIR="$RUNNER_TEMP/apt" nohup .venv/bin/python -m adminpdf > "$RUNNER_TEMP/server.log" 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/health && break; sleep 1; done
-          curl -sf -o /dev/null http://127.0.0.1:8000/
-          curl -sf -o /dev/null http://127.0.0.1:8000/licenses.txt
+          CA="$RUNNER_TEMP/apt/tls/ca.crt"
+          for i in $(seq 1 30); do curl -sf --cacert "$CA" https://localhost:8000/api/health && break; sleep 1; done
+          curl -sf --cacert "$CA" -o /dev/null https://localhost:8000/
+          curl -sf --cacert "$CA" -o /dev/null https://localhost:8000/licenses.txt
       - uses: actions/upload-artifact@v5
         with:
           name: python

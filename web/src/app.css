@@ -180,3 +180,12 @@ progress {
     margin: 0;
   }
 }
+
+/* iOS zooms into any focused field under 16px; keep forms steady on touch. */
+@media (pointer: coarse) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

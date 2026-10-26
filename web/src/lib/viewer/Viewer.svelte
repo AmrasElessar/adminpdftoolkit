@@ -650,9 +650,36 @@
     margin: 0;
     font-size: 1.1rem;
   }
+  @media (max-width: 600px) {
+    .modes {
+      flex: 1 1 100%;
+      overflow-x: auto;
+    }
+    .modes button {
+      flex: 1 0 auto;
+      padding: 6px 10px;
+    }
+    .name {
+      max-width: calc(100vw - 120px);
+    }
+  }
   @media (max-width: 760px) {
-    .thumbs {
+    /* Page thumbnails go; the KVKK findings become a sheet under the pages,
+       so personal data can be treated from a phone too. */
+    .thumbs:not(.kvkk-side) {
       display: none;
+    }
+    .body {
+      flex-direction: column;
+    }
+    .thumbs.kvkk-side {
+      order: 2;
+      width: auto;
+      max-height: 45dvh;
+    }
+    .pages {
+      flex: 1;
+      min-height: 200px;
     }
     .viewer {
       height: calc(100dvh - 76px);

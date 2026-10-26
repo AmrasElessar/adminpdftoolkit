@@ -94,7 +94,10 @@ jobs:
         working-directory: server
         run: |
           APT_DATA_DIR="$RUNNER_TEMP/apt" nohup python -m adminpdf > "$RUNNER_TEMP/server.log" 2>&1 &
-          for i in $(seq 1 30); do curl -sf http://127.0.0.1:8000/api/health && break; sleep 1; done
+          # HTTPS with the server's own CA: verify against it, do not skip checks.
+          for i in $(seq 1 30); do curl -sf --cacert "$RUNNER_TEMP/apt/tls/ca.crt" https://localhost:8000/api/health && break; sleep 1; done
+          # Plain HTTP is not served.
+          ! curl -sf -m 5 http://127.0.0.1:8000/api/health
       - name: Sample PDF
         run: |
           python - <<'PY'
@@ -108,7 +111,7 @@ jobs:
         working-directory: web
         run: |
           npx playwright install --with-deps chromium
-          npm run e2e:a11y -- ../sample.pdf
+          APT_URL=https://localhost:8000 npm run e2e:a11y -- ../sample.pdf
       - name: Server log
         if: failure()
         run: cat "$RUNNER_TEMP/server.log"

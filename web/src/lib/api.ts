@@ -18,7 +18,15 @@ export interface Session {
   local: boolean;
   paired: boolean;
   lan_enabled: boolean;
+  tls: boolean;
   max_upload_mb: number;
+}
+
+export interface DeviceInfo {
+  lan_enabled: boolean;
+  urls: string[];
+  tls: boolean;
+  fingerprint: string | null;
 }
 
 export interface JsonSchema {
@@ -130,6 +138,7 @@ export async function loadSession(): Promise<Session> {
 }
 
 export const pair = (key: string) => request<{ paired: boolean }>("POST", "/api/session/pair", { key });
+export const getDevices = () => request<DeviceInfo>("GET", "/api/session/devices");
 export const listOps = () => request<OpInfo[]>("GET", "/api/ops");
 export const deleteFile = (id: string) => request<void>("DELETE", `/api/files/${encodeURIComponent(id)}`);
 export const getJob = (id: string) => request<Job>("GET", `/api/jobs/${encodeURIComponent(id)}`);

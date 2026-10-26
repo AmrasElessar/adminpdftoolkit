@@ -31,6 +31,7 @@ Doğrudan kullandıklarımız. *Libraries the code imports directly.*
 | [OpenCV](https://github.com/opencv/opencv-python) (headless) | Apache-2.0 | Belge algılama, perspektif ve eğim düzeltme |
 | [NumPy](https://numpy.org/) | BSD-3-Clause | Görüntü işleme |
 | [Pillow](https://github.com/python-pillow/Pillow) | MIT-CMU (HPND) | Görsel okuma/yazma |
+| [segno](https://github.com/heuer/segno) | BSD-3-Clause | Telefon/tablet eşleştirme QR kodu |
 
 ## 2. Dolaylı Python bağımlılıkları / Transitive Python dependencies
 
@@ -97,6 +98,7 @@ plug-in is left out.*
 | [python-docx](https://github.com/python-openxml/python-docx) | 1.2.0 | MIT License | pdf2docx |
 | [python-dotenv](https://github.com/theskumar/python-dotenv) | 1.2.3 | BSD-3-Clause | pydantic-settings |
 | [rich](https://github.com/Textualize/rich) | 15.0.0 | MIT License | ocrmypdf |
+| [segno](https://github.com/heuer/segno) | 1.6.6 | BSD-3-Clause | doğrudan / direct |
 | [starlette](https://github.com/Kludex/starlette) | 1.7.0 | BSD-3-Clause | fastapi |
 | [termcolor](https://github.com/termcolor/termcolor) | 3.3.0 | MIT | pdf2docx |
 | [typing-inspection](https://github.com/pydantic/typing-inspection) | 0.4.4 | MIT | fastapi |

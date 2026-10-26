@@ -1,13 +1,13 @@
 // End-to-end accessibility audit (WCAG 2.1 A/AA via axe-core) of the main
 // screens, light and dark. Needs a running server on $APT_URL (default
-// http://127.0.0.1:8000) and a sample PDF path as the first argument.
+// https://localhost:8000) and a sample PDF path as the first argument.
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { chromium } from "playwright";
 
 const require = createRequire(import.meta.url);
 const axeSrc = readFileSync(require.resolve("axe-core/axe.min.js"), "utf8");
-const base = process.env.APT_URL ?? "http://127.0.0.1:8000";
+const base = process.env.APT_URL ?? "https://localhost:8000";
 const sample = process.argv[2];
 if (!sample) throw new Error("usage: node e2e/a11y.mjs <sample.pdf>");
 
@@ -15,7 +15,7 @@ const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePa
 let failures = 0;
 for (const scheme of ["light", "dark"]) {
   // The app's CSP rightly blocks injected scripts; bypass it for the audit only.
-  const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: "tr-TR", colorScheme: scheme, bypassCSP: true });
+  const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: "tr-TR", colorScheme: scheme, bypassCSP: true, ignoreHTTPSErrors: true });
   const page = await ctx.newPage();
   const audit = async (name) => {
     await page.addScriptTag({ content: axeSrc });

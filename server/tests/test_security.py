@@ -214,3 +214,62 @@ def test_sweep_keeps_files_of_running_jobs(tmp_path: Path) -> None:
     assert store.get(a.id, owner="local")
     with pytest.raises(MissingFileError):
         store.get(b.id, owner="local")
+
+
+# -- local network only -------------------------------------------------------------
+@pytest.mark.parametrize("addr", ["8.8.8.8", "100.64.1.2", "2001:4860::8888", "::ffff:8.8.8.8", "testclient"])
+def test_public_addresses_are_never_served(settings: Settings, addr: str) -> None:
+    settings.lan_enabled = True
+    settings.pairing_key = "pairing-key-0123"
+    with TestClient(create_app(settings), base_url="http://localhost", client=(addr, 1)) as c:
+        assert c.get("/api/session").status_code == 403
+        assert c.get("/api/session/ca.crt").status_code == 403
+        assert c.get("/").status_code == 403
+
+
+@pytest.mark.parametrize("addr", ["192.168.1.5", "10.2.3.4", "172.20.0.9", "169.254.10.1", "fe80::1", "fd00::5"])
+def test_local_network_addresses_may_pair(settings: Settings, addr: str) -> None:
+    settings.lan_enabled = True
+    settings.pairing_key = "pairing-key-0123"
+    with TestClient(create_app(settings), base_url="http://localhost", client=(addr, 1)) as c:
+        assert c.get("/api/session").status_code == 200
+        assert c.get("/api/health").status_code == 401
+
+
+def test_trusted_networks_must_be_local(settings: Settings) -> None:
+    settings.trusted_networks = "0.0.0.0/0"
+    with pytest.raises(ValueError, match="local-network"):
+        create_app(settings).build_middleware_stack()
+
+
+def test_ca_download_and_device_links(settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from adminpdf.core import security, tls
+
+    monkeypatch.setattr(security, "local_addresses", lambda: {"192.168.1.20", "127.0.0.1"})
+    tls.ensure(settings.tls_dir)
+    settings.lan_enabled = True
+    settings.pairing_key = "pairing-key-0123"
+    app = create_app(settings)
+    with TestClient(app, base_url="http://localhost", client=("192.168.1.30", 1)) as phone:
+        r = phone.get("/api/session/ca.crt")  # before pairing: needed to trust the server
+        assert r.status_code == 200
+        assert r.headers["content-type"] == "application/x-x509-ca-cert"
+        assert b"BEGIN CERTIFICATE" in r.content and b"PRIVATE" not in r.content
+        assert phone.get("/api/session/devices").status_code == 401  # pairing link stays on the server PC
+    with TestClient(app, base_url="http://localhost", client=LOCAL) as pc:
+        info = pc.get("/api/session/devices").json()
+        assert info["urls"] == ["https://192.168.1.20:8000/#pair=pairing-key-0123"]
+        assert len(info["fingerprint"]) == 95
+        qr = pc.get("/api/session/devices/qr.svg?i=0")
+        assert qr.status_code == 200 and qr.headers["content-type"].startswith("image/svg+xml")
+        assert b"<script" not in qr.content
+        assert pc.get("/api/session/devices/qr.svg?i=5").status_code == 404
+
+
+def test_hsts_only_for_dns_names(settings: Settings) -> None:
+    settings.allowed_hosts = "pdf.ofis.lan"
+    app = create_app(settings)
+    with TestClient(app, base_url="https://pdf.ofis.lan", client=LOCAL) as c:
+        assert c.get("/api/health").headers["strict-transport-security"] == "max-age=31536000"
+    with TestClient(app, base_url="https://localhost", client=LOCAL) as c:
+        assert "strict-transport-security" not in c.get("/api/health").headers

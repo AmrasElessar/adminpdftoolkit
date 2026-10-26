@@ -5,7 +5,7 @@ BAŞLATMA
   1. Zip dosyasını bir klasöre çıkarın (ör. Belgeler\AdminPDFToolkit).
      Zip'in içinden doğrudan çalıştırmayın.
   2. "Baslat (Windows).bat" dosyasına çift tıklayın.
-     Tarayıcı kendiliğinden açılır: http://127.0.0.1:8000
+     Tarayıcı kendiliğinden açılır: https://localhost:8000
   Python veya başka bir program kurmanız GEREKMEZ; her şey paketin içindedir
   ve internet bağlantısı olmadan çalışır.
 

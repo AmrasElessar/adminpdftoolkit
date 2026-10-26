@@ -19,6 +19,7 @@ export default defineConfig({
   },
   server: {
     // `npm run dev` + `python -m adminpdf` on :8000
-    proxy: { "/api": { target: "http://127.0.0.1:8000", changeOrigin: false } },
+    // (HTTPS with the server's own CA; the dev proxy does not verify it.)
+    proxy: { "/api": { target: "https://localhost:8000", changeOrigin: false, secure: false } },
   },
 });

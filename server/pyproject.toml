@@ -29,6 +29,8 @@ dependencies = [
     "opencv-python-headless>=4.8",
     "numpy>=1.26",
     "Pillow>=10.0",
+    # BSD-3-Clause: QR codes for pairing phones and tablets.
+    "segno>=1.6,<2.0",
 ]
 
 [project.optional-dependencies]

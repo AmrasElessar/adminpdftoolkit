@@ -60,6 +60,7 @@
         style:top={`${b.top - 1}px`}
         style:width={`${b.width + 2}px`}
         style:height={`${b.height + 2}px`}
+        style:font-size={`${Math.max(4, Math.min(16, b.height * 0.8))}px`}
         aria-label={`${f.kind}: ${f.text}`}
         onclick={() => (kvkk.focused = f.id)}
       >
@@ -92,20 +93,23 @@
     padding: 0 2px;
     border: 1.5px solid transparent;
     border-radius: 2px;
-    font: 600 10px/1 ui-monospace, monospace;
+    font-weight: 600;
+    font-family: ui-monospace, monospace;
+    line-height: 1;
     justify-content: flex-start;
     overflow: hidden;
     cursor: pointer;
   }
+  /* Opaque like the result: the preview never shows what will be removed. */
   .finding.black {
-    background: rgb(0 0 0 / 0.82);
+    background: #000;
   }
   .finding.white {
-    background: rgb(255 255 255 / 0.92);
+    background: #fff;
     border-color: #999;
   }
   .finding.mask {
-    background: rgb(255 255 255 / 0.95);
+    background: #fff;
     border-color: #2f5496;
     color: #111;
   }

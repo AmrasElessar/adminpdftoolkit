@@ -6,7 +6,7 @@ WINDOWS
      (Kurulumda "Add python.exe to PATH" kutusunu işaretleyin.)
   2. "Baslat (Windows).bat" dosyasına çift tıklayın.
      İlk açılışta gerekli Python paketleri internetten indirilir (birkaç dakika).
-     Sonraki açılışlar hızlıdır. Tarayıcı kendiliğinden açılır: http://127.0.0.1:8000
+     Sonraki açılışlar hızlıdır. Tarayıcı kendiliğinden açılır: https://localhost:8000
 
 LINUX / macOS
   sh scripts/start.sh

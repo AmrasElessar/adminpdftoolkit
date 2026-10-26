@@ -40,6 +40,12 @@ class Settings(BaseSettings):
     pairing_key: str = ""
     # Interactive API docs at /api/docs (development aid; off by default).
     api_docs: bool = False
+    # HTTPS with this server's own local certificate authority (core/tls.py).
+    # Only turn off behind a TLS reverse proxy of your own.
+    tls: bool = True
+    # Use your own certificate instead (e.g. from a company CA).
+    tls_cert_file: Path | None = None
+    tls_key_file: Path | None = None
 
     @property
     def max_upload_bytes(self) -> int:
@@ -52,6 +58,14 @@ class Settings(BaseSettings):
     @property
     def jobs_dir(self) -> Path:
         return self.data_dir / "jobs"
+
+    @property
+    def tls_dir(self) -> Path:
+        return self.data_dir / "tls"
+
+    @property
+    def scheme(self) -> str:
+        return "https" if self.tls else "http"
 
 
 @lru_cache
