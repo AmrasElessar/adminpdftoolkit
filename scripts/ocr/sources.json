@@ -17,15 +17,15 @@
   "tessdata": {
     "tur": {
       "url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/tur.traineddata",
-      "sha256": ""
+      "sha256": "7393381111e1152420fc4092cb44eef4237580d21b92bf30d7d221aad192c6b7"
     },
     "eng": {
       "url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/eng.traineddata",
-      "sha256": ""
+      "sha256": "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2"
     },
     "osd": {
       "url": "https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/osd.traineddata",
-      "sha256": ""
+      "sha256": "9cf5d576fcc47564f11265841e5ca839001e7e6f38ff7f7aacf46d15a96b00ff"
     }
   }
 }
