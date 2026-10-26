@@ -42,7 +42,7 @@ jobs:
       - name: Package cache key (Linux)
         id: apt-key
         if: runner.os == 'Linux'
-        run: echo "key=apt-${ImageOS:-linux}-${ImageVersion:-0}-v1" >> "$GITHUB_OUTPUT"
+        run: echo "key=apt-${ImageOS:-linux}-${ImageVersion:-0}-py${{ matrix.python-version }}-v1" >> "$GITHUB_OUTPUT"
       - name: Package cache (Linux)
         if: runner.os == 'Linux'
         uses: actions/cache@v4
@@ -56,23 +56,34 @@ jobs:
         timeout-minutes: 40
         env:
           DEBIAN_FRONTEND: noninteractive
+          # LibreOffice (~100 MB) only in one job; its tests skip elsewhere,
+          # as on Windows and macOS.
+          WITH_LIBREOFFICE: ${{ matrix.python-version == '3.13' }}
         run: |
           sudo rm -f /var/lib/man-db/auto-update /etc/apt/apt.conf.d/docker-clean
+          # The runners' default azure mirror crawled at ~100 KB/s: use Ubuntu's own.
+          sudo sed -i 's#azure\.archive\.ubuntu\.com#archive.ubuntu.com#g' \
+            /etc/apt/apt-mirrors.txt /etc/apt/sources.list /etc/apt/sources.list.d/*.sources 2>/dev/null || true
+          packages="tesseract-ocr tesseract-ocr-tur ghostscript qpdf"
+          tools="tesseract gs qpdf"
+          if [ "$WITH_LIBREOFFICE" = true ]; then
+            packages="$packages libreoffice-writer-nogui"
+            tools="$tools soffice"
+          fi
           mkdir -p ~/apt-cache
           sudo cp ~/apt-cache/*.deb /var/cache/apt/archives/ 2>/dev/null || true
           apt_opts="-o Acquire::Retries=3 -o Acquire::http::Timeout=60 -o Acquire::https::Timeout=60"
           apt_opts="$apt_opts -o Binary::apt::APT::Keep-Downloaded-Packages=true"
           for attempt in 1 2 3; do
             if timeout 300 sudo -E apt-get $apt_opts update \
-              && timeout 900 sudo -E apt-get $apt_opts install -y --no-install-recommends \
-                tesseract-ocr tesseract-ocr-tur ghostscript qpdf libreoffice-writer-nogui; then
+              && timeout 900 sudo -E apt-get $apt_opts install -y --no-install-recommends $packages; then
               break
             fi
             echo "::warning::apt attempt $attempt failed or timed out; retrying"
             sudo dpkg --configure -a || true
             sleep 15
           done
-          for tool in tesseract gs qpdf soffice; do command -v "$tool"; done
+          for tool in $tools; do command -v "$tool"; done
           cp /var/cache/apt/archives/*.deb ~/apt-cache/ 2>/dev/null || true
       - name: Install
         run: pip install -e ".[dev]"
