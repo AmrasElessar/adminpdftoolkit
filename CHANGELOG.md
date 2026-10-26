@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expired-file sweeping no longer removes inputs of running jobs. CI token read-only.
 
 ### Added
+- **VirusTotal scan of every release** (`scripts/virustotal.py`, standard library, free API key
+  as the secret `VIRUSTOTAL_API_KEY`): the packages and the launcher exe are uploaded (or looked
+  up by SHA-256), the results go into the release notes and `virustotal.json`, which feeds the
+  README's new *Güvenlik / Security* badge row. Never blocks a release.
 - **About & Licences page** (header link): Turkish and English as separate tabs — supported
   systems, first-start warnings, every Python package actually installed (direct and pulled-in,
   read from their metadata), the web bundle's npm packages, the files of bundled tools with their

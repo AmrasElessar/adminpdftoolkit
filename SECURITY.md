@@ -95,6 +95,10 @@ Out of scope:
 - **No outbound network** — no cloud APIs, no telemetry; OCR, conversion and signing run locally.
 - **Supply chain** — Dependabot (pip, npm, actions, docker), CodeQL (Python + TypeScript), CI on
   Linux/Windows/macOS, WCAG audit.
+- **Release scanning** — every published file (and the launcher exe on its own) is scanned on
+  VirusTotal by the release workflow (`scripts/virustotal.py`, free API key as the secret
+  `VIRUSTOTAL_API_KEY`); the results go into the release notes and the README badges
+  (`virustotal.json`). Checksums are in `SHA256SUMS`, Ed25519-signed.
 
 ---
 
@@ -172,3 +176,7 @@ Kapsam dışı:
   meta veriyi temizler.
 - **Dışa ağ trafiği yok** — bulut API'si ve telemetri yok.
 - **Tedarik zinciri** — Dependabot, CodeQL, çoklu platform CI, WCAG denetimi.
+- **Sürüm taraması** — yayımlanan her dosya (ve başlatıcı exe ayrıca) sürüm iş akışında
+  VirusTotal'da taranır (`scripts/virustotal.py`, ücretsiz API anahtarı `VIRUSTOTAL_API_KEY`
+  sırrı olarak); sonuçlar sürüm notlarına ve README rozetlerine (`virustotal.json`) yazılır.
+  Sağlama toplamları `SHA256SUMS` dosyasında, Ed25519 ile imzalı.

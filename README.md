@@ -29,6 +29,18 @@
 
 </div>
 
+<div align="center">
+
+### 🛡️ Güvenlik / Security
+
+[![VT Launcher exe](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FAmrasElessar%2Fadminpdftoolkit%2Freleases%2Flatest%2Fdownload%2Fvirustotal.json&query=%24.exe&label=VT%20Launcher%20exe&logo=virustotal&logoColor=white&color=2f6db3&cacheSeconds=3600)](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) [![VT Windows](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FAmrasElessar%2Fadminpdftoolkit%2Freleases%2Flatest%2Fdownload%2Fvirustotal.json&query=%24.windows&label=VT%20Windows&logo=virustotal&logoColor=white&color=2f6db3&cacheSeconds=3600)](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) [![VT macOS](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FAmrasElessar%2Fadminpdftoolkit%2Freleases%2Flatest%2Fdownload%2Fvirustotal.json&query=%24.macos&label=VT%20macOS&logo=virustotal&logoColor=white&color=2f6db3&cacheSeconds=3600)](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) [![VT Linux](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgithub.com%2FAmrasElessar%2Fadminpdftoolkit%2Freleases%2Flatest%2Fdownload%2Fvirustotal.json&query=%24.linux&label=VT%20Linux&logo=virustotal&logoColor=white&color=2f6db3&cacheSeconds=3600)](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest)
+
+[![HTTPS](https://img.shields.io/badge/HTTPS-local_CA_·_TLS_1.2%2B-2ea44f)](SECURITY.md) [![Network](https://img.shields.io/badge/network-LAN_only-2ea44f)](SECURITY.md) [![Updates](https://img.shields.io/badge/updates-Ed25519_signed-2f6db3)](SECURITY.md) [![Bundles](https://img.shields.io/badge/bundled_tools-SHA--256_verified-2f6db3)](THIRD_PARTY_LICENSES.md) [![CSP](https://img.shields.io/badge/CSP-strict_%28no_unsafe--eval%29-2ea44f)](SECURITY.md) [![Code signing](https://img.shields.io/badge/code_signing-free_%2F_ad--hoc-lightgrey)](SECURITY.md)
+
+Her sürüm yayımlanırken [VirusTotal](https://www.virustotal.com) ile otomatik taranır; sonuçlar sürüm sayfasında. *Every release is scanned on VirusTotal automatically; results are on the release page.*
+
+</div>
+
 ## ⬇️ İndir ve İlk Açılış / Download & First Start
 
 [**Son sürüm sayfası / Latest release**](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) — kurulum gerektirmez, ücretsizdir.

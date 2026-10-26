@@ -202,10 +202,39 @@ jobs:
           path: dist/*-Linux-macOS.zip
           if-no-files-found: error
 
+  virustotal:
+    name: VirusTotal scan
+    # Never blocks the release: no key, a VirusTotal outage or a false
+    # positive only shows up in the report.
+    needs: [windows, unix, python]
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v5
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Scan the packages and the launcher exe
+        env:
+          # API key of a free VirusTotal account; the scan is skipped without it.
+          VIRUSTOTAL_API_KEY: ${{ secrets.VIRUSTOTAL_API_KEY }}
+        run: |
+          unzip -j dist/*-Windows.zip AdminPDFToolkit/AdminPDFToolkit.exe -d exe
+          python3 scripts/virustotal.py virustotal.md exe/AdminPDFToolkit.exe \
+            dist/*-Windows.zip dist/*-macOS-arm64.zip dist/*-Linux-x86_64.tar.gz dist/*-Linux-macOS.zip
+          if [ -f virustotal.md ]; then cat virustotal.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@v5
+        with:
+          name: virustotal
+          path: virustotal.*
+          if-no-files-found: ignore
+
   publish:
     name: Publish release
     if: startsWith(github.ref, 'refs/tags/v') || (inputs.publish && github.ref == 'refs/heads/main')
-    needs: [windows, unix, python]
+    needs: [windows, unix, python, virustotal]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -230,6 +259,9 @@ jobs:
           RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
         run: |
           # Source tarballs (Ghostscript, AGPL-3.0) are published with the binaries.
+          # The VirusTotal report goes into the notes; virustotal.json (the
+          # README badges) is published with the release.
+          if [ -f dist/virustotal.md ]; then mv dist/virustotal.md virustotal.md; fi
           if [ -d dist/sources ]; then mv dist/sources/* dist/ && rmdir dist/sources; fi
           unzip -p dist/*-Windows.zip AdminPDFToolkit/package.json > dist/release-manifest.json
           cat dist/release-manifest.json
@@ -242,6 +274,7 @@ jobs:
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           python3 scripts/release_notes.py "$TAG" > notes.md
+          if [ -f virustotal.md ]; then printf '\n' >> notes.md && cat virustotal.md >> notes.md; fi
           ls -l dist
           gh release create "$TAG" dist/* \
             --target "$GITHUB_SHA" \
