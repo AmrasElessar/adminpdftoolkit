@@ -36,6 +36,8 @@ export class KvkkState {
   status = $state<"idle" | "scanning" | "ready" | "error">("idle");
   progress = $state(0);
   focused = $state<string | null>(null);
+  /** "Extra-secure PDF": the result is page images only, no text left. */
+  flatten = $state(false);
 
   readonly active = $derived(this.findings.filter((f) => f.action !== "keep"));
 

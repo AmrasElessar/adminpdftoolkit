@@ -22,7 +22,7 @@ import pymupdf
 from pydantic import field_validator
 
 from ..core.errors import UserError
-from ..core.pdf import open_pdf, save_pdf
+from ..core.pdf import flatten_to_images, open_pdf, save_pdf
 from .base import Context, Field, Operation, Params, register
 from .redact import (
     _PRESETS,
@@ -207,6 +207,23 @@ class Treatment(Params):
 class ApplyParams(Params):
     items: list[Treatment] = Field(..., tr="Uygulanacaklar", en="Treatments", min_length=1, max_length=MAX_FINDINGS)
     remove_metadata: bool = Field(True, tr="Meta veriyi temizle", en="Remove metadata")
+    flatten: bool = Field(
+        False,
+        tr="Ekstra güvenli PDF (sayfaları görsele çevir)",
+        en="Extra-secure PDF (turn pages into images)",
+        help_tr="Sonuç yalnızca sayfa görüntülerinden oluşur: metin, gizli katman veya nesne kalmaz, hiçbir araçla "
+        "geri getirilemez. Metin artık seçilemez ve aranamaz; dosya büyüyebilir.",
+        help_en="The result is page pictures only: no text, hidden layers or objects remain, nothing can be "
+        "recovered by any tool. Text can no longer be selected or searched; the file may grow.",
+    )
+    flatten_dpi: int = Field(
+        200,
+        tr="Görüntü çözünürlüğü (DPI)",
+        en="Image resolution (DPI)",
+        ge=100,
+        le=400,
+        ui={"show_if": {"flatten": True}},
+    )
 
 
 _TR_ASCII = str.maketrans("çğıöşüÇĞİÖŞÜâîû", "cgiosuCGIOSUaiu")
@@ -297,5 +314,8 @@ class KvkkApply(Operation):
                 ctx.progress((k + 1) / len(by_page), "")
             if params.remove_metadata:
                 strip_document_metadata(doc)
-            save_pdf(doc, ctx.output(f"{inp.stem}_kvkk.pdf"), clean=True)
+            if params.flatten:
+                flatten_to_images(doc, ctx.output(f"{inp.stem}_kvkk_guvenli.pdf"), dpi=params.flatten_dpi)
+            else:
+                save_pdf(doc, ctx.output(f"{inp.stem}_kvkk.pdf"), clean=True)
         ctx.data = {"applied": counts, "pages": [p + 1 for p in sorted(by_page)]}

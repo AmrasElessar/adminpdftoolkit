@@ -65,6 +65,7 @@
       const job = await runAndWait("kvkk_apply", [{ id: file.id, password: entry.password || undefined }], {
         items: kvkk.payload(),
         remove_metadata: true,
+        flatten: kvkk.flatten,
       });
       if (job.result) onresult(job.result, "view", entry.password);
     } catch (e) {
