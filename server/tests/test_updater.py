@@ -74,7 +74,7 @@ def test_parse_version() -> None:
     assert updater.parse_version("2.0.0") == (2, 0, 0)
 
 
-def test_signature_must_verify() -> None:
+def test_signature_must_verify(monkeypatch: pytest.MonkeyPatch) -> None:
     key, pub = _keys()
     sums = b"0" * 64 + b"  a.zip\n"
     assert updater.verify_sums(sums, base64.b64encode(key.sign(sums)), pub) == {"a.zip": "0" * 64}
@@ -83,8 +83,15 @@ def test_signature_must_verify() -> None:
         updater.verify_sums(sums, base64.b64encode(other.sign(sums)), pub)
     with pytest.raises(updater.UpdateError, match="signature"):
         updater.verify_sums(sums + b"x", base64.b64encode(key.sign(sums)), pub)
+    monkeypatch.setattr(updater, "RELEASE_PUBLIC_KEY", "")
     with pytest.raises(updater.UpdateError, match="no release signing key"):
         updater.verify_sums(sums, b"", "")
+
+
+def test_release_public_key_is_a_valid_ed25519_key() -> None:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+    Ed25519PublicKey.from_public_bytes(base64.b64decode(updater.RELEASE_PUBLIC_KEY, validate=True))
 
 
 def test_genuine_update_is_staged(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
