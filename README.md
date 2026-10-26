@@ -180,16 +180,39 @@ Python veya başka bir program kurmanız gerekmez; paket kendi Python'unu, tüm 
 
 **Güncellemeler:** başlatıcı açılışta (isteğe bağlı) yeni sürümü denetler; varsa içerdiği bileşen sürümleriyle birlikte sorar, **kurup kurmamak sizin seçiminiz**. Yalnızca imzası (Ed25519) ve SHA-256 özeti doğrulanan paketler kurulur; verileriniz ve sertifikanız korunur. Ağ güncellemeyi engelliyorsa uygulama normal çalışmaya devam eder.
 
-İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için bir kez onay ister (sonradan: başlatıcıda **Diğer ▸ Sertifikaya güven**). Konsollu yedek başlatma dosyaları `scripts\` klasöründedir.
+İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için bir kez onay ister (sonradan: başlatıcıda **Diğer ▸ Sertifikaya bu bilgisayarda güven**). Konsollu yedek başlatma dosyaları `scripts\` klasöründedir.
 
-### macOS ve Linux (kurulum gerektirmez)
+### macOS (Apple Silicon M1–M4 — kurulum gerektirmez)
 
-- **macOS (Apple Silicon M1–M4):** **`AdminPDFToolkit-…-macOS-arm64.zip`** → `AdminPDFToolkit.app`'i Uygulamalar klasörüne sürükleyin, çift tıklayın. Uygulama ücretsiz ve açık kaynak olduğu için Apple'ın ücretli onayından geçirilmemiştir: **ilk açılışta bir kez** *Sistem Ayarları ▸ Gizlilik ve Güvenlik ▸ Yine de Aç* deyin, sonra normal açılır.
-- **Linux (x86_64: Ubuntu, Debian, Mint, Fedora, Pardus…):** **`AdminPDFToolkit-…-Linux-x86_64.tar.gz`** → açın, `AdminPDFToolkit`e çift tıklayın; menüye eklemek için `Uygulamalar menusune ekle.sh`.
+1. [Son sürüm](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) sayfasından **`AdminPDFToolkit-…-macOS-arm64.zip`** dosyasını indirin; çift tıklayarak açın.
+2. **`AdminPDFToolkit.app`**'i **Uygulamalar** (Applications) klasörüne sürükleyin ve çift tıklayın.
+3. **İlk açılışta macOS uyarı verir — bu normaldir:**
 
-İkisi de kendi Python'unu içerir ve Windows'taki başlatıcı penceresini (bileşen listesi, "Sistem hazır", ağ paylaşımı, güncelleme bildirimi) açar; sunucu terminalsiz çalışır. Veriler kullanıcı klasöründedir (`~/Library/Application Support/AdminPDFToolkit`, `~/.local/share/AdminPDFToolkit`). OCR ve PDF/A için Tesseract ile Ghostscript sistemden kurulur (`brew install tesseract tesseract-lang ghostscript` / `sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript`); başlatıcı eksikse komutu gösterir.
+   > [!WARNING]
+   > *"AdminPDFToolkit.app" açılamıyor, çünkü geliştirici doğrulanamıyor.* (macOS 15+: *"Apple, AdminPDFToolkit.app uygulamasının kötü amaçlı yazılım içermediğini doğrulayamadı."*)
+   >
+   > Uygulama ücretsiz ve açık kaynak olduğu için Apple'ın ücretli geliştirici hesabı ve onay (notarization) sürecinden geçirilmedi; uyarı bir virüs bulgusu değildir. **Bir kez** şunu yapın:
+   > 1. Uyarıda **Bitti**'ye basın (**Çöp Sepetine Taşı**'ya basmayın).
+   > 2. **Sistem Ayarları ▸ Gizlilik ve Güvenlik**'i açın, aşağı kaydırın.
+   > 3. *"AdminPDFToolkit.app engellendi"* yanındaki **Yine de Aç**'a basın, parolanızı (veya Touch ID) girin, son soruda yine **Aç** deyin.
+   >
+   > Sonraki açılışlar normaldir. Terminal'i biliyorsanız aynısı: `xattr -dr com.apple.quarantine /Applications/AdminPDFToolkit.app`
 
-*macOS (Apple Silicon) and Linux x86_64 get self-contained packages too, with the same launcher window. The macOS app is ad-hoc signed but not notarised (that needs a paid Apple account): on first start use System Settings ▸ Privacy & Security ▸ Open Anyway once. OCR/PDF/A tools come from Homebrew / the distribution.*
+4. Başlatıcı bileşenleri tek tek denetler, **"Sistem hazır"** der ve tarayıcıyı açar. İlk açılışta macOS, yerel HTTPS sertifikasına güvenmek için **parolanızı** bir kez isteyebilir.
+5. OCR ve PDF/A için (isteğe bağlı): [Homebrew](https://brew.sh) ile `brew install tesseract tesseract-lang ghostscript`; başlatıcı eksikse bu komutu gösterir. Diğer tüm araçlar bunlar olmadan da çalışır.
+
+Veriler: `~/Library/Application Support/AdminPDFToolkit` (güncellemede silinmez). Intel Mac'lerde Python paketini (`…-Linux-macOS.zip`) kullanın.
+
+### Linux (x86_64 — Ubuntu 22.04+, Debian 12+, Mint 21+, Pardus 23+, Fedora 36+)
+
+1. [Son sürüm](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) sayfasından **`AdminPDFToolkit-…-Linux-x86_64.tar.gz`** dosyasını indirin ve açın: `tar xzf AdminPDFToolkit-*-Linux-x86_64.tar.gz`
+2. **`AdminPDFToolkit/AdminPDFToolkit`** dosyasına çift tıklayın (veya terminalde `./AdminPDFToolkit/AdminPDFToolkit`). Uygulamalar menüsüne eklemek için bir kez `Uygulamalar menusune ekle.sh`.
+3. Başlatıcı bileşenleri denetler, **"Sistem hazır"** der ve tarayıcıyı açar.
+4. **Tarayıcı sertifika uyarısı verirse:** başlatıcıda **Diğer ▸ Sertifikaya bu bilgisayarda güven** sertifikanın yerini gösterir (`~/.local/share/AdminPDFToolkit/tls/ca.crt`); onu tarayıcının sertifika ayarlarından **Yetkili / Authorities** olarak bir kez içe aktarın. Yalnızca bu bilgisayar ve yerel ağ adresleri için geçerlidir.
+5. OCR ve PDF/A için (isteğe bağlı): `sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript` (Fedora: `sudo dnf install tesseract tesseract-langpack-tur ghostscript`).
+
+Veriler: `~/.local/share/AdminPDFToolkit`. ARM Linux'ta Python paketini (`…-Linux-macOS.zip`) kullanın.
+
 
 ### Docker (tüm araçlar dahil: OCR, LibreOffice, Ghostscript, ClamAV)
 
@@ -219,7 +242,8 @@ cd ../server && python -m adminpdf --open
 <summary>🇬🇧 Installation (English)</summary>
 
 - **Windows:** download **`AdminPDFToolkit-…-Windows.zip`** from the [latest release](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest), unzip, double-click **`AdminPDFToolkit.exe`**. The launcher ticks off every component (Python, libraries, UI, certificate, OCR, Ghostscript, …), starts the server with no console window, says "System ready" and shows the addresses and certificate fingerprint; closing the window keeps it in the notification area. Nothing to install — Python, all libraries, Tesseract (+ Turkish/English) and Ghostscript are inside; works offline, also on networks that block downloads. Optional update check at start: a newer release is offered with its component versions and installed only if you agree and its Ed25519 signature and SHA-256 verify. Console fallbacks are in `scripts\`.
-- **macOS (Apple Silicon) / Linux x86_64:** `…-macOS-arm64.zip` (drag `AdminPDFToolkit.app` to Applications) / `…-Linux-x86_64.tar.gz` (run `AdminPDFToolkit`) — own Python, same launcher window, data in your user folder; OCR / PDF/A via `brew` / `apt` (the launcher shows the command).
+- **macOS (Apple Silicon M1–M4):** download **`…-macOS-arm64.zip`**, open it, drag **`AdminPDFToolkit.app`** to **Applications**, double-click. **On first start macOS warns** *"cannot be opened because the developer cannot be verified"* (macOS 15+: *"Apple could not verify … is free of malware"*) — expected, as the free app has no paid Apple developer account / notarisation. Once: **Done** (not *Move to Trash*) ▸ **System Settings ▸ Privacy & Security** ▸ **Open Anyway** ▸ password / Touch ID ▸ **Open**. (Terminal: `xattr -dr com.apple.quarantine /Applications/AdminPDFToolkit.app`.) macOS may then ask for your password once to trust the local HTTPS certificate. OCR / PDF/A: `brew install tesseract tesseract-lang ghostscript`. Data: `~/Library/Application Support/AdminPDFToolkit`.
+- **Linux x86_64:** download **`…-Linux-x86_64.tar.gz`**, `tar xzf` it, run **`AdminPDFToolkit/AdminPDFToolkit`** (menu entry: `Uygulamalar menusune ekle.sh`). If the browser warns about the certificate, import `~/.local/share/AdminPDFToolkit/tls/ca.crt` once as an **Authority** (the launcher's **More ▸ Trust the certificate here** shows where it is). OCR / PDF/A: `sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript`.
 - **Docker:** `docker compose up -d --build` — includes OCR, LibreOffice, Ghostscript and ClamAV.
 - **From source:** `pip install -e ".[dev]"` in `server/`, `npm ci && npm run build` in `web/`, then `python -m adminpdf --open`.
 - Optional tools: Tesseract (+`tur`), LibreOffice, Ghostscript, qpdf, ClamAV. Missing tools only disable their own features.

@@ -27,7 +27,7 @@ Linux (x86_64: Ubuntu, Debian, Mint, Fedora, Pardus…)
   3. Uygulamalar menüsüne eklemek için bir kez
      "Uygulamalar menusune ekle.sh" dosyasını çalıştırın.
   4. Tarayıcı ilk açılışta sertifika uyarısı verirse: başlatıcıda
-     Diğer ▸ Sertifikaya güven yolu gösterir; o dosyayı tarayıcının
+     Diğer ▸ Sertifikaya bu bilgisayarda güven yolu gösterir; o dosyayı tarayıcının
      sertifika ayarlarından "Yetkili/Authority" olarak bir kez içe aktarın.
 
 OCR VE PDF/A (isteğe bağlı)

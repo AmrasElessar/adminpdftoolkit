@@ -23,7 +23,7 @@ BAŞLATMA
      Pencereyi kapatınca uygulama sistem çubuğunda (saatin yanı) çalışmaya
      devam eder; tamamen kapatmak için "Çıkış".
      İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için
-     bir kez onay ister: "Evet" deyin. (Sonradan: Diğer ▸ Sertifikaya güven)
+     bir kez onay ister: "Evet" deyin. (Sonradan: Diğer ▸ Sertifikaya bu bilgisayarda güven)
   Python veya başka bir program kurmanız GEREKMEZ; OCR ve PDF/A (Ghostscript)
   dahil her şey paketin içindedir ve internet bağlantısı olmadan çalışır.
 
