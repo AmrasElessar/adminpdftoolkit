@@ -116,11 +116,13 @@ Public bodies, schools, healthcare units, law firms and corporate IT teams must 
 ### Windows (en kolay — kurulum gerektirmez)
 
 1. [Son sürüm](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) sayfasından **`AdminPDFToolkit-…-Windows.zip`** dosyasını indirin ve bir klasöre çıkarın.
-2. **`Baslat (Windows).bat`** dosyasına çift tıklayın — tarayıcı açılır.
+2. **`AdminPDFToolkit.exe`** dosyasına çift tıklayın. Başlatıcı Python'dan başlayarak her bileşeni tek tek denetleyip işaretler (✔ / ⚠ / –), sunucuyu **konsol penceresi açmadan** başlatır, "Sistem hazır" der ve adres, yerel ağ adresleri, sertifika parmak izi, veri klasörü bilgilerini gösterir; tarayıcı açılır. Pencereyi kapatınca uygulama **sistem çubuğunda** çalışmaya devam eder; **Çıkış** ile tamamen kapanır.
 
-Python veya başka bir program kurmanız gerekmez; paket kendi Python'unu, tüm kütüphaneleri ve **OCR motorunu (Tesseract + Türkçe/İngilizce dil verisi)** içerir, internetsiz çalışır — indirmeleri engelleyen kurum ağlarında da. OCR dosyaları her kullanımdan önce paketteki SHA-256 listesine göre doğrulanır; bozulursa **`OCR Onar (Windows).bat`** yalnızca bu özetlerle eşleşen dosyaları indirir.
+Python veya başka bir program kurmanız gerekmez; paket kendi Python'unu, tüm kütüphaneleri, **OCR motorunu (Tesseract + Türkçe/İngilizce dil verisi)** ve **Ghostscript'i (PDF/A)** içerir; internetsiz çalışır — indirmeleri engelleyen kurum ağlarında da. Gömülü araçlar her kullanımdan önce paketteki SHA-256 listesine göre doğrulanır.
 
-İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için bir kez onay ister (daha sonra **`Sertifikaya Guven (Windows).bat`** ile de yapılabilir).
+**Güncellemeler:** başlatıcı açılışta (isteğe bağlı) yeni sürümü denetler; varsa içerdiği bileşen sürümleriyle birlikte sorar, **kurup kurmamak sizin seçiminiz**. Yalnızca imzası (Ed25519) ve SHA-256 özeti doğrulanan paketler kurulur; verileriniz ve sertifikanız korunur. Ağ güncellemeyi engelliyorsa uygulama normal çalışmaya devam eder.
+
+İlk açılışta Windows, uygulamanın yerel HTTPS sertifikasına güvenmek için bir kez onay ister (sonradan: başlatıcıda **Diğer ▸ Sertifikaya güven**). Konsollu yedek başlatma dosyaları `scripts\` klasöründedir.
 
 ### Docker (tüm araçlar dahil: OCR, LibreOffice, Ghostscript, ClamAV)
 
@@ -149,7 +151,7 @@ cd ../server && python -m adminpdf --open
 <details>
 <summary>🇬🇧 Installation (English)</summary>
 
-- **Windows:** download **`AdminPDFToolkit-…-Windows.zip`** from the [latest release](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest), unzip, double-click `Baslat (Windows).bat`. Nothing to install — Python, all libraries and the OCR engine (Tesseract + Turkish/English data) are inside; works offline, also on networks that block downloads. The OCR files are checked against the package's SHA-256 list before use; `OCR Onar (Windows).bat` repairs them with hash-verified downloads only. On first start Windows asks once to trust the app's local HTTPS certificate.
+- **Windows:** download **`AdminPDFToolkit-…-Windows.zip`** from the [latest release](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest), unzip, double-click **`AdminPDFToolkit.exe`**. The launcher ticks off every component (Python, libraries, UI, certificate, OCR, Ghostscript, …), starts the server with no console window, says "System ready" and shows the addresses and certificate fingerprint; closing the window keeps it in the notification area. Nothing to install — Python, all libraries, Tesseract (+ Turkish/English) and Ghostscript are inside; works offline, also on networks that block downloads. Optional update check at start: a newer release is offered with its component versions and installed only if you agree and its Ed25519 signature and SHA-256 verify. Console fallbacks are in `scripts\`.
 - **Docker:** `docker compose up -d --build` — includes OCR, LibreOffice, Ghostscript and ClamAV.
 - **From source:** `pip install -e ".[dev]"` in `server/`, `npm ci && npm run build` in `web/`, then `python -m adminpdf --open`.
 - Optional tools: Tesseract (+`tur`), LibreOffice, Ghostscript, qpdf, ClamAV. Missing tools only disable their own features.

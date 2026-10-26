@@ -64,8 +64,25 @@ Out of scope:
 - **Hostile documents** — LibreOffice runs with a throwaway hardened profile (no macros or active
   content, links never updated, no network: SSRF and local-file includes are tested); the optional
   *extra-secure PDF* rebuilds redacted output from page images only.
-- **Verified bundled tools** — the Windows package's OCR files are checked against SHA-256 hashes
-  recorded at build time before every use.
+- **Verified bundled tools** — the Windows package's OCR and Ghostscript files are checked against
+  SHA-256 hashes recorded at build time before every use; they are built from the newest upstream
+  release, checked against the SHA-256 GitHub publishes for it.
+- **Signed updates** — releases publish `SHA256SUMS` + an Ed25519 signature made in the release
+  workflow; the app installs an update only if the signature verifies with the key built into
+  `server/adminpdf/updater.py`, the zip matches its signed hash, it is newer than the running
+  version and no entry escapes the folder. Unsigned releases are announced, never auto-installed.
+- **Launcher** — plain .NET Framework code compiled from source in CI (no packer), with version
+  info and an `asInvoker` manifest (never asks for administrator rights); Authenticode-signed
+  when the maintainer provides a code-signing certificate.
+
+#### Maintainer setup for signing
+
+1. `python scripts/release_signing.py keygen` → put the private key into the repository secret
+   `RELEASE_SIGNING_KEY` and the public key into `RELEASE_PUBLIC_KEY` in
+   `server/adminpdf/updater.py`.
+2. Optional, against SmartScreen / Defender warnings: a code-signing certificate (e.g. free for
+   open source via SignPath Foundation, or Azure Trusted Signing / an OV/EV certificate) as
+   secrets `WINDOWS_SIGN_PFX` (base64 `.pfx`) and `WINDOWS_SIGN_PASSWORD`.
 - **Process isolation** — every job runs in its own spawned process with a timeout, real
   cancellation (process-group kill, including helper tools), and an address-space cap.
 - **Bounded inputs** — streaming uploads with the size cap enforced while writing; page, pixel, DPI,
@@ -139,8 +156,12 @@ Kapsam dışı:
 - **Kötü niyetli belgeler** — LibreOffice makrosuz, aktif içeriksiz, bağlantı güncellemesiz ve
   ağsız bir profille çalışır; *ekstra güvenli PDF* karartılmış çıktıyı yalnızca sayfa
   görüntülerinden yeniden kurar.
-- **Doğrulanan paket araçları** — Windows paketindeki OCR dosyaları her kullanımdan önce derleme
-  sırasında kaydedilen SHA-256 özetleriyle karşılaştırılır.
+- **Doğrulanan paket araçları** — Windows paketindeki OCR ve Ghostscript dosyaları her kullanımdan
+  önce derleme sırasında kaydedilen SHA-256 özetleriyle karşılaştırılır.
+- **İmzalı güncellemeler** — güncelleme yalnızca Ed25519 imzası, SHA-256 özeti doğrulanan ve
+  mevcut sürümden yeni olan paketse kurulur; imzasız sürümler yalnızca bildirilir.
+- **Başlatıcı** — kaynaktan derlenen sade .NET kodu (sıkıştırıcı yok), sürüm bilgili, yönetici
+  izni istemez; kod imzalama sertifikası tanımlanınca Authenticode ile imzalanır.
 - **Süreç izolasyonu** — her iş ayrı süreçte; zaman aşımı, gerçek iptal (yardımcı araçlar dahil
   süreç grubu sonlandırma) ve bellek sınırı.
 - **Sınırlı girdiler** — yükleme boyutu yazılırken uygulanır; sayfa, piksel, DPI, düzenli ifade,

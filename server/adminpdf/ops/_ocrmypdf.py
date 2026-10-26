@@ -24,7 +24,7 @@ from typing import Any
 from ocrmypdf import hookimpl
 
 from ..core.errors import UserError
-from ..core.tools import find_tool
+from ..core.tools import bundled_ghostscript, find_tool
 from .base import InputFile, ProgressFn
 
 PLUGIN = __name__
@@ -166,6 +166,9 @@ def plain_input(inp: InputFile) -> Iterator[Path]:
 
 
 def find_ghostscript() -> str | None:
+    exe, _problem = bundled_ghostscript()
+    if exe:
+        return exe
     return find_tool(
         ("gs", "gswin64c", "gswin32c"),
         windows_globs=("gs/gs*/bin/gswin64c.exe", "gs/gs*/bin/gswin32c.exe"),

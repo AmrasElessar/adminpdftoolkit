@@ -42,6 +42,13 @@ jobs:
         working-directory: web
         run: npm ci --no-audit --no-fund && npm run build
       - name: Build package
+        env:
+          # Newest Tesseract / Ghostscript releases without the anonymous API limit.
+          GITHUB_TOKEN: ${{ github.token }}
+          # Optional Authenticode signing of AdminPDFToolkit.exe (code-signing
+          # certificate as base64 .pfx); unsigned when not set.
+          WINDOWS_SIGN_PFX: ${{ secrets.WINDOWS_SIGN_PFX }}
+          WINDOWS_SIGN_PASSWORD: ${{ secrets.WINDOWS_SIGN_PASSWORD }}
         run: python scripts/build_windows_portable.py
       - name: Smoke-test the unzipped package (no system Python on PATH)
         shell: pwsh
@@ -51,6 +58,20 @@ jobs:
           $app = Resolve-Path smoke/AdminPDFToolkit
           $env:PATH = "C:\Windows\System32;C:\Windows"
           $env:APT_DATA_DIR = "$app\data"
+          $env:APT_OCR_DIR = "$app\ocr"
+          $env:APT_GS_DIR = "$app\gs"
+          # Launcher: built, with version info; every component check passes.
+          $exe = Get-Item "$app\AdminPDFToolkit.exe"
+          $exe.VersionInfo | Format-List ProductName, FileVersion, CompanyName
+          if ($exe.VersionInfo.ProductName -ne "Admin PDF Toolkit") { throw "launcher lacks version info" }
+          (Get-AuthenticodeSignature $exe.FullName).Status
+          $checks = & "$app\python\python.exe" -m adminpdf.selfcheck | ForEach-Object { $_ | ConvertFrom-Json }
+          $checks | Where-Object type -eq check | Format-Table id, status, version -AutoSize
+          if (-not ($checks | Where-Object type -eq done).ready) { throw "self-check: not ready" }
+          foreach ($id in "ocr", "ghostscript") {
+            $c = $checks | Where-Object id -eq $id
+            if ($c.status -ne "ok") { throw "bundled $id is not ok: $($c | ConvertTo-Json -Compress)" }
+          }
           $p = Start-Process -FilePath "$app\python\python.exe" -ArgumentList "-m", "adminpdf" -PassThru -NoNewWindow
           $ok = $false
           foreach ($i in 1..60) {
@@ -65,8 +86,10 @@ jobs:
           $env:TESSDATA_PREFIX = "$app\ocr\tessdata"
           $langs = & "$app\ocr\tesseract.exe" --list-langs 2>&1 | Out-String
           if ($langs -notmatch "(?m)^tur\s*$") { throw "bundled OCR lacks Turkish: $langs" }
-          & "$app\python\python.exe" -c "import sys; from pathlib import Path; from adminpdf.core.tools import verify_bundle; bad = verify_bundle(Path(sys.argv[1])); print('OCR bundle intact' if not bad else bad); sys.exit(1 if bad else 0)" "$app\ocr"
-          if ($LASTEXITCODE -ne 0) { throw "bundled OCR failed its integrity check" }
+          foreach ($bundle in "ocr", "gs") {
+            & "$app\python\python.exe" -c "import sys; from pathlib import Path; from adminpdf.core.tools import verify_bundle; bad = verify_bundle(Path(sys.argv[1])); print(sys.argv[1], 'intact' if not bad else bad); sys.exit(1 if bad else 0)" "$app\$bundle"
+            if ($LASTEXITCODE -ne 0) { throw "bundled $bundle failed its integrity check" }
+          }
           Get-Content "$app\ocr\manifest.json" -Raw | ConvertFrom-Json | Select-Object -ExpandProperty sources | Format-List
           if ($ops.Count -lt 40) { throw "only $($ops.Count) tools loaded" }
           Stop-Process -Id $p.Id -Force
@@ -74,7 +97,9 @@ jobs:
       - uses: actions/upload-artifact@v5
         with:
           name: windows
-          path: dist/*-Windows.zip
+          path: |
+            dist/*-Windows.zip
+            dist/sources/*
           if-no-files-found: error
 
   python:
@@ -131,6 +156,19 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: Checksums, signature and manifest
+        env:
+          # Ed25519 key (scripts/release_signing.py keygen); without it the
+          # release is unsigned and the app only announces it.
+          RELEASE_SIGNING_KEY: ${{ secrets.RELEASE_SIGNING_KEY }}
+        run: |
+          # Source tarballs (Ghostscript, AGPL-3.0) are published with the binaries.
+          if [ -d dist/sources ]; then mv dist/sources/* dist/ && rmdir dist/sources; fi
+          unzip -p dist/*-Windows.zip AdminPDFToolkit/package.json > dist/release-manifest.json
+          cat dist/release-manifest.json
+          pip install -q cryptography
+          python3 scripts/release_signing.py sums dist
+          python3 scripts/release_signing.py sign dist/SHA256SUMS
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -138,7 +176,7 @@ jobs:
         run: |
           python3 scripts/release_notes.py "$TAG" > notes.md
           ls -l dist
-          gh release create "$TAG" dist/*.zip \
+          gh release create "$TAG" dist/* \
             --target "$GITHUB_SHA" \
             --title "$TAG — Admin PDF Toolkit 2" \
             --notes-file notes.md \

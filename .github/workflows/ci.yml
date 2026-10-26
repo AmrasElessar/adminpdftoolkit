@@ -116,6 +116,23 @@ jobs:
         if: failure()
         run: cat "$RUNNER_TEMP/server.log"
 
+  launcher:
+    name: Windows launcher (csc, C# 5)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Compile AdminPDFToolkit.exe
+        shell: pwsh
+        run: |
+          $csc = Get-ChildItem "$env:WINDIR\Microsoft.NET\Framework64\v4*\csc.exe" | Sort-Object FullName | Select-Object -Last 1
+          (Get-Content scripts/launcher/AssemblyInfo.cs.in -Raw).Replace("{version}", "0.0.0") | Set-Content "$env:RUNNER_TEMP\AssemblyInfo.cs"
+          & $csc.FullName /nologo /warnaserror /target:winexe "/out:$env:RUNNER_TEMP\AdminPDFToolkit.exe" `
+            /win32icon:scripts/launcher/app.ico /win32manifest:scripts/launcher/app.manifest `
+            /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll `
+            scripts/launcher/Launcher.cs "$env:RUNNER_TEMP\AssemblyInfo.cs"
+          if ($LASTEXITCODE -ne 0) { throw "csc failed" }
+          (Get-Item "$env:RUNNER_TEMP\AdminPDFToolkit.exe").VersionInfo | Format-List ProductName, FileVersion
+
   docker:
     name: Docker image
     runs-on: ubuntu-latest

@@ -177,14 +177,14 @@ def test_damaged_bundle_is_never_used(tmp_path: Path, monkeypatch: pytest.Monkey
     folder = _bundle(tmp_path)
     monkeypatch.setenv(tools.OCR_BUNDLE_ENV, str(folder))
     monkeypatch.delenv("TESSDATA_PREFIX", raising=False)
-    tools.bundled_ocr.cache_clear()
+    tools._bundled.cache_clear()
     try:
         exe, problem = tools.bundled_ocr()
         assert exe and problem is None
         assert os.environ["TESSDATA_PREFIX"] == str(folder / "tessdata")
 
         (folder / Path(exe).name).write_bytes(b"MZ tampered")
-        tools.bundled_ocr.cache_clear()
+        tools._bundled.cache_clear()
         assert tools.bundled_ocr() == (None, "damaged")
     finally:
-        tools.bundled_ocr.cache_clear()
+        tools._bundled.cache_clear()

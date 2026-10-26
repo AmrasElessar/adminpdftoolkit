@@ -119,7 +119,7 @@ feature is disabled.*
 |---|---|---|---|
 | Tesseract OCR | Apache-2.0 | Metin tanıma | https://github.com/tesseract-ocr/tesseract |
 | Tesseract Windows derlemesi (UB Mannheim) | Apache-2.0 | Windows paketinin `ocr/` klasöründe gömülü gelir (beraberindeki Leptonica, libpng, libjpeg-turbo, libtiff, zlib, libwebp, OpenJPEG, giflib DLL'leri izinli lisanslıdır; bkz. `ocr/NOTICE.txt`) | https://github.com/UB-Mannheim/tesseract |
-| Ghostscript (Artifex) | AGPL-3.0 | PDF/A dönüştürme | https://ghostscript.com/ |
+| Ghostscript (Artifex) | AGPL-3.0 | PDF/A dönüştürme. Windows paketinin `gs/` klasöründe değiştirilmemiş Artifex derlemesi olarak gömülü gelir; birebir kaynak kodu arşivi (`ghostscript-*.tar.gz`) her sürümün indirme sayfasında paketle birlikte yayımlanır (AGPL-3.0 §6) | https://ghostscript.com/ |
 | qpdf (pikepdf içinde) | Apache-2.0 | Düşük seviye PDF, onarım | https://github.com/qpdf/qpdf |
 | LibreOffice | MPL-2.0 | Office → PDF | https://www.libreoffice.org/ |
 | ClamAV (Cisco Talos) | GPL-2.0 | Virüs taraması | https://www.clamav.net/ |

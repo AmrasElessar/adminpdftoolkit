@@ -1,8 +1,16 @@
 {
-  "_comment": "Where the Windows package's bundled OCR comes from. Set each sha256 (lower-case hex) to pin the exact file: the build then refuses anything else. An empty sha256 is accepted once and the build prints the value to pin here.",
+  "_comment": "Bundled tools of the Windows package. With \"url\" empty the newest GitHub release is used at build time and checked against the SHA-256 GitHub publishes for the asset; set \"url\" + \"sha256\" to pin an exact file instead. The hash of every bundled file ends up in the package manifest.",
   "tesseract": {
-    "version": "5.5.0.20241111",
-    "url": "https://github.com/UB-Mannheim/tesseract/releases/download/v5.5.0.20241111/tesseract-ocr-w64-setup-5.5.0.20241111.exe",
+    "github": "UB-Mannheim/tesseract",
+    "asset": "^tesseract-ocr-w64-setup-[0-9.]+\\.exe$",
+    "url": "",
+    "sha256": ""
+  },
+  "ghostscript": {
+    "github": "ArtifexSoftware/ghostpdl-downloads",
+    "asset": "^gs[0-9]+w64\\.exe$",
+    "source_asset": "^ghostscript-[0-9.]+\\.tar\\.gz$",
+    "url": "",
     "sha256": ""
   },
   "tessdata": {

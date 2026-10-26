@@ -26,6 +26,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expired-file sweeping no longer removes inputs of running jobs. CI token read-only.
 
 ### Added
+- Windows package: **`AdminPDFToolkit.exe` launcher** — ticks off every component one by one
+  (Python, libraries, UI, certificate, OCR, Ghostscript, LibreOffice, ClamAV, port, disk, network),
+  starts the server with no console window, shows "System ready" with addresses and the
+  certificate fingerprint, network-sharing switch, hides in the notification area. Plain .NET
+  Framework code built with the Windows `csc`; optional Authenticode signing in CI. The `.bat`
+  files move to `scripts\` as console fallbacks. `python -m adminpdf.selfcheck` does the checks.
+- **Signed updates**: optional check at start; a newer release is offered with its component
+  versions and installed only if the user agrees and its Ed25519-signed SHA-256 verifies
+  (never a downgrade); `data\` is kept. `scripts/release_signing.py`, `SHA256SUMS(.sig)` and
+  `release-manifest.json` in releases.
+- Windows package: **Ghostscript bundled** (PDF/A works offline); Tesseract and Ghostscript come
+  from their newest upstream release at build time, verified against GitHub's published SHA-256;
+  Ghostscript's source tarball is published with each release.
 - **Extra-secure PDF** option for KVKK and *Redact*: the result is rebuilt from page images only, so
   no text, object, annotation, attachment or metadata survives.
 - **Connect a device** dialog on the server PC with a pairing QR code and the certificate

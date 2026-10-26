@@ -20,8 +20,9 @@ from pathlib import Path
 
 log = logging.getLogger("adminpdf.tools")
 
-# Set by the Windows package launcher to its bundled OCR folder.
+# Set by the Windows package launcher to its bundled tool folders.
 OCR_BUNDLE_ENV = "APT_OCR_DIR"
+GS_BUNDLE_ENV = "APT_GS_DIR"
 
 
 def _windows_roots() -> list[str]:
@@ -99,25 +100,37 @@ def verify_bundle(folder: Path) -> list[str]:
     return bad
 
 
-@lru_cache(maxsize=1)
-def bundled_ocr() -> tuple[str | None, str | None]:
-    """``(tesseract_exe, problem)`` for the OCR engine shipped inside the
-    Windows package. Its files are checked against the package manifest
-    every time, offline; a damaged or altered bundle is never run."""
-    root = os.environ.get(OCR_BUNDLE_ENV)
+@lru_cache(maxsize=4)
+def _bundled(env: str, exe_rel: str) -> tuple[str | None, str | None]:
+    """``(exe, problem)`` for a tool shipped inside the Windows package.
+    Its files are checked against the package manifest, offline; a damaged
+    or altered bundle is never run (problem ``"damaged"``)."""
+    root = os.environ.get(env)
     if not root:
         return None, None
     folder = Path(root)
-    exe = folder / ("tesseract.exe" if sys.platform == "win32" else "tesseract")
+    exe = folder / exe_rel
     if not exe.is_file():
         return None, None
     bad = verify_bundle(folder)
     if bad:
-        log.error("bundled OCR failed its integrity check: %s", ", ".join(bad[:10]))
+        log.error("bundled %s failed its integrity check: %s", folder.name, ", ".join(bad[:10]))
         return None, "damaged"
-    _add_to_path(str(folder))
-    os.environ["TESSDATA_PREFIX"] = str(folder / "tessdata")
+    _add_to_path(str(exe.parent))
     return str(exe), None
+
+
+def bundled_ocr() -> tuple[str | None, str | None]:
+    """The package's Tesseract (with its own tessdata), verified."""
+    exe, problem = _bundled(OCR_BUNDLE_ENV, "tesseract.exe" if sys.platform == "win32" else "tesseract")
+    if exe:
+        os.environ["TESSDATA_PREFIX"] = str(Path(exe).parent / "tessdata")
+    return exe, problem
+
+
+def bundled_ghostscript() -> tuple[str | None, str | None]:
+    """The package's Ghostscript (PDF/A), verified."""
+    return _bundled(GS_BUNDLE_ENV, "bin/gswin64c.exe" if sys.platform == "win32" else "bin/gs")
 
 
 def use_user_tessdata() -> None:
