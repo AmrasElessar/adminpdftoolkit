@@ -50,8 +50,10 @@ def test_stream_json_runs_the_selfcheck(tmp_path: Path, monkeypatch: pytest.Monk
     monkeypatch.setenv("APT_PORT", "8768")
     lines: list[dict[str, object]] = []
     code = launcher.stream_json(["-m", "adminpdf.selfcheck"], launcher.child_env(tmp_path / "d"), lines.append)
-    assert code == 0
+    # Not every component exists on a test machine (e.g. no web build in CI):
+    # what matters is the streamed result and an exit code that matches it.
     assert lines[0]["id"] == "python" and lines[-1]["type"] == "done"
+    assert code == (0 if lines[-1]["ready"] else 1)
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX process groups")

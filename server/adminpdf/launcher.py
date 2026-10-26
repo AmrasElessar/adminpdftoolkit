@@ -229,7 +229,7 @@ def open_path(path: Path) -> None:
         if sys.platform == "darwin":
             subprocess.Popen(["open", str(path)])
         elif sys.platform == "win32":
-            os.startfile(str(path))  # type: ignore[attr-defined]
+            os.startfile(str(path))  # type: ignore[attr-defined,unused-ignore]
         else:
             subprocess.Popen(["xdg-open", str(path)])
     except OSError:
@@ -522,11 +522,11 @@ class LauncherApp:  # pragma: no cover - needs a display; exercised by hand and 
                 parent=self.root,
             )
             return
-        self._background(
-            lambda: subprocess.run(
-                [child_python(), "-m", "adminpdf", "--trust-ca"], env=child_env(self.data_dir), check=False
-            )
-        )
+
+        def trust() -> None:
+            subprocess.run([child_python(), "-m", "adminpdf", "--trust-ca"], env=child_env(self.data_dir), check=False)
+
+        self._background(trust)
 
     def _close_window(self) -> None:
         from tkinter import messagebox
