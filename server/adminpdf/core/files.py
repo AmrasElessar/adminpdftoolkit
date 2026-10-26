@@ -7,6 +7,7 @@ exceeded — nothing is spooled beforehand.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import secrets
@@ -33,6 +34,10 @@ class UploadTooLargeError(Exception):
     pass
 
 
+class StorageFullError(Exception):
+    pass
+
+
 class MissingFileError(Exception):
     pass
 
@@ -47,10 +52,13 @@ class StoredFile:
     created: float
     pages: int | None = None
     encrypted: bool = False
+    # "local" or a paired device's id; nobody else can read or use the file.
+    owner: str = "local"
 
     def public(self) -> dict[str, object]:
         d = asdict(self)
         d.pop("created")
+        d.pop("owner")
         return d
 
 
@@ -99,18 +107,38 @@ def sniff(head: bytes, name: str) -> tuple[str, str]:
 
 
 class FileStore:
-    def __init__(self, root: Path, *, max_bytes: int, ttl_seconds: int) -> None:
+    def __init__(self, root: Path, *, max_bytes: int, ttl_seconds: int, max_total_bytes: int = 0) -> None:
         self.root = root
         self.max_bytes = max_bytes
         self.ttl_seconds = ttl_seconds
+        # 0 = unlimited. Uploads that would push the store past it are refused,
+        # so one client cannot fill the disk for everyone.
+        self.max_total_bytes = max_total_bytes
         root.mkdir(parents=True, exist_ok=True)
+
+    def usage(self) -> int:
+        """Bytes currently stored (blobs only)."""
+        total = 0
+        for d in self.root.iterdir():
+            with contextlib.suppress(OSError):
+                total += (d / "blob").stat().st_size
+        return total
+
+    def room(self) -> int:
+        """How many bytes the next upload may use."""
+        if not self.max_total_bytes:
+            return self.max_bytes
+        return max(0, min(self.max_bytes, self.max_total_bytes - self.usage()))
 
     def _dir(self, file_id: str) -> Path:
         if not FILE_ID_RE.match(file_id):
             raise MissingFileError(file_id)
         return self.root / file_id
 
-    async def save_stream(self, name: str, chunks: AsyncIterator[bytes]) -> StoredFile:
+    async def save_stream(self, name: str, chunks: AsyncIterator[bytes], *, owner: str) -> StoredFile:
+        room = self.room()
+        if room <= 0:
+            raise StorageFullError
         file_id = secrets.token_urlsafe(16)
         d = self.root / file_id
         d.mkdir()
@@ -121,8 +149,8 @@ class FileStore:
             with blob.open("wb") as fh:
                 async for chunk in chunks:
                     size += len(chunk)
-                    if size > self.max_bytes:
-                        raise UploadTooLargeError
+                    if size > room:
+                        raise UploadTooLargeError if size > self.max_bytes else StorageFullError
                     if len(head) < 2048:
                         head += chunk[: 2048 - len(head)]
                     fh.write(chunk)
@@ -131,11 +159,11 @@ class FileStore:
             raise
         safe = safe_filename(name)
         kind, mime = sniff(head, safe)
-        meta = StoredFile(id=file_id, name=safe, size=size, kind=kind, mime=mime, created=time.time())
+        meta = StoredFile(id=file_id, name=safe, size=size, kind=kind, mime=mime, created=time.time(), owner=owner)
         self._write_meta(meta)
         return meta
 
-    def register_output(self, path: Path, name: str) -> StoredFile:
+    def register_output(self, path: Path, name: str, *, owner: str) -> StoredFile:
         """Adopt a job result as a stored file so it can feed the next tool."""
         file_id = secrets.token_urlsafe(16)
         d = self.root / file_id
@@ -146,7 +174,13 @@ class FileStore:
         safe = safe_filename(name)
         kind, mime = sniff(head, safe)
         meta = StoredFile(
-            id=file_id, name=safe, size=(d / "blob").stat().st_size, kind=kind, mime=mime, created=time.time()
+            id=file_id,
+            name=safe,
+            size=(d / "blob").stat().st_size,
+            kind=kind,
+            mime=mime,
+            created=time.time(),
+            owner=owner,
         )
         self._write_meta(meta)
         return self.probe(meta)
@@ -172,12 +206,16 @@ class FileStore:
     def _write_meta(self, meta: StoredFile) -> None:
         (self.root / meta.id / "meta.json").write_text(json.dumps(asdict(meta)), encoding="utf-8")
 
-    def get(self, file_id: str) -> StoredFile:
+    def get(self, file_id: str, *, owner: str) -> StoredFile:
+        """Metadata of a file owned by ``owner``; anyone else's reads as missing."""
         meta_path = self._dir(file_id) / "meta.json"
         try:
-            return StoredFile(**json.loads(meta_path.read_text(encoding="utf-8")))
+            meta = StoredFile(**json.loads(meta_path.read_text(encoding="utf-8")))
         except (OSError, ValueError, TypeError) as e:
             raise MissingFileError(file_id) from e
+        if not secrets.compare_digest(meta.owner, owner):
+            raise MissingFileError(file_id)
+        return meta
 
     def path(self, file_id: str) -> Path:
         p = self._dir(file_id) / "blob"
@@ -188,17 +226,23 @@ class FileStore:
     def delete(self, file_id: str) -> None:
         shutil.rmtree(self._dir(file_id), ignore_errors=True)
 
-    def sweep(self, now: float | None = None) -> int:
-        """Delete files older than the TTL. Returns how many were removed."""
+    def sweep(self, now: float | None = None, *, keep: frozenset[str] = frozenset()) -> int:
+        """Delete files older than the TTL, except ``keep`` (inputs of running
+        jobs). Returns how many were removed."""
         now = now or time.time()
         removed = 0
         for d in self.root.iterdir():
+            if d.name in keep:
+                continue
             meta = d / "meta.json"
             try:
                 created = json.loads(meta.read_text(encoding="utf-8"))["created"]
             except (OSError, ValueError, KeyError):
                 # Half-written upload: fall back to the directory mtime.
-                created = d.stat().st_mtime
+                try:
+                    created = d.stat().st_mtime
+                except OSError:
+                    continue
             if now - created > self.ttl_seconds:
                 shutil.rmtree(d, ignore_errors=True)
                 removed += 1

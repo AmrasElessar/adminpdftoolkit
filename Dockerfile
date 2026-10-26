@@ -25,8 +25,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     APT_HOST=0.0.0.0 \
     APT_PORT=8000 \
     APT_DATA_DIR=/data \
-    # Requests arrive from the Docker bridge, not loopback.
-    APT_TRUSTED_NETWORKS=172.16.0.0/12
+    # A browser on the Docker host reaches us via the bridge gateway, not
+    # loopback: trust exactly that address (nothing else on 172.16.0.0/12).
+    # Ignored when LAN mode is on — then every device pairs.
+    APT_TRUSTED_NETWORKS=gateway
 
 # OCR (Tesseract tr+en), PDF/A (Ghostscript), repair (qpdf), antivirus
 # (ClamAV), fonts with Turkish coverage, and optionally LibreOffice for

@@ -97,7 +97,7 @@
   void load(untrack(() => entry.password));
 
   onDestroy(() => {
-    void doc?.destroy();
+    void doc?.loadingTask.destroy();
   });
 
   // ---- zoom & navigation -----------------------------------------------------

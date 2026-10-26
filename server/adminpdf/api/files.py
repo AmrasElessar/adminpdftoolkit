@@ -9,7 +9,7 @@ from urllib.parse import unquote
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import FileResponse
 
-from ..core.files import FileStore, MissingFileError, UploadTooLargeError
+from ..core.files import FileStore, MissingFileError, StorageFullError, UploadTooLargeError
 from . import deps
 
 router = APIRouter(prefix="/api/files", tags=["files"])
@@ -19,6 +19,7 @@ router = APIRouter(prefix="/api/files", tags=["files"])
 async def upload(
     request: Request,
     store: Annotated[FileStore, Depends(deps.store)],
+    owner: Annotated[str, Depends(deps.owner)],
     x_filename: Annotated[str, Header(max_length=1024)] = "file",
     content_length: Annotated[int | None, Header()] = None,
 ) -> dict[str, object]:
@@ -28,9 +29,13 @@ async def upload(
     if content_length is not None and content_length > store.max_bytes:
         raise HTTPException(status_code=413, detail="File too large")
     try:
-        meta = await store.save_stream(unquote(x_filename), request.stream())
+        meta = await store.save_stream(unquote(x_filename), request.stream(), owner=owner)
     except UploadTooLargeError:
         raise HTTPException(status_code=413, detail="File too large") from None
+    except StorageFullError:
+        raise HTTPException(
+            status_code=507, detail="Storage is full; wait for older files to expire or delete some"
+        ) from None
     if meta.size == 0:
         store.delete(meta.id)
         raise HTTPException(status_code=400, detail="Empty file")
@@ -40,17 +45,24 @@ async def upload(
 
 
 @router.get("/{file_id}/meta")
-def file_meta(file_id: str, store: Annotated[FileStore, Depends(deps.store)]) -> dict[str, object]:
+def file_meta(
+    file_id: str, store: Annotated[FileStore, Depends(deps.store)], owner: Annotated[str, Depends(deps.owner)]
+) -> dict[str, object]:
     try:
-        return store.get(file_id).public()
+        return store.get(file_id, owner=owner).public()
     except MissingFileError:
         raise deps.not_found() from None
 
 
 @router.get("/{file_id}")
-def download(file_id: str, store: Annotated[FileStore, Depends(deps.store)], inline: bool = False) -> FileResponse:
+def download(
+    file_id: str,
+    store: Annotated[FileStore, Depends(deps.store)],
+    owner: Annotated[str, Depends(deps.owner)],
+    inline: bool = False,
+) -> FileResponse:
     try:
-        meta = store.get(file_id)
+        meta = store.get(file_id, owner=owner)
         path = store.path(file_id)
     except MissingFileError:
         raise deps.not_found() from None
@@ -63,9 +75,11 @@ def download(file_id: str, store: Annotated[FileStore, Depends(deps.store)], inl
 
 
 @router.delete("/{file_id}", status_code=204)
-def delete(file_id: str, store: Annotated[FileStore, Depends(deps.store)]) -> None:
+def delete(
+    file_id: str, store: Annotated[FileStore, Depends(deps.store)], owner: Annotated[str, Depends(deps.owner)]
+) -> None:
     try:
-        store.get(file_id)
+        store.get(file_id, owner=owner)
     except MissingFileError:
         raise deps.not_found() from None
     store.delete(file_id)

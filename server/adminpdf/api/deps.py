@@ -30,5 +30,23 @@ def sessions(request: Request) -> SessionRegistry:
     return r
 
 
+def owner(request: Request) -> str:
+    """Who files and jobs belong to: "local" or one id per paired device.
+    Set by the security middleware; absent only on the pairing endpoints."""
+    o: str | None = getattr(request.state, "apt_owner", None)
+    if not o:
+        raise HTTPException(status_code=401, detail="Pairing required")
+    return o
+
+
+def is_loopback(request: Request) -> bool:
+    """This very machine (no proxy in between), per the security middleware."""
+    return bool(getattr(request.state, "apt_loopback", False))
+
+
+def is_local(request: Request) -> bool:
+    return bool(getattr(request.state, "apt_local", False))
+
+
 def not_found(what: str = "Not found") -> HTTPException:
     return HTTPException(status_code=404, detail=what)

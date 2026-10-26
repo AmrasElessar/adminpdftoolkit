@@ -23,7 +23,7 @@ def main() -> None:
         settings.host = "0.0.0.0"
         settings.lan_enabled = True
         if not settings.pairing_key:
-            settings.pairing_key = secrets.token_urlsafe(9)
+            settings.pairing_key = secrets.token_urlsafe(16)
         from .core.security import local_addresses
 
         ips = sorted(a for a in local_addresses() if "." in a and not a.startswith("127."))
@@ -45,6 +45,7 @@ def main() -> None:
         port=settings.port,
         workers=1,
         proxy_headers=False,
+        server_header=False,
     )
 
 

@@ -221,11 +221,63 @@ class OfficeParams(Params):
     )
 
 
+# A throwaway LibreOffice profile that treats every document as hostile: no
+# macros, no active content (OLE / DDE), links and external data never
+# updated, formulas never recalculated on load, and every network request
+# sent to a proxy that does not exist (port 9, "discard"), so a crafted
+# document can neither read local files nor reach the network (SSRF).
+# Unknown keys are ignored by older LibreOffice versions.
+_LO_HARDENING = {
+    "/org.openoffice.Office.Common/Security/Scripting": {
+        "MacroSecurityLevel": ("int", "3"),
+        "DisableMacrosExecution": ("boolean", "true"),
+        "DisableActiveContent": ("boolean", "true"),
+        "BlockUntrustedRefererLinks": ("boolean", "true"),
+    },
+    # Calc: 0 always, 1 never, 2 on request. Writer: 0 never, 1 on request.
+    "/org.openoffice.Office.Calc/Content/Update": {"Link": ("int", "1")},
+    "/org.openoffice.Office.Writer/Content/Update": {"Link": ("int", "0")},
+    "/org.openoffice.Office.Calc/Formula/Load": {
+        "OOXMLRecalcMode": ("int", "1"),
+        "ODFRecalcMode": ("int", "1"),
+    },
+    "/org.openoffice.Inet/Settings": {
+        "ooInetProxyType": ("int", "2"),
+        "ooInetHTTPProxyName": ("string", "127.0.0.1"),
+        "ooInetHTTPProxyPort": ("int", "9"),
+        "ooInetHTTPSProxyName": ("string", "127.0.0.1"),
+        "ooInetHTTPSProxyPort": ("int", "9"),
+        "ooInetFTPProxyName": ("string", "127.0.0.1"),
+        "ooInetFTPProxyPort": ("int", "9"),
+        "ooInetNoProxy": ("string", ""),
+    },
+}
+
+
+def write_hardened_profile(profile: Path) -> None:
+    items = []
+    for path, props in _LO_HARDENING.items():
+        for name, (kind, value) in props.items():
+            items.append(
+                f'<item oor:path="{path}"><prop oor:name="{name}" oor:op="fuse" oor:type="xs:{kind}">'
+                f"<value>{html.escape(value)}</value></prop></item>"
+            )
+    (profile / "user").mkdir(parents=True)
+    (profile / "user" / "registrymodifications.xcu").write_text(
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<oor:items xmlns:oor="http://openoffice.org/2001/registry" '
+        'xmlns:xs="http://www.w3.org/2001/XMLSchema" '
+        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n' + "\n".join(items) + "\n</oor:items>\n",
+        encoding="utf-8",
+    )
+
+
 def libreoffice_to_pdf(soffice: str, inp: InputFile, out: Path) -> None:
     with tempfile.TemporaryDirectory(prefix="apt-lo-") as tmp:
         tmpdir = Path(tmp)
         src = tmpdir / f"input{inp.path.suffix or Path(inp.name).suffix}"
         shutil.copyfile(inp.path, src)
+        write_hardened_profile(tmpdir / "profile")
         profile = (tmpdir / "profile").as_uri()
         result = proc.run(
             [

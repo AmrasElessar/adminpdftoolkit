@@ -48,6 +48,7 @@ export function viewportRectToPdf(vp: PageViewport, x0: number, y0: number, x1: 
 
 /** PDF user-space rect → viewport CSS box {left, top, width, height}. */
 export function pdfRectToViewport(vp: PageViewport, r: readonly number[]): { left: number; top: number; width: number; height: number } {
-  const [x0, y0, x1, y1] = vp.convertToViewportRectangle([r[0]!, r[1]!, r[2]!, r[3]!]) as [number, number, number, number];
+  const [x0, y0] = vp.convertToViewportPoint(r[0]!, r[1]!) as [number, number];
+  const [x1, y1] = vp.convertToViewportPoint(r[2]!, r[3]!) as [number, number];
   return { left: Math.min(x0, x1), top: Math.min(y0, y1), width: Math.abs(x1 - x0), height: Math.abs(y1 - y0) };
 }

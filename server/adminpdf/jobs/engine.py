@@ -26,6 +26,7 @@ import threading
 import time
 import zipfile
 from dataclasses import dataclass, field
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,12 @@ from ..core.files import FileStore, StoredFile
 from . import worker
 
 TERMINAL = frozenset({"done", "failed", "cancelled"})
+# Unfinished jobs one owner may have at a time; more is refused (HTTP 429).
+MAX_PENDING_PER_OWNER = 20
+
+
+class TooManyJobsError(Exception):
+    pass
 
 
 def _stop(proc: Any, *, hard: bool = False) -> None:
@@ -52,6 +59,7 @@ def _stop(proc: Any, *, hard: bool = False) -> None:
 class Job:
     id: str
     op: str
+    owner: str = "local"
     status: str = "queued"  # queued | running | done | failed | cancelled
     progress: float = 0.0
     message: str = ""
@@ -97,12 +105,21 @@ class JobEngine:
         self._cancel_requested: set[str] = set()
         self._changed = asyncio.Condition()
         self._tasks: set[asyncio.Task[None]] = set()
+        # Stored-file ids read by unfinished jobs: the sweeper must not expire them.
+        self._in_use: dict[str, int] = {}
         self._mp = mp.get_context("spawn")
         work_dir.mkdir(parents=True, exist_ok=True)
 
     # -- public API ------------------------------------------------------
-    def get(self, job_id: str) -> Job | None:
-        return self._jobs.get(job_id)
+    def get(self, job_id: str, *, owner: str) -> Job | None:
+        """A job of ``owner``; anyone else's reads as missing."""
+        job = self._jobs.get(job_id)
+        if job is None or not secrets.compare_digest(job.owner, owner):
+            return None
+        return job
+
+    def files_in_use(self) -> frozenset[str]:
+        return frozenset(self._in_use)
 
     def submit(
         self,
@@ -110,16 +127,35 @@ class JobEngine:
         params: dict[str, Any],
         inputs: list[tuple[Path, str, str]],
         files: dict[str, tuple[Path, str]] | None = None,
+        *,
+        owner: str = "local",
     ) -> Job:
-        job = Job(id=secrets.token_urlsafe(16), op=op)
+        pending = sum(1 for j in self._jobs.values() if j.owner == owner and j.status not in TERMINAL)
+        if pending >= MAX_PENDING_PER_OWNER:
+            raise TooManyJobsError
+        files = files or {}
+        job = Job(id=secrets.token_urlsafe(16), op=op, owner=owner)
         self._jobs[job.id] = job
-        task = asyncio.create_task(self._run(job, params, inputs, files or {}))
+        used = [p.parent.name for p, _n, _pw in inputs] + [p.parent.name for p, _n in files.values()]
+        for fid in used:
+            self._in_use[fid] = self._in_use.get(fid, 0) + 1
+
+        def release(_task: asyncio.Task[None]) -> None:
+            for fid in used:
+                left = self._in_use.get(fid, 1) - 1
+                if left > 0:
+                    self._in_use[fid] = left
+                else:
+                    self._in_use.pop(fid, None)
+
+        task = asyncio.create_task(self._run(job, params, inputs, files))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
+        task.add_done_callback(release)
         return job
 
-    async def cancel(self, job_id: str) -> bool:
-        job = self._jobs.get(job_id)
+    async def cancel(self, job_id: str, *, owner: str) -> bool:
+        job = self.get(job_id, owner=owner)
         if job is None or job.status in TERMINAL:
             return False
         self._cancel_requested.add(job_id)
@@ -257,7 +293,8 @@ class JobEngine:
             loop = asyncio.get_running_loop()
             produced = payload["outputs"]
             outputs = [
-                await loop.run_in_executor(None, self.store.register_output, Path(p), name) for p, name in produced
+                await loop.run_in_executor(None, partial(self.store.register_output, Path(p), name, owner=job.owner))
+                for p, name in produced
             ]
             result = None
             if len(outputs) == 1:
@@ -304,6 +341,6 @@ class JobEngine:
             with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
                 for path, name in outputs:
                     zf.write(path, name)
-            return self.store.register_output(zip_path, f"{stem}_sonuclar.zip")
+            return self.store.register_output(zip_path, f"{stem}_sonuclar.zip", owner=job.owner)
 
         return await asyncio.get_running_loop().run_in_executor(None, build)

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, ValidationError
 
 from ..core.files import FileStore, MissingFileError
-from ..jobs.engine import JobEngine
+from ..jobs.engine import JobEngine, TooManyJobsError
 from ..ops.base import REGISTRY, file_params
 from . import deps
 
@@ -37,6 +37,7 @@ async def run(
     body: RunBody,
     store: Annotated[FileStore, Depends(deps.store)],
     engine: Annotated[JobEngine, Depends(deps.engine)],
+    owner: Annotated[str, Depends(deps.owner)],
 ) -> dict[str, Any]:
     op = REGISTRY.get(name)
     if op is None:
@@ -49,7 +50,7 @@ async def run(
     inputs = []
     for ref in body.inputs:
         try:
-            meta = store.get(ref.id)
+            meta = store.get(ref.id, owner=owner)
             path = store.path(ref.id)
         except MissingFileError:
             raise deps.not_found("Input file not found (it may have expired)") from None
@@ -69,11 +70,14 @@ async def run(
         if not file_id:
             continue
         try:
-            meta = store.get(file_id)
+            meta = store.get(file_id, owner=owner)
             files[field_name] = (store.path(file_id), meta.name)
         except MissingFileError:
             raise deps.not_found(f"{field_name}: file not found (it may have expired)") from None
         if accept and meta.kind not in accept:
             raise HTTPException(status_code=415, detail=f"{field_name}: expected {', '.join(accept)}, got {meta.kind}")
-    job = engine.submit(op.name, params.model_dump(mode="json"), inputs, files)
+    try:
+        job = engine.submit(op.name, params.model_dump(mode="json"), inputs, files, owner=owner)
+    except TooManyJobsError:
+        raise HTTPException(status_code=429, detail="Too many unfinished jobs; wait for some to finish") from None
     return job.public()

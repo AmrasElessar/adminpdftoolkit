@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from "../i18n.svelte";
-  import type { PageViewport } from "../viewer/pdf";
+  import { pdfRectToViewport, type PageViewport } from "../viewer/pdf";
   import type { KvkkState, Rect } from "./state.svelte";
 
   let { page, viewport, kvkk }: { page: number; viewport: PageViewport; kvkk: KvkkState } = $props();
@@ -11,8 +11,7 @@
   const items = $derived(kvkk.findings.filter((f) => f.page === page));
 
   function box(r: readonly number[]): { left: number; top: number; width: number; height: number } {
-    const [x0, y0, x1, y1] = viewport.convertToViewportRectangle([r[0]!, r[1]!, r[2]!, r[3]!]) as number[];
-    return { left: Math.min(x0!, x1!), top: Math.min(y0!, y1!), width: Math.abs(x1! - x0!), height: Math.abs(y1! - y0!) };
+    return pdfRectToViewport(viewport, r);
   }
 
   function local(e: PointerEvent): [number, number] {

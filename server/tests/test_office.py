@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import zipfile
+from pathlib import Path
 
 import pymupdf
 import pytest
@@ -96,3 +97,83 @@ def test_zip_bomb_rejected(api: Api) -> None:
     job = api.run("office_to_pdf", [f["id"]], {"engine": "builtin"})
     assert job["status"] == "failed"
     assert "zip bomb" in job["error"]["en"]
+
+
+@needs_lo
+def test_libreoffice_cannot_read_local_files_or_the_network(tmp_path: Path) -> None:
+    """A crafted workbook asks LibreOffice to fetch a URL (SSRF) and a Word
+    field to include a local file; neither may reach the output PDF."""
+    import threading
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+
+    from openpyxl import Workbook
+
+    from adminpdf.ops.base import InputFile
+    from adminpdf.ops.office import libreoffice_to_pdf
+
+    hits: list[str] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            hits.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"SIZINTI-HTTP")
+
+        def log_message(self, *_args: object) -> None:
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        secret = tmp_path / "secret.txt"
+        secret.write_text("SIZINTI-DOSYA")
+        wb = Workbook()
+        ws = wb.active
+        assert ws is not None
+        ws["A1"] = f'=_xlfn.WEBSERVICE("http://127.0.0.1:{server.server_port}/x")'
+        ws["A2"] = f'=_xlfn.WEBSERVICE("{secret.as_uri()}")'
+        wb.save(tmp_path / "evil.xlsx")
+
+        base = io.BytesIO(make_docx("PLACEHOLDER"))
+        evil_docx = tmp_path / "evil.docx"
+        with zipfile.ZipFile(base) as src, zipfile.ZipFile(evil_docx, "w") as dst:
+            for info in src.infolist():
+                data = src.read(info.filename)
+                if info.filename == "word/document.xml":
+                    field = (
+                        '<w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve">'
+                        f' INCLUDETEXT "{secret}" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/>'
+                        '</w:r><w:r><w:t>cached</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r>'
+                    )
+                    run = "<w:r><w:rPr><w:b/></w:rPr><w:t>PLACEHOLDER</w:t></w:r>"
+                    data = data.decode().replace(run, field).encode()
+                    assert b"INCLUDETEXT" in data
+                dst.writestr(info, data)
+
+        for name in ("evil.xlsx", "evil.docx"):
+            out = tmp_path / f"{name}.pdf"
+            libreoffice_to_pdf(find_soffice() or "", InputFile(tmp_path / name, name), out)
+            with pymupdf.open(out) as doc:
+                text = "".join(p.get_text() for p in doc)
+            assert "SIZINTI" not in text, name
+        assert hits == []
+    finally:
+        server.shutdown()
+
+
+def test_libreoffice_profile_is_hardened(tmp_path: Path) -> None:
+    import xml.etree.ElementTree as ET
+
+    from adminpdf.ops.office import write_hardened_profile
+
+    write_hardened_profile(tmp_path / "p")
+    root = ET.parse(tmp_path / "p" / "user" / "registrymodifications.xcu").getroot()
+    oor = "{http://openoffice.org/2001/registry}"
+    values = {
+        (item.get(f"{oor}path"), prop.get(f"{oor}name")): prop.findtext("value") for item in root for prop in item
+    }
+    assert values[("/org.openoffice.Office.Common/Security/Scripting", "DisableMacrosExecution")] == "true"
+    assert values[("/org.openoffice.Office.Common/Security/Scripting", "DisableActiveContent")] == "true"
+    assert values[("/org.openoffice.Office.Calc/Content/Update", "Link")] == "1"
+    assert values[("/org.openoffice.Inet/Settings", "ooInetHTTPProxyPort")] == "9"
