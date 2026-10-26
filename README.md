@@ -29,6 +29,49 @@
 
 </div>
 
+## ⬇️ İndir ve İlk Açılış / Download & First Start
+
+[**Son sürüm sayfası / Latest release**](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) — kurulum gerektirmez, ücretsizdir.
+
+| Sistem | Dosya | Aç |
+|---|---|---|
+| **Windows 10 / 11** (64 bit) | `AdminPDFToolkit-…-Windows.zip` | Çıkarın → `AdminPDFToolkit.exe` |
+| **macOS 11+** (Apple Silicon M1–M4) | `AdminPDFToolkit-…-macOS-arm64.zip` | `AdminPDFToolkit.app`'i Uygulamalar'a sürükleyin → çift tıklayın |
+| **Linux x86_64** (Ubuntu 22.04+, Debian 12+, Mint 21+, Pardus 23+, Fedora 36+) | `AdminPDFToolkit-…-Linux-x86_64.tar.gz` | Açın → `AdminPDFToolkit` |
+| Intel Mac, ARM Linux, diğer | `AdminPDFToolkit-…-Linux-macOS.zip` | Python 3.11+ ile `scripts/start.sh` |
+| Sunucu / NAS | Docker | `docker compose up -d --build` |
+
+> [!IMPORTANT]
+> **İlk açılışta işletim sistemi uyarı gösterecek — bu normaldir.** Uygulama ücretsiz ve açık kaynak olduğu için Microsoft ve Apple'ın ücretli kod imzalama / onay hizmetlerinden geçirilmedi; uyarı bir hata ya da virüs bulgusu değildir. Bir kez onaylarsınız, sonra çıkmaz:
+>
+> - **Windows — "Windows bilgisayarınızı korudu" (SmartScreen):** **Ek bilgi ▸ Yine de çalıştır**. (Zip'i açmadan önce sağ tık ▸ Özellikler ▸ **Engellemeyi kaldır** işaretlerseniz hiç çıkmaz.)
+> - **Windows — "Güvenlik Uyarısı: sertifika yüklemek üzeresiniz":** **Evet**. Bu, uygulamanın yerel HTTPS sertifikasıdır; yalnızca bu bilgisayar ve yerel ağ adresleri için geçerlidir, hiçbir internet sitesi için geçerli değildir.
+> - **Windows — Güvenlik duvarı** (ağ paylaşımı açıkken): yalnızca **Özel ağlar**'a izin verin.
+> - **macOS — "Geliştirici doğrulanamadığından açılamıyor":** **Bitti** ▸ **Sistem Ayarları ▸ Gizlilik ve Güvenlik** ▸ aşağıda **Yine de Aç** ▸ parolanız. (Terminal: `xattr -dr com.apple.quarantine /Applications/AdminPDFToolkit.app`)
+> - **macOS — parola isteği:** uygulamanın yerel HTTPS sertifikasına güvenmek içindir.
+> - **Linux / telefonlar — tarayıcı sertifika uyarısı:** sertifikayı bir kez yükleyin (Linux: veri klasöründeki `tls/ca.crt`; telefon: eşleştirme ekranında **Sertifikayı yükle**).
+>
+> İndirdiğiniz dosyanın değiştirilmediğini sürüm sayfasındaki **`SHA256SUMS`** ile doğrulayabilirsiniz: Windows `certutil -hashfile <dosya> SHA256` · macOS `shasum -a 256 <dosya>` · Linux `sha256sum <dosya>`.
+
+<details>
+<summary>🇬🇧 Download & first start (English)</summary>
+
+Get the package for your system from the [latest release](https://github.com/AmrasElessar/adminpdftoolkit/releases/latest) — free, nothing to install: **Windows 10 / 11** (`…-Windows.zip` → `AdminPDFToolkit.exe`), **macOS 11+ on Apple Silicon** (`…-macOS-arm64.zip` → drag `AdminPDFToolkit.app` to Applications), **Linux x86_64** (`…-Linux-x86_64.tar.gz` → `AdminPDFToolkit`), the Python 3.11+ package for Intel Macs / ARM Linux, or Docker.
+
+> [!IMPORTANT]
+> **The operating system will warn you on first start — that is expected.** Being free and open source, the app has not gone through Microsoft's and Apple's paid code-signing / notarisation; the warning is not an error or a virus finding. Confirm it once:
+>
+> - **Windows — "Windows protected your PC" (SmartScreen):** **More info ▸ Run anyway**. (Right-click the zip ▸ Properties ▸ **Unblock** before extracting and it never appears.)
+> - **Windows — "Security Warning: you are about to install a certificate":** **Yes**. It is the app's local HTTPS certificate, valid only for this PC and local-network addresses, never for any website.
+> - **Windows — Firewall** (with network sharing on): allow **Private networks** only.
+> - **macOS — "cannot be opened because the developer cannot be verified":** **Done** ▸ **System Settings ▸ Privacy & Security** ▸ **Open Anyway** ▸ your password. (Terminal: `xattr -dr com.apple.quarantine /Applications/AdminPDFToolkit.app`)
+> - **macOS — password prompt:** to trust the app's local HTTPS certificate.
+> - **Linux / phones — browser certificate warning:** install the certificate once (Linux: `tls/ca.crt` in the data folder; phones: **Install certificate** on the pairing screen).
+>
+> Verify a download against **`SHA256SUMS`** on the release page: Windows `certutil -hashfile <file> SHA256` · macOS `shasum -a 256 <file>` · Linux `sha256sum <file>`.
+
+</details>
+
 ## 🎬 Demo
 
 <div align="center">

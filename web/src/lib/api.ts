@@ -138,6 +138,42 @@ export async function loadSession(): Promise<Session> {
 }
 
 export const pair = (key: string) => request<{ paired: boolean }>("POST", "/api/session/pair", { key });
+type Lang2 = { tr: string; en: string };
+export interface AboutItem {
+  name: string;
+  url: string;
+  license: string;
+  role: Lang2;
+  where: Lang2;
+}
+export interface About {
+  version: string;
+  license: string;
+  source: string;
+  intro: Lang2;
+  systems: {
+    server_title: Lang2;
+    server: { name: Lang2; how: Lang2 }[];
+    client_title: Lang2;
+    clients: { name: Lang2; how: Lang2 }[];
+  };
+  first_run_title: Lang2;
+  first_run_intro: Lang2;
+  first_run: { system: string; title: Lang2; steps: Lang2 }[];
+  verify: Lang2;
+  python_roles: Record<string, Lang2>;
+  groups: { id: string; title: Lang2; intro: Lang2; items: AboutItem[] }[];
+  methods_title: Lang2;
+  methods_intro: Lang2;
+  methods: { name: Lang2; where: Lang2; source: string }[];
+  notes: Lang2[];
+  runtime: Record<string, string>;
+  python_packages: { name: string; version: string; license: string; url: string; via: string }[];
+  web_packages: { name: string; version: string; license: string; url: string }[];
+  bundled: { name: string; version: string; sources: Record<string, { url: string; sha256: string }>; files: string[] }[];
+}
+
+export const getAbout = () => request<About>("GET", "/api/about");
 export const getDevices = () => request<DeviceInfo>("GET", "/api/session/devices");
 export const listOps = () => request<OpInfo[]>("GET", "/api/ops");
 export const deleteFile = (id: string) => request<void>("DELETE", `/api/files/${encodeURIComponent(id)}`);

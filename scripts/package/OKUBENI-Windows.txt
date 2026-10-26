@@ -1,6 +1,20 @@
 Admin PDF Toolkit {version} — Windows paketi (kurulum gerektirmez)
 ==================================================================
 
+İLK AÇILIŞTA GÖRECEĞİNİZ UYARILAR (normaldir)
+  Uygulama ücretsiz ve açık kaynak olduğu için Microsoft'un ücretli kod
+  imzalama hizmetinden geçirilmedi. Uyarılar bir hata ya da virüs bulgusu
+  değildir; bir kez onaylarsınız:
+  - "Windows bilgisayarınızı korudu" (mavi pencere): "Ek bilgi" ▸
+    "Yine de çalıştır". Zip'i açmadan önce sağ tık ▸ Özellikler ▸
+    "Engellemeyi kaldır" işaretlerseniz hiç çıkmaz.
+  - "Güvenlik Uyarısı ... sertifika yüklemek üzeresiniz": "Evet". Bu,
+    uygulamanın yerel HTTPS sertifikasıdır; yalnızca bu bilgisayar ve yerel
+    ağ adresleri için geçerlidir, hiçbir internet sitesi için geçerli değildir.
+  - Güvenlik duvarı (ağ paylaşımı açıkken): yalnızca "Özel ağlar"a izin verin.
+  İndirdiğiniz dosyayı sürüm sayfasındaki SHA256SUMS ile doğrulayabilirsiniz:
+    certutil -hashfile AdminPDFToolkit-{version}-Windows.zip SHA256
+
 BAŞLATMA
   1. Zip dosyasını bir klasöre çıkarın (ör. Belgeler\AdminPDFToolkit).
      Zip'in içinden doğrudan çalıştırmayın.

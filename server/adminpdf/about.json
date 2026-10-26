@@ -1,0 +1,919 @@
+{
+  "_comment": "Curated half of the About & Licences page and THIRD_PARTY_LICENSES.md (scripts/third_party.py). Python packages, bundled npm packages and the files of bundled tools are listed automatically; everything else is here, in Turkish and English separately.",
+  "intro": {
+    "tr": "Admin PDF Toolkit özgür yazılımdır: GNU Affero Genel Kamu Lisansı sürüm 3 veya sonrası (AGPL-3.0-or-later) ile dağıtılır. Ücretsizdir; kullanabilir, inceleyebilir, değiştirebilir ve paylaşabilirsiniz. Değiştirilmiş bir sürümü ağ üzerinden başkalarına sunarsanız, değiştirilmiş kaynak kodunu da onlarla paylaşmanız gerekir. Uygulama başkalarının emeği üzerine kuruludur: kullandığı her kütüphane, program, font, veri ve yöntem aşağıda kaynağı ve lisansıyla anılır. Hepsi ücretsizdir ve AGPL-3.0 ile uyumludur. Emeği geçen herkese teşekkür ederiz.",
+    "en": "Admin PDF Toolkit is free software, distributed under the GNU Affero General Public License version 3 or later (AGPL-3.0-or-later). It costs nothing; you may use, study, change and share it. If you offer a modified version to others over a network, you must share the modified source code with them too. The app is built on other people's work: every library, program, font, dataset and method it uses is credited below with its source and licence. All are free and compatible with AGPL-3.0. Thank you to everyone involved."
+  },
+  "source": "https://github.com/AmrasElessar/adminpdftoolkit",
+  "systems": {
+    "server_title": {
+      "tr": "Sunucu: uygulamanın kurulduğu bilgisayar",
+      "en": "Server: the computer the app runs on"
+    },
+    "server": [
+      {
+        "name": {
+          "tr": "Windows 10 / 11 (64 bit, x64)",
+          "en": "Windows 10 / 11 (64-bit, x64)"
+        },
+        "how": {
+          "tr": "Kurulumsuz paket: AdminPDFToolkit.exe başlatıcısı; Python, OCR (Tesseract + Türkçe) ve PDF/A (Ghostscript) dahil.",
+          "en": "No-install package: AdminPDFToolkit.exe launcher; Python, OCR (Tesseract + Turkish) and PDF/A (Ghostscript) included."
+        }
+      },
+      {
+        "name": {
+          "tr": "macOS 11 ve üstü, Apple Silicon (M1–M4)",
+          "en": "macOS 11 or later, Apple Silicon (M1–M4)"
+        },
+        "how": {
+          "tr": "Kurulumsuz AdminPDFToolkit.app; ilk açılışta bir kez Sistem Ayarları ▸ Gizlilik ve Güvenlik ▸ Yine de Aç. OCR ve PDF/A için: brew install tesseract tesseract-lang ghostscript.",
+          "en": "No-install AdminPDFToolkit.app; on first start once: System Settings ▸ Privacy & Security ▸ Open Anyway. For OCR and PDF/A: brew install tesseract tesseract-lang ghostscript."
+        }
+      },
+      {
+        "name": {
+          "tr": "Linux x86_64 (glibc 2.35+: Ubuntu 22.04+, Debian 12+, Linux Mint 21+, Pardus 23+, Fedora 36+)",
+          "en": "Linux x86_64 (glibc 2.35+: Ubuntu 22.04+, Debian 12+, Linux Mint 21+, Pardus 23+, Fedora 36+)"
+        },
+        "how": {
+          "tr": "Kurulumsuz tar.gz paketi ve başlatıcı penceresi. OCR ve PDF/A için: sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript.",
+          "en": "No-install tar.gz package with the launcher window. For OCR and PDF/A: sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript."
+        }
+      },
+      {
+        "name": {
+          "tr": "Intel Mac, ARM Linux ve diğer sistemler",
+          "en": "Intel Macs, ARM Linux and other systems"
+        },
+        "how": {
+          "tr": "Python 3.11+ ile çalışan paket (scripts/start.sh); ilk açılışta kütüphaneleri kurar.",
+          "en": "Package for Python 3.11+ (scripts/start.sh); installs the libraries on first start."
+        }
+      },
+      {
+        "name": {
+          "tr": "Docker (Linux sunucu, NAS)",
+          "en": "Docker (Linux server, NAS)"
+        },
+        "how": {
+          "tr": "OCR, PDF/A, LibreOffice ve ClamAV dahil tüm araçlarla.",
+          "en": "With every tool: OCR, PDF/A, LibreOffice and ClamAV."
+        }
+      }
+    ],
+    "client_title": {
+      "tr": "Kullanıcılar: uygulamayı açan cihazlar",
+      "en": "Users: the devices that open the app"
+    },
+    "clients": [
+      {
+        "name": {
+          "tr": "Bilgisayar tarayıcıları",
+          "en": "Desktop browsers"
+        },
+        "how": {
+          "tr": "Chrome / Edge 119+, Firefox 121+, Safari 17.4+ (Windows, macOS, Linux).",
+          "en": "Chrome / Edge 119+, Firefox 121+, Safari 17.4+ (Windows, macOS, Linux)."
+        }
+      },
+      {
+        "name": {
+          "tr": "Telefon ve tablet",
+          "en": "Phones and tablets"
+        },
+        "how": {
+          "tr": "Android 10+ (Chrome), iPhone / iPad iOS-iPadOS 17.4+ (Safari); ana ekrana uygulama olarak eklenebilir.",
+          "en": "Android 10+ (Chrome), iPhone / iPad on iOS / iPadOS 17.4+ (Safari); can be added to the home screen as an app."
+        }
+      },
+      {
+        "name": {
+          "tr": "Ağ",
+          "en": "Network"
+        },
+        "how": {
+          "tr": "Yalnızca aynı yerel ağdaki cihazlar bağlanabilir, bağlantı her zaman HTTPS'tir; internet gerekmez ve internetten erişilemez.",
+          "en": "Only devices on the same local network can connect, always over HTTPS; no internet is needed and the app cannot be reached from the internet."
+        }
+      }
+    ]
+  },
+  "python_roles": {
+    "pymupdf": {
+      "tr": "PDF okuma, yazma, görüntüleme, düzenleme, karartma",
+      "en": "PDF reading, writing, rendering, editing, redaction"
+    },
+    "fastapi": {
+      "tr": "Web API",
+      "en": "Web API"
+    },
+    "uvicorn": {
+      "tr": "HTTPS sunucusu",
+      "en": "HTTPS server"
+    },
+    "pydantic": {
+      "tr": "Veri doğrulama",
+      "en": "Data validation"
+    },
+    "pydantic-settings": {
+      "tr": "Ayarlar",
+      "en": "Settings"
+    },
+    "pdf2docx": {
+      "tr": "PDF → Word",
+      "en": "PDF → Word"
+    },
+    "openpyxl": {
+      "tr": "Excel okuma / yazma",
+      "en": "Excel reading / writing"
+    },
+    "python-docx": {
+      "tr": "Word okuma",
+      "en": "Word reading"
+    },
+    "pikepdf": {
+      "tr": "Düşük seviye PDF (qpdf), onarım, güvenlik taraması",
+      "en": "Low-level PDF (qpdf), repair, security scan"
+    },
+    "ocrmypdf": {
+      "tr": "OCR ve PDF/A",
+      "en": "OCR and PDF/A"
+    },
+    "pyhanko": {
+      "tr": "PAdES dijital imza",
+      "en": "PAdES digital signatures"
+    },
+    "pyhanko-certvalidator": {
+      "tr": "İmza sertifikası doğrulama",
+      "en": "Signing certificate validation"
+    },
+    "cryptography": {
+      "tr": "Sertifikalar, HTTPS yerel CA, güncelleme imzası",
+      "en": "Certificates, the local HTTPS CA, update signatures"
+    },
+    "fonttools": {
+      "tr": "Font alt kümeleme, glif kapsamı",
+      "en": "Font subsetting, glyph coverage"
+    },
+    "opencv-python-headless": {
+      "tr": "Belge algılama, perspektif ve eğiklik düzeltme",
+      "en": "Document detection, perspective and skew correction"
+    },
+    "numpy": {
+      "tr": "Görüntü işleme",
+      "en": "Image processing"
+    },
+    "pillow": {
+      "tr": "Görsel okuma / yazma",
+      "en": "Image reading / writing"
+    },
+    "segno": {
+      "tr": "Telefon / tablet eşleştirme QR kodu",
+      "en": "Phone / tablet pairing QR code"
+    }
+  },
+  "groups": [
+    {
+      "id": "programs",
+      "title": {
+        "tr": "Programlar ve araçlar",
+        "en": "Programs and tools"
+      },
+      "intro": {
+        "tr": "Ayrı süreç olarak çalıştırılır. Yoksa yalnızca ilgili özellik kapanır.",
+        "en": "Run as separate processes. If one is missing, only its feature is off."
+      },
+      "items": [
+        {
+          "name": "Tesseract OCR",
+          "url": "https://github.com/tesseract-ocr/tesseract",
+          "license": "Apache-2.0",
+          "role": {
+            "tr": "Metin tanıma (OCR)",
+            "en": "Text recognition (OCR)"
+          },
+          "where": {
+            "tr": "Windows paketinde ocr/ klasöründe gömülü; diğer sistemlerde sistemden kurulur",
+            "en": "Bundled in ocr/ in the Windows package; installed from the system elsewhere"
+          }
+        },
+        {
+          "name": "Tesseract Windows build (UB Mannheim)",
+          "url": "https://github.com/UB-Mannheim/tesseract",
+          "license": "Apache-2.0",
+          "role": {
+            "tr": "Tesseract'ın Windows derlemesi ve DLL'leri",
+            "en": "Windows build of Tesseract and its DLLs"
+          },
+          "where": {
+            "tr": "Windows paketi (ocr/); dosyaların tam listesi aşağıda 'Pakete gömülü dosyalar' bölümünde",
+            "en": "Windows package (ocr/); full file list below under 'Files bundled in this package'"
+          }
+        },
+        {
+          "name": "Leptonica",
+          "url": "http://www.leptonica.org/",
+          "license": "BSD-2-Clause",
+          "role": {
+            "tr": "Tesseract'ın görüntü kütüphanesi",
+            "en": "Tesseract's image library"
+          },
+          "where": {
+            "tr": "Windows paketi, Tesseract ile",
+            "en": "Windows package, with Tesseract"
+          }
+        },
+        {
+          "name": "libpng · libjpeg-turbo · libtiff · zlib · libwebp · OpenJPEG · giflib",
+          "url": "https://github.com/UB-Mannheim/tesseract",
+          "license": "libpng · IJG/BSD-3-Clause · libtiff · Zlib · BSD-3-Clause · BSD-2-Clause · MIT",
+          "role": {
+            "tr": "Tesseract'ın görsel biçimi kütüphaneleri",
+            "en": "Tesseract's image format libraries"
+          },
+          "where": {
+            "tr": "Windows paketi, Tesseract ile",
+            "en": "Windows package, with Tesseract"
+          }
+        },
+        {
+          "name": "Ghostscript (Artifex)",
+          "url": "https://ghostscript.com/",
+          "license": "AGPL-3.0",
+          "role": {
+            "tr": "PDF/A dönüştürme",
+            "en": "PDF/A conversion"
+          },
+          "where": {
+            "tr": "Windows paketinde gs/ klasöründe değiştirilmeden gömülü; birebir kaynak arşivi her sürümle birlikte yayımlanır (AGPL-3.0 §6). Diğer sistemlerde sistemden kurulur",
+            "en": "Bundled unmodified in gs/ in the Windows package; its exact source tarball is published with every release (AGPL-3.0 §6). Installed from the system elsewhere"
+          }
+        },
+        {
+          "name": "qpdf",
+          "url": "https://github.com/qpdf/qpdf",
+          "license": "Apache-2.0",
+          "role": {
+            "tr": "Düşük seviye PDF, onarım",
+            "en": "Low-level PDF, repair"
+          },
+          "where": {
+            "tr": "pikepdf'in içinde",
+            "en": "Inside pikepdf"
+          }
+        },
+        {
+          "name": "LibreOffice",
+          "url": "https://www.libreoffice.org/",
+          "license": "MPL-2.0",
+          "role": {
+            "tr": "Word / Excel / PowerPoint → PDF (yüksek doğruluk)",
+            "en": "Word / Excel / PowerPoint → PDF (high fidelity)"
+          },
+          "where": {
+            "tr": "İsteğe bağlı, sistemden; Docker'da dahil",
+            "en": "Optional, from the system; included in Docker"
+          }
+        },
+        {
+          "name": "ClamAV (Cisco Talos)",
+          "url": "https://www.clamav.net/",
+          "license": "GPL-2.0",
+          "role": {
+            "tr": "Virüs taraması",
+            "en": "Virus scan"
+          },
+          "where": {
+            "tr": "İsteğe bağlı, sistemden; Docker'da dahil",
+            "en": "Optional, from the system; included in Docker"
+          }
+        },
+        {
+          "name": "pngquant · jbig2enc",
+          "url": "https://pngquant.org/",
+          "license": "GPL-3.0 · Apache-2.0",
+          "role": {
+            "tr": "OCR çıktısını küçültme (OCRmyPDF üzerinden)",
+            "en": "Shrinking OCR output (through OCRmyPDF)"
+          },
+          "where": {
+            "tr": "İsteğe bağlı, sistemden",
+            "en": "Optional, from the system"
+          }
+        },
+        {
+          "name": "winget (Microsoft)",
+          "url": "https://github.com/microsoft/winget-cli",
+          "license": "MIT",
+          "role": {
+            "tr": "Python paketiyle çalışırken Tesseract kurulumu (OCR Kur.bat)",
+            "en": "Installing Tesseract with the Python package (OCR Kur.bat)"
+          },
+          "where": {
+            "tr": "Windows'un parçası; dağıtılmaz",
+            "en": "Part of Windows; not redistributed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "runtimes",
+      "title": {
+        "tr": "Paketlere gömülü çalışma ortamları",
+        "en": "Runtimes bundled in the packages"
+      },
+      "intro": {
+        "tr": "Kurulumsuz paketlerin içinde gelir.",
+        "en": "Shipped inside the no-install packages."
+      },
+      "items": [
+        {
+          "name": "Python (CPython, Windows embeddable)",
+          "url": "https://www.python.org/",
+          "license": "PSF-2.0",
+          "role": {
+            "tr": "Çalışma ortamı; içinde OpenSSL (Apache-2.0), SQLite (kamu malı), libffi (MIT), bzip2, xz (0BSD), zlib, expat (MIT), mpdecimal (BSD-2-Clause)",
+            "en": "Runtime; includes OpenSSL (Apache-2.0), SQLite (public domain), libffi (MIT), bzip2, xz (0BSD), zlib, expat (MIT), mpdecimal (BSD-2-Clause)"
+          },
+          "where": {
+            "tr": "Windows paketi (python/)",
+            "en": "Windows package (python/)"
+          }
+        },
+        {
+          "name": "python-build-standalone",
+          "url": "https://github.com/astral-sh/python-build-standalone",
+          "license": "PSF-2.0 (CPython) · MPL-2.0 (build scripts)",
+          "role": {
+            "tr": "Taşınabilir CPython; içinde Tcl/Tk (Tcl lisansı, BSD tarzı) başlatıcı penceresi için, OpenSSL (Apache-2.0), SQLite (kamu malı), libffi (MIT), zlib, bzip2, xz (0BSD), expat (MIT), mpdecimal (BSD-2-Clause), ncurses (MIT-X11), libedit (BSD-3-Clause)",
+            "en": "Relocatable CPython; includes Tcl/Tk (Tcl licence, BSD-style) for the launcher window, OpenSSL (Apache-2.0), SQLite (public domain), libffi (MIT), zlib, bzip2, xz (0BSD), expat (MIT), mpdecimal (BSD-2-Clause), ncurses (MIT-X11), libedit (BSD-3-Clause)"
+          },
+          "where": {
+            "tr": "macOS ve Linux paketleri",
+            "en": "macOS and Linux packages"
+          }
+        },
+        {
+          "name": ".NET Framework 4.x (Microsoft)",
+          "url": "https://dotnet.microsoft.com/",
+          "license": "Windows bileşeni / Windows component",
+          "role": {
+            "tr": "AdminPDFToolkit.exe başlatıcısı bununla derlenir ve çalışır",
+            "en": "AdminPDFToolkit.exe is built with and runs on it"
+          },
+          "where": {
+            "tr": "Windows'un parçası; dağıtılmaz",
+            "en": "Part of Windows; not redistributed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "docker",
+      "title": {
+        "tr": "Docker görüntüsü",
+        "en": "Docker image"
+      },
+      "intro": {
+        "tr": "Yalnızca Docker kurulumunda.",
+        "en": "Docker installs only."
+      },
+      "items": [
+        {
+          "name": "python:3.13-slim (Debian)",
+          "url": "https://hub.docker.com/_/python",
+          "license": "PSF-2.0 · Debian (DFSG)",
+          "role": {
+            "tr": "Temel görüntü",
+            "en": "Base image"
+          },
+          "where": {
+            "tr": "Docker",
+            "en": "Docker"
+          }
+        },
+        {
+          "name": "tini",
+          "url": "https://github.com/krallin/tini",
+          "license": "MIT",
+          "role": {
+            "tr": "Süreç yöneticisi",
+            "en": "Init process"
+          },
+          "where": {
+            "tr": "Docker",
+            "en": "Docker"
+          }
+        },
+        {
+          "name": "Tesseract (tur, eng) · Ghostscript · qpdf · ClamAV · LibreOffice (writer, calc, impress)",
+          "url": "https://packages.debian.org/",
+          "license": "Apache-2.0 · AGPL-3.0 · Apache-2.0 · GPL-2.0 · MPL-2.0",
+          "role": {
+            "tr": "Debian paketleri olarak",
+            "en": "As Debian packages"
+          },
+          "where": {
+            "tr": "Docker",
+            "en": "Docker"
+          }
+        },
+        {
+          "name": "fonts-dejavu-core · fonts-liberation2 · fonts-noto-core",
+          "url": "https://packages.debian.org/",
+          "license": "Bitstream Vera · SIL OFL 1.1 · SIL OFL 1.1",
+          "role": {
+            "tr": "Sistem fontları",
+            "en": "System fonts"
+          },
+          "where": {
+            "tr": "Docker",
+            "en": "Docker"
+          }
+        }
+      ]
+    },
+    {
+      "id": "fonts",
+      "title": {
+        "tr": "Fontlar",
+        "en": "Fonts"
+      },
+      "intro": {
+        "tr": "Bilgisayardaki fontlar (Microsoft vb.) pakete konmaz ve başka cihaza gönderilmez; yalnızca o bilgisayarda, fontun izin verdiği ölçüde (OS/2 fsType) PDF'e alt küme olarak gömülür.",
+        "en": "Fonts installed on the computer (Microsoft etc.) are never packaged or sent to other devices; they are only embedded into PDFs on that computer, as far as the font allows (OS/2 fsType)."
+      },
+      "items": [
+        {
+          "name": "DejaVu Sans (Regular, Bold)",
+          "url": "https://dejavu-fonts.github.io/",
+          "license": "Bitstream Vera / DejaVu",
+          "role": {
+            "tr": "Türkçe karakter kapsamlı varsayılan font",
+            "en": "Default font with full Turkish coverage"
+          },
+          "where": {
+            "tr": "Tüm paketler (assets/fonts, DejaVu-LICENSE.txt)",
+            "en": "All packages (assets/fonts, DejaVu-LICENSE.txt)"
+          }
+        },
+        {
+          "name": "Liberation Sans · Serif · Mono 2.1.5 (Red Hat, Google)",
+          "url": "https://github.com/liberationfonts/liberation-fonts",
+          "license": "SIL OFL 1.1",
+          "role": {
+            "tr": "Arial, Times New Roman ve Courier New ile ölçü uyumlu",
+            "en": "Metric-compatible with Arial, Times New Roman and Courier New"
+          },
+          "where": {
+            "tr": "Tüm paketler (assets/fonts, Liberation-LICENSE.txt)",
+            "en": "All packages (assets/fonts, Liberation-LICENSE.txt)"
+          }
+        },
+        {
+          "name": "pdf.js standard fonts (Foxit, Liberation)",
+          "url": "https://github.com/mozilla/pdf.js",
+          "license": "BSD-3-Clause (PDFium) · SIL OFL 1.1",
+          "role": {
+            "tr": "Tarayıcıda PDF'in standart 14 fontu",
+            "en": "The 14 PDF standard fonts in the browser"
+          },
+          "where": {
+            "tr": "web_dist/pdfjs/standard_fonts (LICENSE_FOXIT, LICENSE_LIBERATION)",
+            "en": "web_dist/pdfjs/standard_fonts (LICENSE_FOXIT, LICENSE_LIBERATION)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "title": {
+        "tr": "Veriler",
+        "en": "Data"
+      },
+      "intro": {
+        "tr": "",
+        "en": ""
+      },
+      "items": [
+        {
+          "name": "tessdata_fast (tur, eng, osd) 4.1.0",
+          "url": "https://github.com/tesseract-ocr/tessdata_fast",
+          "license": "Apache-2.0",
+          "role": {
+            "tr": "OCR dil modelleri",
+            "en": "OCR language models"
+          },
+          "where": {
+            "tr": "Windows paketi (ocr/tessdata, SHA-256 sabitli)",
+            "en": "Windows package (ocr/tessdata, SHA-256 pinned)"
+          }
+        },
+        {
+          "name": "pdf.js CMaps · ICC profiles · wasm decoders (OpenJPEG, JBIG2, QCMS)",
+          "url": "https://github.com/mozilla/pdf.js",
+          "license": "Apache-2.0 · BSD-3-Clause (Adobe CMaps) · BSD-2-Clause (OpenJPEG) · MIT (QCMS)",
+          "role": {
+            "tr": "Tarayıcıda Asya fontları, renk profilleri, JPEG 2000 / JBIG2 görselleri",
+            "en": "Asian fonts, colour profiles, JPEG 2000 / JBIG2 images in the browser"
+          },
+          "where": {
+            "tr": "web_dist/pdfjs (lisans dosyalarıyla)",
+            "en": "web_dist/pdfjs (with their licence files)"
+          }
+        }
+      ]
+    },
+    {
+      "id": "build",
+      "title": {
+        "tr": "Geliştirme, derleme ve test araçları",
+        "en": "Development, build and test tools"
+      },
+      "intro": {
+        "tr": "Uygulamayı üretmek ve sınamak için kullanılır; paketlere girmez.",
+        "en": "Used to build and test the app; not part of the packages."
+      },
+      "items": [
+        {
+          "name": "Node.js",
+          "url": "https://nodejs.org/",
+          "license": "MIT",
+          "role": {
+            "tr": "Arayüz derlemesi",
+            "en": "UI build"
+          },
+          "where": {
+            "tr": "Derleme",
+            "en": "Build"
+          }
+        },
+        {
+          "name": "Vite · Rolldown",
+          "url": "https://github.com/vitejs/vite",
+          "license": "MIT",
+          "role": {
+            "tr": "Arayüz paketleme",
+            "en": "UI bundling"
+          },
+          "where": {
+            "tr": "Derleme",
+            "en": "Build"
+          }
+        },
+        {
+          "name": "TypeScript",
+          "url": "https://github.com/microsoft/TypeScript",
+          "license": "Apache-2.0",
+          "role": {
+            "tr": "Tip denetimi",
+            "en": "Type checking"
+          },
+          "where": {
+            "tr": "Derleme",
+            "en": "Build"
+          }
+        },
+        {
+          "name": "@sveltejs/vite-plugin-svelte · svelte-check · @tsconfig/svelte",
+          "url": "https://github.com/sveltejs",
+          "license": "MIT",
+          "role": {
+            "tr": "Svelte derleme ve denetim",
+            "en": "Svelte build and checks"
+          },
+          "where": {
+            "tr": "Derleme",
+            "en": "Build"
+          }
+        },
+        {
+          "name": "Playwright",
+          "url": "https://github.com/microsoft/playwright",
+          "license": "Apache-2.0",
+          "role": {
+            "tr": "Uçtan uca test",
+            "en": "End-to-end tests"
+          },
+          "where": {
+            "tr": "Test",
+            "en": "Tests"
+          }
+        },
+        {
+          "name": "axe-core (Deque)",
+          "url": "https://github.com/dequelabs/axe-core",
+          "license": "MPL-2.0",
+          "role": {
+            "tr": "Erişilebilirlik (WCAG) denetimi",
+            "en": "Accessibility (WCAG) audit"
+          },
+          "where": {
+            "tr": "Test",
+            "en": "Tests"
+          }
+        },
+        {
+          "name": "pytest · httpx · ruff · mypy",
+          "url": "https://pytest.org/",
+          "license": "MIT · BSD-3-Clause · MIT · MIT",
+          "role": {
+            "tr": "Sunucu testleri, biçim ve tip denetimi",
+            "en": "Server tests, linting and type checking"
+          },
+          "where": {
+            "tr": "Test",
+            "en": "Tests"
+          }
+        },
+        {
+          "name": "pip · setuptools · wheel",
+          "url": "https://pip.pypa.io/",
+          "license": "MIT",
+          "role": {
+            "tr": "Python paketleme",
+            "en": "Python packaging"
+          },
+          "where": {
+            "tr": "Derleme",
+            "en": "Build"
+          }
+        },
+        {
+          "name": "7-Zip",
+          "url": "https://www.7-zip.org/",
+          "license": "LGPL-2.1",
+          "role": {
+            "tr": "Tesseract / Ghostscript kurulum dosyalarını derlemede açmak",
+            "en": "Unpacking the Tesseract / Ghostscript installers at build time"
+          },
+          "where": {
+            "tr": "Derleme (Windows)",
+            "en": "Build (Windows)"
+          }
+        },
+        {
+          "name": "Docker Buildx",
+          "url": "https://github.com/docker/buildx",
+          "license": "Apache-2.0",
+          "role": {
+            "tr": "Docker görüntüsü",
+            "en": "Docker image"
+          },
+          "where": {
+            "tr": "Derleme",
+            "en": "Build"
+          }
+        }
+      ]
+    }
+  ],
+  "methods_title": {
+    "tr": "Yöntemler ve algoritmalar",
+    "en": "Methods and algorithms"
+  },
+  "methods_intro": {
+    "tr": "Başkalarının yayımladığı, kendi kodumuzla uyguladığımız yöntemler.",
+    "en": "Published methods we implemented in our own code."
+  },
+  "methods": [
+    {
+      "name": {
+        "tr": "Fotoğraftaki kâğıdın gerçek en/boy oranı (odak uzaklığı kestirimi)",
+        "en": "True aspect ratio of a photographed sheet (focal-length estimate)"
+      },
+      "where": {
+        "tr": "Görselden PDF, perspektif düzeltme",
+        "en": "Images to PDF, perspective correction"
+      },
+      "source": "Z. Zhang, L. He, Whiteboard scanning and image enhancement, Digital Signal Processing 17(2), 2007"
+    },
+    {
+      "name": {
+        "tr": "İzdüşüm profili varyansıyla eğiklik bulma",
+        "en": "Skew detection by projection-profile variance"
+      },
+      "where": {
+        "tr": "Eğiklik düzeltme",
+        "en": "Deskew"
+      },
+      "source": "W. Postl, Detection of linear oblique structures and skew scan in digitized documents, ICPR 1986"
+    },
+    {
+      "name": {
+        "tr": "Canny kenar algılama",
+        "en": "Canny edge detection"
+      },
+      "where": {
+        "tr": "Belge algılama (OpenCV)",
+        "en": "Document detection (OpenCV)"
+      },
+      "source": "J. Canny, A Computational Approach to Edge Detection, IEEE TPAMI 8(6), 1986"
+    },
+    {
+      "name": {
+        "tr": "Ramer–Douglas–Peucker çokgen sadeleştirme",
+        "en": "Ramer–Douglas–Peucker polygon simplification"
+      },
+      "where": {
+        "tr": "Belge köşeleri (OpenCV)",
+        "en": "Document corners (OpenCV)"
+      },
+      "source": "D. Douglas, T. Peucker, The Canadian Cartographer 10(2), 1973"
+    },
+    {
+      "name": {
+        "tr": "Otsu eşikleme",
+        "en": "Otsu thresholding"
+      },
+      "where": {
+        "tr": "Eğiklik analizinde mürekkep ayırma",
+        "en": "Ink separation in skew analysis"
+      },
+      "source": "N. Otsu, A Threshold Selection Method from Gray-Level Histograms, IEEE SMC 9(1), 1979"
+    },
+    {
+      "name": {
+        "tr": "Arka plana bölerek gölge düzeltme, uyarlamalı eşikleme",
+        "en": "Shadow removal by background division, adaptive thresholding"
+      },
+      "where": {
+        "tr": "Tarama iyileştirme",
+        "en": "Scan enhancement"
+      },
+      "source": "OpenCV documentation (Apache-2.0)"
+    },
+    {
+      "name": {
+        "tr": "T.C. Kimlik No denetim haneleri",
+        "en": "Turkish ID number check digits"
+      },
+      "where": {
+        "tr": "KVKK tarama",
+        "en": "Personal-data scan"
+      },
+      "source": "T.C. İçişleri Bakanlığı Nüfus ve Vatandaşlık İşleri (public algorithm)"
+    },
+    {
+      "name": {
+        "tr": "IBAN mod-97 doğrulama",
+        "en": "IBAN mod-97 check"
+      },
+      "where": {
+        "tr": "KVKK tarama",
+        "en": "Personal-data scan"
+      },
+      "source": "ISO 13616 / ISO 7064"
+    },
+    {
+      "name": {
+        "tr": "Luhn kart numarası doğrulama",
+        "en": "Luhn card number check"
+      },
+      "where": {
+        "tr": "KVKK tarama",
+        "en": "Personal-data scan"
+      },
+      "source": "H. P. Luhn, US patent 2,950,048 (1960); ISO/IEC 7812"
+    },
+    {
+      "name": {
+        "tr": "Vergi Kimlik No denetim hanesi",
+        "en": "Turkish tax number check digit"
+      },
+      "where": {
+        "tr": "KVKK tarama",
+        "en": "Personal-data scan"
+      },
+      "source": "Gelir İdaresi Başkanlığı (public algorithm)"
+    },
+    {
+      "name": {
+        "tr": "Metin farkı (SequenceMatcher)",
+        "en": "Text difference (SequenceMatcher)"
+      },
+      "where": {
+        "tr": "Belge karşılaştırma",
+        "en": "Document comparison"
+      },
+      "source": "Python difflib (PSF-2.0)"
+    },
+    {
+      "name": {
+        "tr": "Ed25519 imza, SHA-256",
+        "en": "Ed25519 signatures, SHA-256"
+      },
+      "where": {
+        "tr": "Güncelleme ve paket doğrulama",
+        "en": "Update and package verification"
+      },
+      "source": "RFC 8032; FIPS 180-4 (via cryptography / hashlib)"
+    }
+  ],
+  "notes": [
+    {
+      "tr": "Standartlar ve nasıl uyduğumuz STANDARDS.md dosyasındadır; standart metinleri yayıncılarına (ISO, ETSI, W3C) aittir ve dağıtılmaz.",
+      "en": "The standards we follow and how are listed in STANDARDS.md; standard texts belong to their publishers (ISO, ETSI, W3C) and are not redistributed."
+    },
+    {
+      "tr": "Adobe ve Acrobat, Adobe Inc.'in ticari markalarıdır; yalnızca karşılaştırma amacıyla anılır. Bu proje Adobe ile bağlantılı değildir. Apple, macOS, iPhone ve iPad Apple Inc.'in; Windows Microsoft Corporation'ın ticari markalarıdır.",
+      "en": "Adobe and Acrobat are trademarks of Adobe Inc., mentioned for comparison only; this project is not affiliated with Adobe. Apple, macOS, iPhone and iPad are trademarks of Apple Inc.; Windows is a trademark of Microsoft Corporation."
+    },
+    {
+      "tr": "LGPL-3.0 lisanslı Python paketleri (fpdf2, img2pdf) değiştirilmeden, ayrı kütüphane olarak kullanılır.",
+      "en": "LGPL-3.0 Python packages (fpdf2, img2pdf) are used unmodified, as separate libraries."
+    }
+  ],
+  "first_run_title": {
+    "tr": "İlk açılışta görebileceğiniz uyarılar",
+    "en": "Warnings you may see on first start"
+  },
+  "first_run_intro": {
+    "tr": "Uygulama ücretsiz ve açık kaynak olduğu için Microsoft ve Apple'ın ücretli kod imzalama / onay hizmetlerinden geçirilmemiştir. Bu yüzden işletim sistemi ilk açılışta \"tanınmayan uygulama\" uyarısı gösterir. Bu bir hata ya da virüs bulgusu değildir; aşağıdaki adımlarla bir kez onaylarsınız, sonra uyarı çıkmaz. İndirdiğiniz dosyanın değiştirilmediğini, sürüm sayfasındaki SHA256SUMS listesiyle karşılaştırarak doğrulayabilirsiniz.",
+    "en": "Because the app is free and open source, it has not gone through Microsoft's and Apple's paid code-signing / approval services. The operating system therefore shows an \"unrecognised app\" warning on first start. This is not an error or a virus finding; you confirm it once with the steps below and it does not appear again. You can check that your download was not altered by comparing it with the SHA256SUMS list on the release page."
+  },
+  "first_run": [
+    {
+      "system": "Windows",
+      "title": {
+        "tr": "\"Windows bilgisayarınızı korudu\" (SmartScreen)",
+        "en": "\"Windows protected your PC\" (SmartScreen)"
+      },
+      "steps": {
+        "tr": "AdminPDFToolkit.exe'yi ilk çalıştırdığınızda mavi bir pencere çıkar: \"Ek bilgi\"ye, ardından \"Yine de çalıştır\"a tıklayın. Zip'i açmadan önce dosyaya sağ tıklayıp Özellikler ▸ \"Engellemeyi kaldır\" işaretlemek de uyarıyı önler.",
+        "en": "When you first run AdminPDFToolkit.exe a blue window appears: click \"More info\", then \"Run anyway\". Ticking Properties ▸ \"Unblock\" on the zip before extracting it also avoids the warning."
+      }
+    },
+    {
+      "system": "Windows",
+      "title": {
+        "tr": "Sertifika yükleme onayı (\"Güvenlik Uyarısı\")",
+        "en": "Certificate install confirmation (\"Security Warning\")"
+      },
+      "steps": {
+        "tr": "İlk açılışta Windows, \"Admin PDF Toolkit yerel CA\" adlı bir sertifikayı yüklemek isteyip istemediğinizi sorar: \"Evet\" deyin. Bu sertifika yalnızca bu bilgisayardaki uygulamaya ve yerel ağ adreslerine güvenmek içindir; ad kısıtlı olduğundan hiçbir internet sitesi için geçerli değildir.",
+        "en": "On first start Windows asks whether to install a certificate named \"Admin PDF Toolkit local CA\": answer \"Yes\". It only makes this PC trust the app and local-network addresses; being name-constrained, it is not valid for any website."
+      }
+    },
+    {
+      "system": "Windows",
+      "title": {
+        "tr": "Güvenlik duvarı (ağ paylaşımı açıkken)",
+        "en": "Firewall (with network sharing on)"
+      },
+      "steps": {
+        "tr": "Ağ paylaşımını açınca Windows Defender Güvenlik Duvarı python.exe için izin ister: YALNIZCA \"Özel ağlar\"ı işaretleyin, \"Ortak ağlar\"ı işaretlemeyin.",
+        "en": "When you turn on network sharing, Windows Defender Firewall asks about python.exe: tick ONLY \"Private networks\", not \"Public networks\"."
+      }
+    },
+    {
+      "system": "macOS",
+      "title": {
+        "tr": "\"Geliştirici doğrulanamadığından açılamıyor\" (Gatekeeper)",
+        "en": "\"cannot be opened because the developer cannot be verified\" (Gatekeeper)"
+      },
+      "steps": {
+        "tr": "\"Bitti\"ye basın. Sistem Ayarları ▸ Gizlilik ve Güvenlik'i açıp aşağı kaydırın, \"AdminPDFToolkit.app engellendi\" yanındaki \"Yine de Aç\"a basın ve parolanızı girin. Bir kez yeterlidir. (Terminal ile: xattr -dr com.apple.quarantine /Applications/AdminPDFToolkit.app)",
+        "en": "Click \"Done\". Open System Settings ▸ Privacy & Security, scroll down, click \"Open Anyway\" next to \"AdminPDFToolkit.app was blocked\" and enter your password. Once is enough. (In Terminal: xattr -dr com.apple.quarantine /Applications/AdminPDFToolkit.app)"
+      }
+    },
+    {
+      "system": "macOS",
+      "title": {
+        "tr": "Anahtar Zinciri parolası",
+        "en": "Keychain password"
+      },
+      "steps": {
+        "tr": "İlk açılışta macOS, uygulamanın yerel HTTPS sertifikasına güvenmek için parolanızı ister. Vazgeçerseniz tarayıcı sertifika uyarısı gösterir; sonradan başlatıcıda Diğer ▸ Sertifikaya güven ile yapabilirsiniz.",
+        "en": "On first start macOS asks for your password to trust the app's local HTTPS certificate. If you cancel, the browser shows a certificate warning; you can do it later via More ▸ Trust the certificate in the launcher."
+      }
+    },
+    {
+      "system": "Linux",
+      "title": {
+        "tr": "Tarayıcı sertifika uyarısı",
+        "en": "Browser certificate warning"
+      },
+      "steps": {
+        "tr": "Linux sistem sertifikalarını otomatik değiştirmiyoruz. Veri klasöründeki tls/ca.crt dosyasını tarayıcının Ayarlar ▸ Gizlilik ve güvenlik ▸ Sertifikalar ▸ Yetkililer bölümünden bir kez içe aktarın (\"web sitelerini tanımlamak için güven\").",
+        "en": "We do not change Linux system certificates automatically. Import tls/ca.crt from the data folder once under the browser's Settings ▸ Privacy and security ▸ Certificates ▸ Authorities (\"trust for identifying websites\")."
+      }
+    },
+    {
+      "system": "Android / iPhone / iPad",
+      "title": {
+        "tr": "Telefonda sertifika uyarısı",
+        "en": "Certificate warning on phones"
+      },
+      "steps": {
+        "tr": "Eşleştirme ekranındaki \"Sertifikayı yükle\" ile sertifikayı bir kez yükleyin. iPhone / iPad'de ayrıca Ayarlar ▸ Genel ▸ Hakkında ▸ Sertifika Güven Ayarları'ndan açın. Yükleme sırasında parmak izini sunucu bilgisayarındaki \"Cihaz bağla\" penceresiyle karşılaştırın.",
+        "en": "Install the certificate once via \"Install certificate\" on the pairing screen. On iPhone / iPad also enable it under Settings ▸ General ▸ About ▸ Certificate Trust Settings. While installing, compare the fingerprint with the \"Connect device\" window on the server PC."
+      }
+    }
+  ],
+  "verify": {
+    "tr": "İndirmeyi doğrulamak için sürüm sayfasındaki SHA256SUMS dosyasındaki değerle karşılaştırın — Windows: certutil -hashfile <dosya> SHA256 · macOS: shasum -a 256 <dosya> · Linux: sha256sum <dosya>",
+    "en": "To verify a download, compare it with the value in SHA256SUMS on the release page — Windows: certutil -hashfile <file> SHA256 · macOS: shasum -a 256 <file> · Linux: sha256sum <file>"
+  }
+}

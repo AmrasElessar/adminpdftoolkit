@@ -14,6 +14,8 @@ macOS (Apple Silicon: M1, M2, M3, M4…)
      Bu yalnızca bir kez yapılır; sonra uygulama normal açılır.
      (Terminal'i biliyorsanız aynı işi şu komut da yapar:
         xattr -dr com.apple.quarantine /Applications/AdminPDFToolkit.app )
+     İndirdiğiniz zip'i sürüm sayfasındaki SHA256SUMS ile doğrulayabilirsiniz:
+        shasum -a 256 AdminPDFToolkit-{version}-macOS-arm64.zip
   3. Başlatıcı bileşenleri tek tek denetler, "Sistem hazır" der ve tarayıcıyı
      açar: https://localhost:8000. İlk açılışta macOS, uygulamanın yerel HTTPS
      sertifikasına güvenmek için parolanızı isteyebilir.

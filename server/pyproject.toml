@@ -68,4 +68,4 @@ follow_untyped_imports = false
 
 [tool.setuptools.package-data]
 # Ship the bundled fonts and the built web UI inside the wheel.
-adminpdf = ["assets/*.png", "assets/fonts/*.ttf", "assets/fonts/*.txt", "web_dist/**/*"]
+adminpdf = ["about.json", "assets/*.png", "assets/fonts/*.ttf", "assets/fonts/*.txt", "web_dist/**/*"]

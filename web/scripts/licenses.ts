@@ -54,6 +54,19 @@ export function licenses(header: string): Plugin {
           ].join("\n"),
         )
         .join("\n\n");
+      // Machine-readable list for the in-app About & Licences page.
+      this.emitFile({
+        type: "asset",
+        fileName: "licenses.json",
+        source: JSON.stringify(
+          sections.map(({ pkg }) => ({
+            name: pkg.name,
+            version: pkg.version,
+            license: pkg.license ?? "?",
+            url: pkg.homepage ?? `https://www.npmjs.com/package/${pkg.name}`,
+          })),
+        ),
+      });
       this.emitFile({ type: "asset", fileName: "licenses.txt", source: `${header.trim()}\n\n\n# Web arayüzüne paketlenen bileşenlerin lisans metinleri / Licence texts of bundled web components\n\n${body}\n` });
     },
   };

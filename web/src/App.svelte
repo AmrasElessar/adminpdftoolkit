@@ -5,6 +5,7 @@
   import ToolGrid from "./components/ToolGrid.svelte";
   import Shortcuts from "./components/Shortcuts.svelte";
   import Devices from "./components/Devices.svelte";
+  import About from "./components/About.svelte";
   import ToolPanel from "./components/ToolPanel.svelte";
   import { typing, ui } from "./lib/shortcuts.svelte";
   import { type Entry, workspace } from "./lib/workspace.svelte";
@@ -26,6 +27,7 @@
   let pairKey = $state("");
   let pairError = $state("");
   let showDevices = $state(false);
+  let showAbout = $state(false);
 
   async function boot(): Promise<void> {
     fatal = "";
@@ -95,6 +97,7 @@
 <svelte:window onkeydown={keydown} />
 <Shortcuts />
 <Devices bind:open={showDevices} />
+<About bind:open={showAbout} />
 
 <div class="app">
   <a class="skip" href="#main">{t("İçeriğe atla", "Skip to content")}</a>
@@ -105,7 +108,7 @@
       {#if session}<small>v{session.version}</small>{/if}
       <!-- AGPL-3.0 §13: every user, also over the LAN, gets a way to the source. -->
       <a class="source" href="https://github.com/AmrasElessar/adminpdftoolkit" target="_blank" rel="noopener noreferrer" title={t("Özgür yazılım (AGPL-3.0) — kaynak kodu ve lisans", "Free software (AGPL-3.0) — source code and licence")}>AGPL-3.0 · {t("Kaynak kod", "Source")}</a>
-      <a class="source" href="/licenses.txt" target="_blank" rel="noopener" title={t("Kullanılan açık kaynak bileşenler ve lisansları", "Open-source components used and their licences")}>{t("Lisanslar", "Licences")}</a>
+      <button class="source link" onclick={() => (showAbout = true)} title={t("Hakkında, çalıştığı sistemler, kullanılan açık kaynak bileşenler ve lisansları", "About, supported systems, open-source components and their licences")}>{t("Hakkında ve Lisanslar", "About & Licences")}</button>
     </div>
     {#if session?.local}
       <button class="ghost small dev" onclick={() => (showDevices = true)} title={t("Telefon / tablet bağla", "Connect a phone / tablet")}>📱 <span>{t("Cihaz bağla", "Connect device")}</span></button>
@@ -223,6 +226,14 @@
   .source {
     font-size: 0.75rem;
     color: var(--muted);
+  }
+  .source.link {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-decoration: underline;
+    cursor: pointer;
   }
   .source:hover,
   .source:focus-visible {

@@ -8,6 +8,7 @@ import logging
 from collections.abc import AsyncIterator
 from functools import partial
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -95,6 +96,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.get("/api/health", tags=["session"])
     def health() -> dict[str, str]:
         return {"status": "ok", "version": VERSION}
+
+    @app.get("/api/about", tags=["session"])
+    def about() -> dict[str, Any]:
+        """Systems, first-run notes and every component with its licence."""
+        from .about import about as collect
+
+        return collect(settings.web_dist)
 
     _mount_web(app, settings.web_dist)
     app.add_middleware(SecurityMiddleware, settings=settings, sessions=sessions)

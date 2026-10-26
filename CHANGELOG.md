@@ -26,6 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   expired-file sweeping no longer removes inputs of running jobs. CI token read-only.
 
 ### Added
+- **About & Licences page** (header link): Turkish and English as separate tabs — supported
+  systems, first-start warnings, every Python package actually installed (direct and pulled-in,
+  read from their metadata), the web bundle's npm packages, the files of bundled tools with their
+  SHA-256 sources, programs, runtimes, fonts, data, build tools and methods. `/api/about`;
+  `scripts/third_party.py` writes the same data as THIRD_PARTY_LICENSES.md (Turkish part, then
+  English part).
+- **First-start warnings documented** on the README main page, the release page, the packages'
+  OKUBENI files and the app: Windows SmartScreen (*More info ▸ Run anyway* / *Unblock*), the
+  certificate prompt, the firewall (private networks only), macOS Gatekeeper (*Open Anyway*) and
+  keychain password, browser/phone certificate install, SHA256SUMS verification.
 - **Self-contained macOS (Apple Silicon) and Linux x86_64 packages** with their own Python
   (python-build-standalone, SHA-256 verified) and the same launcher window in Tk
   (`python -m adminpdf.launcher`): component checklist, server without a terminal, network
@@ -114,7 +124,7 @@ and in git history.
   the first start on Windows offers it. The app picks the per-user language folder up automatically.
 - Full attribution page: every direct and transitive library, external program, font, dataset and
   published algorithm with its licence (`THIRD_PARTY_LICENSES.md`, generated Python table via
-  `scripts/python_licenses.py`). The UI serves it at `/licenses.txt` together with the full licence
+  `scripts/third_party.py`). The UI serves it at `/licenses.txt` together with the full licence
   texts of all bundled npm packages, collected at build time; header links to the source code
   (AGPL-3.0 §13) and the licences.
 
