@@ -14,7 +14,7 @@ Admin PDF Toolkit özgür yazılımdır: GNU Affero Genel Kamu Lisansı sürüm 
 **Sunucu: uygulamanın kurulduğu bilgisayar**
 
 - **Windows 10 / 11 (64 bit, x64)** — Kurulumsuz paket: AdminPDFToolkit.exe başlatıcısı; Python, OCR (Tesseract + Türkçe) ve PDF/A (Ghostscript) dahil.
-- **macOS 11 ve üstü, Apple Silicon (M1–M4)** — Kurulumsuz AdminPDFToolkit.app; ilk açılışta bir kez Sistem Ayarları ▸ Gizlilik ve Güvenlik ▸ Yine de Aç. OCR ve PDF/A için: brew install tesseract tesseract-lang ghostscript.
+- **macOS 11 ve üstü, Apple Silicon (M1 ve sonrası: M1–M5…)** — Kurulumsuz AdminPDFToolkit.app; ilk açılışta bir kez Sistem Ayarları ▸ Gizlilik ve Güvenlik ▸ Yine de Aç. OCR ve PDF/A için: brew install tesseract tesseract-lang ghostscript.
 - **Linux x86_64 (glibc 2.35+: Ubuntu 22.04+, Debian 12+, Linux Mint 21+, Pardus 23+, Fedora 36+)** — Kurulumsuz tar.gz paketi ve başlatıcı penceresi. OCR ve PDF/A için: sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript.
 - **Intel Mac, ARM Linux ve diğer sistemler** — Python 3.11+ ile çalışan paket (scripts/start.sh); ilk açılışta kütüphaneleri kurar.
 - **Docker (Linux sunucu, NAS)** — OCR, PDF/A, LibreOffice ve ClamAV dahil tüm araçlarla.
@@ -218,7 +218,7 @@ Admin PDF Toolkit is free software, distributed under the GNU Affero General Pub
 **Server: the computer the app runs on**
 
 - **Windows 10 / 11 (64-bit, x64)** — No-install package: AdminPDFToolkit.exe launcher; Python, OCR (Tesseract + Turkish) and PDF/A (Ghostscript) included.
-- **macOS 11 or later, Apple Silicon (M1–M4)** — No-install AdminPDFToolkit.app; on first start once: System Settings ▸ Privacy & Security ▸ Open Anyway. For OCR and PDF/A: brew install tesseract tesseract-lang ghostscript.
+- **macOS 11 or later, Apple Silicon (M1 and later: M1–M5…)** — No-install AdminPDFToolkit.app; on first start once: System Settings ▸ Privacy & Security ▸ Open Anyway. For OCR and PDF/A: brew install tesseract tesseract-lang ghostscript.
 - **Linux x86_64 (glibc 2.35+: Ubuntu 22.04+, Debian 12+, Linux Mint 21+, Pardus 23+, Fedora 36+)** — No-install tar.gz package with the launcher window. For OCR and PDF/A: sudo apt install tesseract-ocr tesseract-ocr-tur ghostscript.
 - **Intel Macs, ARM Linux and other systems** — Package for Python 3.11+ (scripts/start.sh); installs the libraries on first start.
 - **Docker (Linux server, NAS)** — With every tool: OCR, PDF/A, LibreOffice and ClamAV.

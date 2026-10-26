@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-10-26 — HTTPS, local network only, self-contained Windows / macOS / Linux packages
+
+### Release signing
+- Releases are signed with the project's Ed25519 key; its public half is built into the app
+  (`updater.RELEASE_PUBLIC_KEY`), so the Windows package can install verified updates in place.
+
 ### Security
 - **HTTPS by default** with the server's own local certificate authority, name-constrained to
   private addresses and local names; the server certificate follows LAN address changes; TLS 1.2+,
@@ -957,7 +963,8 @@ This release elevates the PDF analysis primitives we built for the editor's
 - PDF structural scan flags `/JavaScript`, `/Launch`, `/EmbeddedFile`,
   `/RichMedia`, `/SubmitForm`, `/GoToR`, `/URI`, `/XFA`.
 
-[Unreleased]: https://github.com/AmrasElessar/adminpdftoolkit/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/AmrasElessar/adminpdftoolkit/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/AmrasElessar/adminpdftoolkit/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/AmrasElessar/adminpdftoolkit/compare/v1.13.2...v2.0.0
 [1.10.0]: https://github.com/orhanenginokay/pdfconverter/compare/v1.9.1...v1.10.0
 [1.9.1]: https://github.com/orhanenginokay/pdfconverter/compare/v1.9.0...v1.9.1

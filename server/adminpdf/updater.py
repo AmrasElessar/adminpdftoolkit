@@ -53,7 +53,7 @@ def platform_asset() -> re.Pattern[str]:
 # Ed25519 public key of the release workflow (base64, 32 bytes), set when
 # signing is configured (see scripts/release_signing.py). Empty = no
 # automatic installs.
-RELEASE_PUBLIC_KEY = ""
+RELEASE_PUBLIC_KEY = "tB7ypO8z1pL9qb/CewmPox4suNoDHDxChX/aOoZ8fAc="
 TIMEOUT = 8
 MAX_PACKAGE_BYTES = 2 * 1024**3
 
