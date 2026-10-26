@@ -15,7 +15,6 @@ cannot start). Nothing here touches the network.
 from __future__ import annotations
 
 import contextlib
-import importlib
 import json
 import shutil
 import socket
@@ -23,7 +22,7 @@ import subprocess
 import sys
 import time
 from collections.abc import Callable, Iterator
-from importlib import metadata
+from importlib import import_module, metadata
 from pathlib import Path
 from typing import Any
 
@@ -104,7 +103,7 @@ def check_libraries(_s: Settings) -> Result:
     missing, versions = [], []
     for module, dist, name in LIBRARIES:
         try:
-            importlib.import_module(module)
+            import_module(module)
         except Exception:
             missing.append(name)
             continue

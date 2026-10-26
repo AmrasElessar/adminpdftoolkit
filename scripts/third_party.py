@@ -124,8 +124,10 @@ def render() -> str:
     head = [
         "# Üçüncü Taraf Lisansları / Third-Party Licences",
         "",
-        "Bu dosya otomatik üretilir: `python scripts/third_party.py`. "
-        "*This file is generated: `python scripts/third_party.py`.*",
+        (
+            "Bu dosya otomatik üretilir: `python scripts/third_party.py`. "
+            "*This file is generated: `python scripts/third_party.py`.*"
+        ),
         "",
         "- [Türkçe](#üçüncü-taraf-lisansları-ve-atıflar)",
         "- [English](#third-party-licences-and-attributions)",

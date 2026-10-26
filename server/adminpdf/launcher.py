@@ -112,7 +112,7 @@ class Settings:
                 if sep:
                     self.values[key.strip()] = value.strip()
         except OSError:
-            pass
+            pass  # no settings yet: defaults apply
 
     def get(self, key: str, default: bool) -> bool:
         return self.values.get(key, "1" if default else "0") == "1"
@@ -123,7 +123,7 @@ class Settings:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.write_text("".join(f"{k}={v}\n" for k, v in self.values.items()), encoding="utf-8")
         except OSError:
-            pass
+            pass  # read-only location: the choice lasts for this session only
 
 
 def port() -> int:
@@ -221,7 +221,7 @@ class Server:
                 else:
                     os.killpg(p.pid, signal.SIGKILL)
             except OSError:
-                pass
+                pass  # already gone
 
 
 def open_path(path: Path) -> None:
@@ -233,7 +233,7 @@ def open_path(path: Path) -> None:
         else:
             subprocess.Popen(["xdg-open", str(path)])
     except OSError:
-        pass
+        pass  # no file manager: nothing else to do
 
 
 # -- the window -----------------------------------------------------------------
@@ -341,7 +341,7 @@ class LauncherApp:  # pragma: no cover - needs a display; exercised by hand and 
             if icon.is_file():
                 self.root.iconphoto(True, self.tk.PhotoImage(file=str(icon)))
         except Exception:
-            pass
+            pass  # cosmetic: the window keeps the default icon
 
     def _background(self, work: Callable[[], None]) -> None:
         threading.Thread(target=work, daemon=True).start()

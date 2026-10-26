@@ -144,9 +144,11 @@ def render(rows: list[dict[str, Any]]) -> str:
     lines = [
         "## VirusTotal",
         "",
-        "Bu sürümün dosyaları yayımlanırken [VirusTotal](https://www.virustotal.com) ile otomatik tarandı; "
-        "bağlantılardan tüm antivirüs motorlarının güncel sonucunu görebilirsiniz. "
-        "*Every file of this release was scanned on VirusTotal while publishing; the links show the current result of every engine.*",
+        (
+            "Bu sürümün dosyaları yayımlanırken [VirusTotal](https://www.virustotal.com) ile otomatik tarandı; "
+            "bağlantılardan tüm antivirüs motorlarının güncel sonucunu görebilirsiniz. "
+            "*Every file of this release was scanned on VirusTotal while publishing; the links show the current result of every engine.*"
+        ),
         "",
         "| Dosya / File | Sonuç | Result | SHA-256 |",
         "|---|---|---|---|",
@@ -158,9 +160,11 @@ def render(rows: list[dict[str, Any]]) -> str:
         lines += [
             "",
             "> [!NOTE]",
-            "> Az sayıda motorun uyarısı yeni ve ücretli sertifikayla imzalanmamış programlarda sık görülen bir yanlış alarmdır; "
-            "kaynak kod ve derleme kayıtları herkese açıktır. *A few hits on a new program without a paid signing certificate "
-            "are a common false positive; the source and the build logs are public.*",
+            (
+                "> Az sayıda motorun uyarısı yeni ve ücretli sertifikayla imzalanmamış programlarda sık görülen bir yanlış alarmdır; "
+                "kaynak kod ve derleme kayıtları herkese açıktır. *A few hits on a new program without a paid signing certificate "
+                "are a common false positive; the source and the build logs are public.*"
+            ),
         ]
     return "\n".join(lines) + "\n"
 

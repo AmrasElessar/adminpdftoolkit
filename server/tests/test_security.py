@@ -113,10 +113,13 @@ def test_paired_devices_cannot_reach_each_others_files_or_jobs(settings: Setting
         assert "owner" not in up.json()
         assert a.get(f"/api/files/{fid}").status_code == 200
         for other in (b, local):
-            assert other.get(f"/api/files/{fid}").status_code == 404
-            assert other.get(f"/api/files/{fid}/meta").status_code == 404
-            assert other.delete(f"/api/files/{fid}").status_code == 404
-            assert other.post("/api/ops/info", json={"inputs": [{"id": fid}]}).status_code == 404
+            responses = [
+                other.get(f"/api/files/{fid}"),
+                other.get(f"/api/files/{fid}/meta"),
+                other.delete(f"/api/files/{fid}"),
+                other.post("/api/ops/info", json={"inputs": [{"id": fid}]}),
+            ]
+            assert [r.status_code for r in responses] == [404] * 4
 
         job = a.post("/api/ops/info", json={"inputs": [{"id": fid}]})
         assert job.status_code == 202

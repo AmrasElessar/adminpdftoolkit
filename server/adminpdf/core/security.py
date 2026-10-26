@@ -35,6 +35,7 @@ import time
 from collections import OrderedDict, deque
 from collections.abc import Awaitable, Callable, MutableMapping
 from http.cookies import SimpleCookie
+from pathlib import Path
 from typing import Any
 
 from ..config import Settings
@@ -128,7 +129,7 @@ def is_loopback(host: str | None) -> bool:
 def default_gateway() -> str | None:
     """The IPv4 default gateway from ``/proc/net/route`` (Linux only)."""
     try:
-        lines = open("/proc/net/route", encoding="ascii").read().splitlines()[1:]  # noqa: SIM115
+        lines = Path("/proc/net/route").read_text(encoding="ascii").splitlines()[1:]
     except OSError:
         return None
     for line in lines:
