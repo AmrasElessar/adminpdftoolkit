@@ -65,7 +65,7 @@ jobs:
           $exe.VersionInfo | Format-List ProductName, FileVersion, CompanyName
           if ($exe.VersionInfo.ProductName -ne "Admin PDF Toolkit") { throw "launcher lacks version info" }
           (Get-AuthenticodeSignature $exe.FullName).Status
-          $checks = & "$app\python\python.exe" -m adminpdf.selfcheck | ForEach-Object { $_ | ConvertFrom-Json }
+          $checks = & "$app\python\python.exe" -m adminpdf.selfcheck | Where-Object { $_ -like '{*' } | ForEach-Object { $_ | ConvertFrom-Json }
           $checks | Where-Object type -eq check | Format-Table id, status, version -AutoSize
           if (-not ($checks | Where-Object type -eq done).ready) { throw "self-check: not ready" }
           foreach ($id in "ocr", "ghostscript") {

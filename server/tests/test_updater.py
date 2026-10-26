@@ -171,3 +171,22 @@ def test_selfcheck_lines_are_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     assert next(r for r in results if r["id"] == "libraries")["status"] == "ok"
     info = selfcheck.info(settings, results)
     assert info["url"] == "https://localhost:8765/"
+
+
+def test_selfcheck_output_is_ascii(tmp_path: Path) -> None:
+    """Windows consoles default to legacy code pages; Turkish must survive."""
+    import os
+    import subprocess
+    import sys
+
+    env = {**os.environ, "APT_DATA_DIR": str(tmp_path / "d"), "PYTHONIOENCODING": "cp1252", "APT_PORT": "8766"}
+    env.pop("PYTHONUTF8", None)
+    r = subprocess.run(
+        [sys.executable, "-m", "adminpdf.selfcheck"], capture_output=True, env=env, timeout=120, check=False
+    )
+    lines = [ln for ln in r.stdout.splitlines() if ln.startswith(b"{")]
+    assert lines and all(ln.isascii() for ln in lines)
+    import json
+
+    titles = [json.loads(ln).get("title", {}).get("tr", "") for ln in lines]
+    assert "Kütüphaneler" in titles

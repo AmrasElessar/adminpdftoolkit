@@ -192,7 +192,7 @@ def main() -> None:
     args = parser.parse_args()
 
     def emit(obj: dict[str, Any]) -> None:
-        print(json.dumps(obj, ensure_ascii=False), flush=True)
+        print(json.dumps(obj), flush=True)
 
     if args.cmd == "check":
         emit(check())

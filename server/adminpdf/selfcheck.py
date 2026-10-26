@@ -305,14 +305,16 @@ def info(settings: Settings, results: list[Result]) -> dict[str, Any]:
 
 
 def main() -> None:
+    # Output is ASCII-only JSON (\uXXXX escapes), so any console code page
+    # (cp1252, cp857, …) carries Turkish text intact.
     settings = get_settings()
     results = []
     for result in run_checks(settings):
         results.append(result)
-        print(json.dumps(result, ensure_ascii=False), flush=True)
+        print(json.dumps(result), flush=True)
         time.sleep(0.05)  # lets the launcher tick items one by one
     ready = not any(r["status"] == "error" for r in results)
-    print(json.dumps({"type": "done", "ready": ready, "info": info(settings, results)}, ensure_ascii=False), flush=True)
+    print(json.dumps({"type": "done", "ready": ready, "info": info(settings, results)}), flush=True)
     sys.exit(0 if ready else 1)
 
 
