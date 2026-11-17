@@ -15,7 +15,7 @@ COPY THIRD_PARTY_LICENSES.md /THIRD_PARTY_LICENSES.md
 RUN mkdir -p /server/adminpdf && npm run build
 
 # ---- Runtime -----------------------------------------------------------------
-FROM python:3.13-slim AS runtime
+FROM python:3.15-slim AS runtime
 ARG WITH_LIBREOFFICE=true
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
